@@ -45,7 +45,16 @@ So the flow is:
 
 ## Stack
 
-Next.js 16 (App Router, Server Actions) · TypeScript · Drizzle ORM · Postgres 16 (Docker) · Tailwind CSS 4.
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js 16 (App Router, Server Actions, Turbopack) |
+| UI | React 19 · Tailwind CSS 4 |
+| Language | TypeScript 5 (Node 22+) |
+| Database | Postgres 16 (Docker Compose, port 5433) via the `postgres` driver |
+| ORM / migrations | Drizzle ORM · drizzle-kit |
+| Validation | Zod 4 |
+| Time tracking | Hubstaff API v2 + Hubstaff desktop CLI (through a local helper) |
+| Tooling | tsx (seed, helper and scripts) · ESLint 9 |
 
 ```
 src/db/schema.ts          users, clients, tasks, work_sessions, hubstaff_activities, app_state
