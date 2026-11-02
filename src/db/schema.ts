@@ -23,6 +23,11 @@ export const users = pgTable("users", {
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  contactName: text("contact_name"),
+  email: text("email"),
+  phone: text("phone"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   // Later scope: link to the QuickBooks Online customer.
   qboCustomerId: text("qbo_customer_id"),
   // Overrides HUBSTAFF_PROJECT_ID for this client's tasks.

@@ -29,7 +29,7 @@ export async function switchUser(formData: FormData) {
 
 const newTask = z.object({
   title: z.string().trim().min(1, "Title is required"),
-  clientId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+  clientId: z.coerce.number({ error: "Pick a client" }).int().positive("Pick a client"),
   assigneeId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
   dueDate: z.string().optional().transform((v) => v || undefined),
 });
@@ -39,6 +39,29 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
     const input = newTask.parse(Object.fromEntries(formData));
     await db.insert(schema.tasks).values(input);
     return undefined;
+  });
+}
+
+const optionalText = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => v || undefined);
+
+const newClient = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  contactName: optionalText,
+  email: z.email().optional().or(z.literal("").transform(() => undefined)),
+  phone: optionalText,
+  notes: optionalText,
+  hubstaffProjectId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+});
+
+export async function createClient(_prev: unknown, formData: FormData): Promise<Result<{ id: number }>> {
+  return run(async () => {
+    const input = newClient.parse(Object.fromEntries(formData));
+    const [client] = await db.insert(schema.clients).values(input).returning({ id: schema.clients.id });
+    return client;
   });
 }
 

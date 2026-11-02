@@ -102,7 +102,15 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-muted">{clientName ?? "—"}</td>
+                  <td className="px-3 py-2 text-muted">
+                    {task.clientId ? (
+                      <Link href={`/clients/${task.clientId}`} className="hover:underline">
+                        {clientName}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-muted">{assigneeName ?? "—"}</td>
                   <td className="px-3 py-2">
                     <span className="badge">{statusLabel[task.status]}</span>

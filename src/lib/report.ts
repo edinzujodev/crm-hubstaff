@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNotNull, lt, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { config } from "@/lib/config";
 
@@ -161,6 +161,87 @@ async function findOverlaps(sessions: schema.WorkSession[]) {
     }
   }
   return result;
+}
+
+export type ClientReport = Awaited<ReturnType<typeof getClientReport>>;
+
+/**
+ * Hubstaff time on a client's CRM tasks between two calendar days (inclusive,
+ * `YYYY-MM-DD` in `timeZone`), combined with the client's task list.
+ */
+export async function getClientReport(clientId: number, from: string, to: string, timeZone: string) {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const [tasks, users] = await Promise.all([
+    db.select().from(schema.tasks).where(eq(schema.tasks.clientId, clientId)),
+    db.select().from(schema.users),
+  ]);
+  const taskIds = tasks.map((t) => t.id);
+  // Query a wider UTC window, then keep the slots whose local day is inside the range.
+  const activities = taskIds.length
+    ? await db
+        .select()
+        .from(schema.hubstaffActivities)
+        .where(
+          and(
+            inArray(schema.hubstaffActivities.taskId, taskIds),
+            gte(schema.hubstaffActivities.startsAt, new Date(Date.parse(from) - DAY_MS)),
+            lt(schema.hubstaffActivities.startsAt, new Date(Date.parse(to) + 2 * DAY_MS)),
+          ),
+        )
+        .orderBy(asc(schema.hubstaffActivities.startsAt))
+    : [];
+
+  const dayFmt = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+  const inRange = activities.filter((a) => {
+    const day = dayFmt.format(a.startsAt);
+    return day >= from && day <= to;
+  });
+
+  const userByHubstaffId = new Map(users.filter((u) => u.hubstaffUserId).map((u) => [u.hubstaffUserId!, u.name]));
+  type Totals = { tracked: number; active: number };
+  const bump = <K>(map: Map<K, Totals>, key: K, a: { trackedSeconds: number; activeSeconds: number }) => {
+    const cur = map.get(key) ?? { tracked: 0, active: 0 };
+    cur.tracked += a.trackedSeconds;
+    cur.active += a.activeSeconds;
+    map.set(key, cur);
+  };
+
+  const byTask = new Map<number, Totals>();
+  const byUser = new Map<string, Totals>();
+  const byDay = new Map<string, Totals>();
+  for (const a of inRange) {
+    bump(byTask, a.taskId!, a);
+    bump(byUser, userByHubstaffId.get(a.hubstaffUserId) ?? `Hubstaff user ${a.hubstaffUserId}`, a);
+    bump(byDay, dayFmt.format(a.startsAt), a);
+  }
+
+  const trackedSeconds = inRange.reduce((n, a) => n + a.trackedSeconds, 0);
+  const activeSeconds = inRange.reduce((n, a) => n + a.activeSeconds, 0);
+  return {
+    trackedSeconds,
+    activityPercent: trackedSeconds ? Math.round((activeSeconds / trackedSeconds) * 100) : null,
+    taskCount: tasks.length,
+    openTaskCount: tasks.filter((t) => t.status !== "done").length,
+    tasks: tasks
+      .map((t) => ({ task: t, ...(byTask.get(t.id) ?? { tracked: 0, active: 0 }) }))
+      .sort((a, b) => b.tracked - a.tracked || b.task.id - a.task.id),
+    byUser: [...byUser].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.tracked - a.tracked),
+    byDay: [...byDay].map(([day, v]) => ({ day, ...v })).sort((a, b) => b.day.localeCompare(a.day)),
+  };
+}
+
+/** Total tracked seconds per client since an instant, for the client list. */
+export async function trackedByClient(since: Date) {
+  const rows = await db
+    .select({
+      clientId: schema.tasks.clientId,
+      tracked: sql<number>`sum(${schema.hubstaffActivities.trackedSeconds})::int`,
+    })
+    .from(schema.hubstaffActivities)
+    .innerJoin(schema.tasks, eq(schema.hubstaffActivities.taskId, schema.tasks.id))
+    .where(gte(schema.hubstaffActivities.startsAt, since))
+    .groupBy(schema.tasks.clientId);
+  return new Map(rows.filter((r) => r.clientId !== null).map((r) => [r.clientId!, r.tracked]));
 }
 
 /** Tracked seconds per CRM task, for the task list. */

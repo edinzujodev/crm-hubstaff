@@ -18,3 +18,8 @@ export function fmtDateTime(d: Date, timeZone: string): string {
 export function fmtTime(d: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit" }).format(d);
 }
+
+/** Calendar day (`YYYY-MM-DD`) of an instant in the given time zone. */
+export function localDay(d: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}

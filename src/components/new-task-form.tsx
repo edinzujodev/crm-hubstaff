@@ -20,8 +20,10 @@ export function NewTaskForm({ clients, users }: { clients: Option[]; users: Opti
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Client
-        <select name="clientId" className="input text-foreground" defaultValue="">
-          <option value="">—</option>
+        <select name="clientId" required className="input text-foreground" defaultValue="">
+          <option value="" disabled>
+            Select…
+          </option>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}

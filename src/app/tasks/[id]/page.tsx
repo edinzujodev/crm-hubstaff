@@ -76,7 +76,16 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           </Link>
           <h1 className="mt-1 text-xl font-semibold">{task.title}</h1>
           <p className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted">
-            <span>Client: {row.clientName ?? "—"}</span>
+            <span>
+              Client:{" "}
+              {task.clientId ? (
+                <Link href={`/clients/${task.clientId}`} className="underline">
+                  {row.clientName}
+                </Link>
+              ) : (
+                "—"
+              )}
+            </span>
             <span>Assignee: {row.assigneeName ?? "—"}</span>
             {task.dueDate && <span>Due: {task.dueDate}</span>}
             <span>{task.hubstaffTaskId ? `Hubstaff task #${task.hubstaffTaskId}` : "Not in Hubstaff yet (created on first Start)"}</span>
