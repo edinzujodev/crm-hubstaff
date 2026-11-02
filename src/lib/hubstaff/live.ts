@@ -73,6 +73,11 @@ async function api<T>(path: string, init: RequestInit = {}, attempt = 0): Promis
   return res.json() as Promise<T>;
 }
 
+/** Raw GET for scripts (e.g. scripts/hubstaff-ids.ts). */
+export function hubstaffGet<T>(path: string) {
+  return api<T>(path);
+}
+
 function orgId(): number {
   const id = config.hubstaffOrgId;
   if (!id) throw new Error("HUBSTAFF_ORG_ID is not set");

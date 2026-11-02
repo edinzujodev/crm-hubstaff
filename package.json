@@ -11,7 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
     "helper": "tsx helper/hubstaff-helper.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "hubstaff:ids": "tsx scripts/hubstaff-ids.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

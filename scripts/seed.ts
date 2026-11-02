@@ -11,6 +11,10 @@ const SLOT = 10 * 60 * 1000;
 
 async function main() {
   const mock = hubstaffMode() === "mock";
+  if (!mock && !process.argv.includes("--yes")) {
+    console.error("Live mode: seeding wipes all CRM data. Run `npm run db:seed -- --yes` if that's what you want.");
+    process.exit(1);
+  }
   await db.execute(
     sql`truncate hubstaff_activities, work_sessions, tasks, clients, users, app_state restart identity cascade`,
   );

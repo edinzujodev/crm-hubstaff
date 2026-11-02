@@ -70,7 +70,7 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
       <div className="flex items-center gap-2">
         {runningSince ? (
           <>
-            <span className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400">
+            <span suppressHydrationWarning className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400">
               ● {elapsed(runningSince)}
             </span>
             <button onClick={onFinish} disabled={pending} className="btn btn-danger">
