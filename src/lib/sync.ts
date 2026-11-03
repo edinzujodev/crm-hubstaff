@@ -40,6 +40,30 @@ export async function syncHubstaff(): Promise<SyncResult> {
   from = new Date(Math.floor(from.getTime() / SLOT_MS) * SLOT_MS);
   const to = new Date(now.getTime() + SLOT_MS);
 
+  const { fetched, matched } = await syncRange(provider, from, to);
+
+  const autoClosed = await autoCloseForgottenSessions(now);
+
+  await db
+    .insert(schema.appState)
+    .values({ key: LAST_SYNC_KEY, value: now.toISOString() })
+    .onConflictDoUpdate({ target: schema.appState.key, set: { value: now.toISOString(), updatedAt: now } });
+
+  return {
+    mode: provider.mode,
+    fetched,
+    matched,
+    unmatched: fetched - matched,
+    autoClosed,
+    from: from.toISOString(),
+    to: to.toISOString(),
+  };
+}
+
+type Provider = ReturnType<typeof hubstaff>;
+
+/** Reads [from, to) from Hubstaff in 7-day windows and reconciles what is stored. */
+async function syncRange(provider: Provider, from: Date, to: Date) {
   const taskRows = await db
     .select({ id: schema.tasks.id, hubstaffTaskId: schema.tasks.hubstaffTaskId })
     .from(schema.tasks)
@@ -62,23 +86,16 @@ export async function syncHubstaff(): Promise<SyncResult> {
       .delete(schema.hubstaffActivities)
       .where(ids.length ? and(inWindow, notInArray(schema.hubstaffActivities.id, ids)) : inWindow);
   }
+  return { fetched, matched };
+}
 
-  const autoClosed = await autoCloseForgottenSessions(now);
-
-  await db
-    .insert(schema.appState)
-    .values({ key: LAST_SYNC_KEY, value: now.toISOString() })
-    .onConflictDoUpdate({ target: schema.appState.key, set: { value: now.toISOString(), updatedAt: now } });
-
-  return {
-    mode: provider.mode,
-    fetched,
-    matched,
-    unmatched: fetched - matched,
-    autoClosed,
-    from: from.toISOString(),
-    to: to.toISOString(),
-  };
+/** Loads older Hubstaff time (e.g. before the CRM was used) so reports can cover it. Capped at 92 days. */
+export async function backfillHubstaff(fromDay: string, toDay: string) {
+  const from = new Date(Math.floor(Date.parse(fromDay) / SLOT_MS) * SLOT_MS - DAY_MS);
+  const to = new Date(Math.min(Date.parse(toDay) + 2 * DAY_MS, Date.now() + SLOT_MS));
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) throw new Error("Invalid date range.");
+  if ((to.getTime() - from.getTime()) / DAY_MS > 95) throw new Error("Load at most about 3 months at a time.");
+  return syncRange(hubstaff(), from, to);
 }
 
 async function upsertActivities(activities: HubstaffActivityDto[], crmTaskByHubstaffId: Map<number, number>) {

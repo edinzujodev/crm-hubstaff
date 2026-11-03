@@ -68,6 +68,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/">Tasks</Link>
               <Link href="/leads">Leads</Link>
               <Link href="/clients">Clients</Link>
+              <Link href="/reports">Reports</Link>
               <Link href="/team">Team</Link>
             </nav>
             <span

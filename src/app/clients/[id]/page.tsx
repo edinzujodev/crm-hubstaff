@@ -69,6 +69,9 @@ async function ClientDetail({
           <input type="date" name="to" defaultValue={to} className="input text-foreground" />
         </label>
         <button className="btn">Show</button>
+        <Link href={`/reports?client=${id}&from=${from}&to=${to}`} className="btn">
+          Full report →
+        </Link>
       </form>
 
       <section className="grid gap-3 sm:grid-cols-3">

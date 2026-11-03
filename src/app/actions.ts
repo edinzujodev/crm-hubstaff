@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser, USER_COOKIE } from "@/lib/current-user";
 import { ensureHubstaffTask, finishSession, startSession } from "@/lib/sessions";
-import { lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
+import { backfillHubstaff, lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
 
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -211,6 +211,11 @@ export async function setTaskStatus(taskId: number, status: "todo" | "in_progres
     await db.update(schema.tasks).set({ status }).where(eq(schema.tasks.id, taskId));
     return undefined;
   });
+}
+
+/** Pulls older Hubstaff time for the range being reported, so reports can cover it. */
+export async function loadHubstaffRange(from: string, to: string) {
+  return run(() => backfillHubstaff(from, to));
 }
 
 export async function syncNow() {

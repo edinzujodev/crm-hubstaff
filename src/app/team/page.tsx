@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { asc } from "drizzle-orm";
 import { connection } from "next/server";
@@ -21,7 +22,11 @@ async function Members() {
         <tbody>
           {users.map((u) => (
             <tr key={u.id} className="border-b border-border last:border-0">
-              <td className="px-3 py-2">{u.name}</td>
+              <td className="px-3 py-2">
+                <Link href={`/reports?user=${u.id}`} className="hover:underline">
+                  {u.name}
+                </Link>
+              </td>
               <td className="px-3 py-2 text-muted">{u.email}</td>
               <td className="px-3 py-2">
                 <form action={setHubstaffUserId.bind(null, u.id)} className="flex gap-2">
