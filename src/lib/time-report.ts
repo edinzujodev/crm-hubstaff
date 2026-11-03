@@ -173,3 +173,14 @@ export function reportToCsv(report: TimeReport) {
   ]);
   return [head, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
 }
+
+/** One entry per calendar day in the range, zero-filled, for charts. */
+export function dailySeries(report: TimeReport, from: string, to: string) {
+  const byDay = new Map(report.byDay.map((r) => [r.key, r]));
+  const out: (Totals & { day: string })[] = [];
+  for (let t = Date.parse(from); t <= Date.parse(to) && out.length < 120; t += DAY_MS) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    out.push({ day, ...(byDay.get(day) ?? empty()) });
+  }
+  return out;
+}

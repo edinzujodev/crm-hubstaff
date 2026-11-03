@@ -9,6 +9,11 @@
   --primary: #1f6f5c;
   --primary-fg: #ffffff;
   --danger: #b4372f;
+  /* Charts */
+  --series-1: #2a78d6;
+  --viz-grid: #e1e0d9;
+  --viz-axis: #c3c2b7;
+  --viz-muted: #898781;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +26,9 @@
     --primary: #3fa58b;
     --primary-fg: #0d1f1a;
     --danger: #e0645b;
+    --series-1: #3987e5;
+    --viz-grid: #2c2c2a;
+    --viz-axis: #383835;
   }
 }
 

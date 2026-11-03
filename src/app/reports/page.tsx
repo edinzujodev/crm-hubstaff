@@ -3,11 +3,16 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { BarList, type BarDatum } from "@/components/charts/bar-list";
+import { ChartTip } from "@/components/charts/chart-tip";
+import { ColumnChart } from "@/components/charts/column-chart";
+import { LineChart } from "@/components/charts/line-chart";
 import { LoadRangeButton } from "@/components/load-range-button";
 import { config } from "@/lib/config";
+import { longDay } from "@/lib/chart";
 import { fmtDuration } from "@/lib/format";
 import { parseReportParams, rangePresets, reportQuery } from "@/lib/report-range";
-import { getTimeReport, type Row } from "@/lib/time-report";
+import { dailySeries, getTimeReport, type Row } from "@/lib/time-report";
 
 const pct = (tracked: number, active: number) => (tracked ? `${Math.round((active / tracked) * 100)}%` : "—");
 
@@ -53,6 +58,93 @@ function Table({ title, rows, firstColumn }: { title: string; rows: Row[]; first
         </table>
       </div>
     </section>
+  );
+}
+
+const MAX_BARS = 8;
+
+/** Ranked bars: the top rows, then everything else folded into one "Other" row. */
+function toBars(rows: Row[], total: number): BarDatum[] {
+  const share = (n: number) => (total ? `${Math.round((n / total) * 100)}%` : "");
+  const tip = (label: string, r: { tracked: number; billable: number; active: number }) =>
+    `${fmtDuration(r.tracked)}
+${label}
+Billable ${fmtDuration(r.billable)} · Activity ${pct(r.tracked, r.active)}`;
+  const shown = rows.slice(0, MAX_BARS).map((r) => ({
+    key: r.key,
+    label: r.label,
+    href: r.href,
+    value: r.tracked,
+    display: fmtDuration(r.tracked),
+    share: share(r.tracked),
+    tip: tip(r.label, r),
+  }));
+  const rest = rows.slice(MAX_BARS);
+  if (rest.length) {
+    const sum = { tracked: 0, billable: 0, active: 0 };
+    for (const r of rest) {
+      sum.tracked += r.tracked;
+      sum.billable += r.billable;
+      sum.active += r.active;
+    }
+    const label = `Other (${rest.length})`;
+    shown.push({ key: "other", label, href: undefined, value: sum.tracked, display: fmtDuration(sum.tracked), share: share(sum.tracked), tip: tip(label, sum) });
+  }
+  return shown;
+}
+
+function Charts({ report, from, to }: { report: Awaited<ReturnType<typeof getTimeReport>>; from: string; to: string }) {
+  const days = dailySeries(report, from, to);
+  const columns = days.map((d) => ({
+    key: d.day,
+    label: fmtDuration(d.tracked),
+    value: d.tracked / 3600,
+    tip: `${fmtDuration(d.tracked)}
+${longDay(d.day)}
+Billable ${fmtDuration(d.billable)} · Activity ${pct(d.tracked, d.active)}`,
+  }));
+  const activity = days.map((d) => ({
+    key: d.day,
+    value: d.tracked ? Math.round((d.active / d.tracked) * 100) : null,
+    tip: d.tracked
+      ? `${pct(d.tracked, d.active)} active
+${longDay(d.day)}
+${fmtDuration(d.tracked)} tracked`
+      : `No time tracked
+${longDay(d.day)}`,
+  }));
+
+  return (
+    <ChartTip>
+      <div className="space-y-6">
+        <section className="card p-4">
+          <h2 className="font-semibold">Hours per day</h2>
+          <p className="mb-2 text-xs text-muted">Time tracked in Hubstaff each day. The tallest day is labelled.</p>
+          <ColumnChart data={columns} ariaLabel={`Hours tracked per day from ${from} to ${to}. The same numbers are in the By day table below.`} />
+        </section>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <section className="card p-4">
+            <h2 className="font-semibold">Time by client</h2>
+            <p className="mb-3 text-xs text-muted">Share of tracked time, largest first.</p>
+            <BarList data={toBars(report.byClient, report.total.tracked)} />
+          </section>
+          <section className="card p-4">
+            <h2 className="font-semibold">Time by person</h2>
+            <p className="mb-3 text-xs text-muted">Share of tracked time, largest first.</p>
+            <BarList data={toBars(report.byUser, report.total.tracked)} />
+          </section>
+        </div>
+
+        <section className="card p-4">
+          <h2 className="font-semibold">Activity per day</h2>
+          <p className="mb-2 text-xs text-muted">
+            Share of tracked time with keyboard or mouse activity. Days with no tracked time leave a gap.
+          </p>
+          <LineChart data={activity} ariaLabel={`Activity percentage per day from ${from} to ${to}. The same numbers are in the By day table below.`} />
+        </section>
+      </div>
+    </ChartTip>
   );
 }
 
@@ -143,6 +235,9 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
         </div>
       </section>
 
+      <Charts report={report} from={filter.from} to={filter.to} />
+
+      <h2 className="pt-2 text-lg font-semibold">Tables</h2>
       <section className="grid gap-6 md:grid-cols-2">
         <Table title="By client" rows={report.byClient} firstColumn="Client" />
         <Table title="By person" rows={report.byUser} firstColumn="Person" />
