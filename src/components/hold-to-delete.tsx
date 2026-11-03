@@ -13,7 +13,7 @@ export function HoldToDelete({
 }: {
   title: string;
   redirectTo?: string;
-  action: () => Promise<{ ok: boolean; error?: string }>;
+  action: () => Promise<{ ok: boolean; error?: string; data?: unknown }>;
 }) {
   const [pending, startTransition] = useTransition();
   const [holding, setHolding] = useState(false);
@@ -37,7 +37,13 @@ export function HoldToDelete({
         if (!res.ok) {
           setHolding(false);
           alert(res.error ?? "Could not delete.");
-        } else if (redirectTo) router.push(redirectTo);
+        } else {
+          const d = res.data;
+          if (d && typeof d === "object" && "hubstaffError" in d) {
+            alert(`Deleted in the CRM, but Hubstaff could not be updated: ${String(d.hubstaffError)}`);
+          }
+          if (redirectTo) router.push(redirectTo);
+        }
       });
     }, HOLD_MS);
   };

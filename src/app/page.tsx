@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
+import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
@@ -35,6 +36,8 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
   const mine = openSessions.find((s) => s.userId === me?.id);
   const mineTask = mine ? tasks.find((t) => t.task.id === mine.taskId)?.task : undefined;
   const visible = tasks.filter(({ task }) => {
+    if (show === "deleted") return task.deletedAt !== null;
+    if (task.deletedAt) return false;
     if (show === "all") return true;
     if (show === "done") return task.status === "done";
     return task.status !== "done" && (show === "everyone" || !me || task.assigneeId === me.id || !task.assigneeId);
@@ -65,6 +68,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
           ["everyone", "Everyone's open tasks"],
           ["done", "Done"],
           ["all", "All"],
+          ["deleted", "Deleted"],
         ].map(([key, label]) => (
           <Link
             key={key}
@@ -97,6 +101,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                     <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">
                       {task.title}
                     </Link>
+                    {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
                     {others.length > 0 && (
                       <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400">
                         ● {others.length} working now
@@ -121,6 +126,10 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
+                    {task.deletedAt ? (
+                      <RestoreTaskButton compact taskId={task.id} />
+                    ) : (
+                    <>
                     <TimerControls
                       compact
                       taskId={task.id}
@@ -129,6 +138,8 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                       otherTask={mine && mineTask && mine.taskId !== task.id ? { id: mineTask.id, title: mineTask.title } : null}
                     />
                     <DeleteTaskButton taskId={task.id} title={task.title} />
+                    </>
+                    )}
                     </div>
                   </td>
                 </tr>

@@ -217,12 +217,15 @@ export async function getClientReport(clientId: number, from: string, to: string
 
   const trackedSeconds = inRange.reduce((n, a) => n + a.trackedSeconds, 0);
   const activeSeconds = inRange.reduce((n, a) => n + a.activeSeconds, 0);
+  const live = tasks.filter((t) => !t.deletedAt);
   return {
     trackedSeconds,
     activityPercent: trackedSeconds ? Math.round((activeSeconds / trackedSeconds) * 100) : null,
-    taskCount: tasks.length,
-    openTaskCount: tasks.filter((t) => t.status !== "done").length,
+    taskCount: live.length,
+    openTaskCount: live.filter((t) => t.status !== "done").length,
+    // Deleted tasks only stay in the list while they still have time in the period.
     tasks: tasks
+      .filter((t) => !t.deletedAt || byTask.has(t.id))
       .map((t) => ({ task: t, ...(byTask.get(t.id) ?? { tracked: 0, active: 0 }) }))
       .sort((a, b) => b.tracked - a.tracked || b.task.id - a.task.id),
     byUser: [...byUser].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.tracked - a.tracked),

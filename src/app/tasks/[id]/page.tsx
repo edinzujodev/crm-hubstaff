@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
+import { RestoreTaskButton } from "@/components/restore-task-button";
 import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
@@ -93,16 +94,30 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           </p>
         </div>
         <div className="flex items-start gap-3">
-          <TaskStatusSelect taskId={task.id} status={task.status} />
-          <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />
-          <TimerControls
-            taskId={task.id}
-            done={task.status === "done"}
-            runningSince={mine?.taskId === id ? mine.startedAt.toISOString() : null}
-            otherTask={otherTask ?? null}
-          />
+          {task.deletedAt ? (
+            <RestoreTaskButton taskId={task.id} />
+          ) : (
+            <>
+              <TaskStatusSelect taskId={task.id} status={task.status} />
+              <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />
+              <TimerControls
+                taskId={task.id}
+                done={task.status === "done"}
+                runningSince={mine?.taskId === id ? mine.startedAt.toISOString() : null}
+                otherTask={otherTask ?? null}
+              />
+            </>
+          )}
         </div>
       </div>
+
+      {task.deletedAt && (
+        <p className="card border-red-500/40 p-3 text-sm">
+          This task was deleted on {fmtDateTime(task.deletedAt, tz)}. It is hidden from the task list and can&apos;t be
+          started. Its Hubstaff task is marked [SOFT-DELETED], and the hours below still count in reports. Restore it to
+          use it again.
+        </p>
+      )}
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="card p-4">

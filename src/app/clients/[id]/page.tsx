@@ -112,6 +112,7 @@ async function ClientDetail({
                     <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">
                       {task.title}
                     </Link>
+                    {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
                   </td>
                   <td className="px-3 py-2">
                     <span className="badge">{statusLabel[task.status]}</span>

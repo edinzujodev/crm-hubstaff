@@ -1,11 +1,13 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser, USER_COOKIE } from "@/lib/current-user";
+import { hubstaff } from "@/lib/hubstaff";
+import { markDeleted, unmarkDeleted } from "@/lib/soft-delete";
 import { ensureHubstaffTask, finishSession, startSession } from "@/lib/sessions";
 import { backfillHubstaff, lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
 
@@ -51,16 +53,46 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
   });
 }
 
-/** Removes the task and its CRM sessions. Hubstaff time stays in the mirror as unmatched; the Hubstaff task is not touched. */
-export async function deleteTask(taskId: number) {
+/**
+ * Soft delete: the task is hidden in the CRM and its Hubstaff title gets a
+ * "[SOFT-DELETED]" prefix. Nothing is removed, so Hubstaff time and reports
+ * keep working. A running session on it is ended.
+ */
+export async function deleteTask(taskId: number): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
+    const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
+    if (!task) throw new Error("Task not found");
+    if (task.deletedAt) return {};
+    const now = new Date();
     await db.transaction(async (tx) => {
-      await tx.update(schema.hubstaffActivities).set({ taskId: null }).where(eq(schema.hubstaffActivities.taskId, taskId));
-      await tx.delete(schema.workSessions).where(eq(schema.workSessions.taskId, taskId));
-      await tx.delete(schema.tasks).where(eq(schema.tasks.id, taskId));
+      await tx
+        .update(schema.workSessions)
+        .set({ endedAt: now, endReason: "finished" })
+        .where(and(eq(schema.workSessions.taskId, taskId), isNull(schema.workSessions.endedAt)));
+      await tx.update(schema.tasks).set({ deletedAt: now }).where(eq(schema.tasks.id, taskId));
     });
-    return undefined;
+    return renameInHubstaff(task.hubstaffTaskId, markDeleted);
   });
+}
+
+export async function restoreTask(taskId: number): Promise<Result<{ hubstaffError?: string }>> {
+  return run(async () => {
+    const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
+    if (!task) throw new Error("Task not found");
+    await db.update(schema.tasks).set({ deletedAt: null }).where(eq(schema.tasks.id, taskId));
+    return renameInHubstaff(task.hubstaffTaskId, unmarkDeleted);
+  });
+}
+
+/** The CRM change is already saved; a Hubstaff failure is reported, not thrown. */
+async function renameInHubstaff(hubstaffTaskId: number | null, rename: (title: string) => string) {
+  if (!hubstaffTaskId) return {};
+  try {
+    await hubstaff().renameTask(hubstaffTaskId, rename);
+    return {};
+  } catch (e) {
+    return { hubstaffError: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 const optionalText = z

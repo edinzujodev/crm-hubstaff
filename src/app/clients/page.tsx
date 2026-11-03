@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { NewClientForm } from "@/components/new-client-form";
 import { config } from "@/lib/config";
@@ -16,7 +16,7 @@ async function ClientList() {
     db
       .select({ clientId: schema.tasks.clientId, n: count() })
       .from(schema.tasks)
-      .where(eq(schema.tasks.status, "in_progress"))
+      .where(and(eq(schema.tasks.status, "in_progress"), isNull(schema.tasks.deletedAt)))
       .groupBy(schema.tasks.clientId),
     trackedByClient(new Date(Date.parse(monthStart))),
   ]);

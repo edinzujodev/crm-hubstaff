@@ -52,6 +52,7 @@ export async function startSession(taskId: number, userId: number) {
   ]);
   if (!task) throw new Error("Task not found");
   if (!user) throw new Error("User not found");
+  if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
   if (task.status === "done") throw new Error("Task is done; reopen it first.");
 
   const hubstaffTaskId = await ensureHubstaffTask(task, user);
