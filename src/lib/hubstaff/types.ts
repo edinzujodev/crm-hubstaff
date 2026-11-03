@@ -23,6 +23,8 @@ export interface HubstaffProvider {
   readonly mode: "mock" | "live";
   createTask(input: CreateTaskInput): Promise<{ id: number; projectId: number }>;
   assignTask(hubstaffTaskId: number, hubstaffUserId: number): Promise<void>;
+  /** Changes the task's title in Hubstaff and returns the title it had before. */
+  renameTask(hubstaffTaskId: number, rename: (current: string) => string): Promise<void>;
   /** Activities whose slot starts in [start, stop). */
   listActivities(start: Date, stop: Date): Promise<HubstaffActivityDto[]>;
 }

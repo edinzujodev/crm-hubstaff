@@ -30,6 +30,8 @@ export const mockProvider: HubstaffProvider = {
 
   async assignTask() {},
 
+  async renameTask() {},
+
   async listActivities(start, stop) {
     const now = Date.now();
     const sessions = await db

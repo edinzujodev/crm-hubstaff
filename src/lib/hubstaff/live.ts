@@ -103,6 +103,16 @@ export const liveProvider: HubstaffProvider = {
     });
   },
 
+  async renameTask(hubstaffTaskId, rename) {
+    const { task } = await api<{ task: { lock_version: number; summary: string } }>(`/tasks/${hubstaffTaskId}`);
+    const summary = rename(task.summary);
+    if (summary === task.summary) return;
+    await api(`/tasks/${hubstaffTaskId}`, {
+      method: "PUT",
+      body: JSON.stringify({ lock_version: task.lock_version, summary }),
+    });
+  },
+
   async listActivities(start, stop) {
     const out: HubstaffActivityDto[] = [];
     let pageStartId: number | undefined;

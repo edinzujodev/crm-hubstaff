@@ -77,6 +77,8 @@ export const tasks = pgTable(
     hubstaffTaskId: integer("hubstaff_task_id").unique(),
     hubstaffProjectId: integer("hubstaff_project_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Soft delete: the row, its sessions and its Hubstaff time are kept; lists hide it.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [index("tasks_assignee_idx").on(t.assigneeId)],
 );
