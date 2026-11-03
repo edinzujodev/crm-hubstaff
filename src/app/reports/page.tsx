@@ -95,6 +95,8 @@ Billable ${fmtDuration(r.billable)} · Activity ${pct(r.tracked, r.active)}`;
 
 function Charts({ report, from, to }: { report: Awaited<ReturnType<typeof getTimeReport>>; from: string; to: string }) {
   const days = dailySeries(report, from, to);
+  // Only worth a chart when there is a real team to compare (not just "No team").
+  const showTeams = report.byTeam.some((r) => r.href);
   const columns = days.map((d) => ({
     key: d.day,
     label: fmtDuration(d.tracked),
@@ -129,6 +131,13 @@ ${longDay(d.day)}`,
             <p className="mb-3 text-xs text-muted">Share of tracked time, largest first.</p>
             <BarList data={toBars(report.byClient, report.total.tracked)} />
           </section>
+          {showTeams && (
+            <section className="card p-4">
+              <h2 className="font-semibold">Time by team</h2>
+              <p className="mb-3 text-xs text-muted">Share of tracked time, largest first.</p>
+              <BarList data={toBars(report.byTeam, report.total.tracked)} />
+            </section>
+          )}
           <section className="card p-4">
             <h2 className="font-semibold">Time by person</h2>
             <p className="mb-3 text-xs text-muted">Share of tracked time, largest first.</p>
@@ -152,10 +161,11 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
   await connection();
   const tz = config.timeZone;
   const filter = parseReportParams(await searchParams, tz);
-  const [report, clients, users] = await Promise.all([
+  const [report, clients, users, teams] = await Promise.all([
     getTimeReport(filter),
     db.select({ id: schema.clients.id, name: schema.clients.name }).from(schema.clients).orderBy(asc(schema.clients.name)),
     db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).orderBy(asc(schema.users.name)),
+    db.select({ id: schema.teams.id, name: schema.teams.name }).from(schema.teams).orderBy(asc(schema.teams.name)),
   ]);
   const presets = rangePresets(tz);
   const query = reportQuery(filter);
@@ -178,6 +188,17 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          Team
+          <select name="team" defaultValue={filter.teamId ?? ""} className="input text-foreground">
+            <option value="">All teams</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
             ))}
           </select>
@@ -242,6 +263,11 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
         <Table title="By client" rows={report.byClient} firstColumn="Client" />
         <Table title="By person" rows={report.byUser} firstColumn="Person" />
       </section>
+      {report.byTeam.some((r) => r.href) && (
+        <section className="grid gap-6 md:grid-cols-2">
+          <Table title="By team" rows={report.byTeam} firstColumn="Team" />
+        </section>
+      )}
 
       {report.people.length > 1 && report.byClient.length > 0 && (
         <section className="space-y-2">
