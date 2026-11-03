@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   date,
@@ -18,6 +19,16 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   // The person's Hubstaff user id; activities are matched to CRM users through it.
   hubstaffUserId: integer("hubstaff_user_id").unique(),
+  // A person is in at most one team, so team totals never double count.
+  teamId: integer("team_id").references((): AnyPgColumn => teams.id),
+});
+
+export const teams = pgTable("teams", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  // The team leader; also a member of the team.
+  leaderId: integer("leader_id").references((): AnyPgColumn => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const clients = pgTable("clients", {
@@ -140,6 +151,7 @@ export const appState = pgTable("app_state", {
 });
 
 export type User = typeof users.$inferSelect;
+export type Team = typeof teams.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type Task = typeof tasks.$inferSelect;

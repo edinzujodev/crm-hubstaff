@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { refresh } from "next/cache";
 import { z } from "zod";
@@ -270,6 +270,72 @@ const member = z.object({
 export async function addMember(_prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
     await db.insert(schema.users).values(member.parse(Object.fromEntries(formData)));
+    return undefined;
+  });
+}
+
+const newTeam = z.object({
+  name: z.string().trim().min(1, "Team name is required"),
+  leaderId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+});
+
+/** The leader is also made a member of the team (moving them out of any other team). */
+async function assignLeader(tx: Pick<typeof db, "update">, teamId: number, leaderId: number | null) {
+  await tx.update(schema.teams).set({ leaderId }).where(eq(schema.teams.id, teamId));
+  if (leaderId) {
+    await tx
+      .update(schema.teams)
+      .set({ leaderId: null })
+      .where(and(eq(schema.teams.leaderId, leaderId), ne(schema.teams.id, teamId)));
+    await tx.update(schema.users).set({ teamId }).where(eq(schema.users.id, leaderId));
+  }
+}
+
+export async function createTeam(_prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    const input = newTeam.parse(Object.fromEntries(formData));
+    try {
+      await db.transaction(async (tx) => {
+        const [team] = await tx.insert(schema.teams).values({ name: input.name }).returning({ id: schema.teams.id });
+        if (input.leaderId) await assignLeader(tx, team.id, input.leaderId);
+      });
+    } catch (e) {
+      if (String(e instanceof Error ? (e.cause ?? e) : e).includes("teams_name_unique")) {
+        throw new Error(`A team called "${input.name}" already exists.`);
+      }
+      throw e;
+    }
+    return undefined;
+  });
+}
+
+export async function setTeamLeader(teamId: number, leaderId: number | null) {
+  return run(async () => {
+    await db.transaction((tx) => assignLeader(tx, teamId, leaderId));
+    return undefined;
+  });
+}
+
+/** Moves a person into a team, or out of any team with null. A leader who moves out stops leading. */
+export async function setUserTeam(userId: number, teamId: number | null) {
+  return run(async () => {
+    await db.transaction(async (tx) => {
+      await tx.update(schema.users).set({ teamId }).where(eq(schema.users.id, userId));
+      const leads = and(eq(schema.teams.leaderId, userId), teamId ? ne(schema.teams.id, teamId) : undefined);
+      await tx.update(schema.teams).set({ leaderId: null }).where(leads);
+    });
+    return undefined;
+  });
+}
+
+/** Deletes the team itself; its members stay and become "no team". */
+export async function deleteTeam(teamId: number) {
+  return run(async () => {
+    await db.transaction(async (tx) => {
+      await tx.update(schema.users).set({ teamId: null }).where(eq(schema.users.teamId, teamId));
+      await tx.update(schema.teams).set({ leaderId: null }).where(eq(schema.teams.id, teamId));
+      await tx.delete(schema.teams).where(eq(schema.teams.id, teamId));
+    });
     return undefined;
   });
 }

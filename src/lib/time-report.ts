@@ -4,6 +4,7 @@ import { localDay } from "@/lib/format";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const NO_CLIENT = "Not on a CRM client";
+export const NO_TEAM = "No team";
 
 export type TimeReportFilter = {
   from: string; // YYYY-MM-DD, inclusive, in `timeZone`
@@ -12,6 +13,8 @@ export type TimeReportFilter = {
   clientId?: number | null;
   /** CRM user id. */
   userId?: number | null;
+  /** CRM team id: only people in this team. */
+  teamId?: number | null;
 };
 
 export type Totals = { tracked: number; active: number; billable: number };
@@ -23,6 +26,9 @@ export type Line = Totals & {
   userKey: string;
   userName: string;
   userHref?: string;
+  teamKey: string;
+  teamName: string;
+  teamHref?: string;
   clientKey: string;
   clientName: string;
   clientHref?: string;
@@ -46,7 +52,7 @@ export type TimeReport = Awaited<ReturnType<typeof getTimeReport>>;
  * the totals match Hubstaff.
  */
 export async function getTimeReport(f: TimeReportFilter) {
-  const [activities, users, taskRows] = await Promise.all([
+  const [activities, users, taskRows, teams] = await Promise.all([
     db
       .select()
       .from(schema.hubstaffActivities)
@@ -62,7 +68,9 @@ export async function getTimeReport(f: TimeReportFilter) {
       .select({ task: schema.tasks, clientName: schema.clients.name })
       .from(schema.tasks)
       .leftJoin(schema.clients, eq(schema.tasks.clientId, schema.clients.id)),
+    db.select().from(schema.teams),
   ]);
+  const teamById = new Map(teams.map((t) => [t.id, t]));
 
   const userByHubstaffId = new Map(users.filter((u) => u.hubstaffUserId).map((u) => [u.hubstaffUserId!, u]));
   const taskById = new Map(taskRows.map((r) => [r.task.id, r]));
@@ -75,6 +83,8 @@ export async function getTimeReport(f: TimeReportFilter) {
 
     const user = userByHubstaffId.get(a.hubstaffUserId);
     if (f.userId && user?.id !== f.userId) continue;
+    if (f.teamId && user?.teamId !== f.teamId) continue;
+    const team = user?.teamId ? teamById.get(user.teamId) : undefined;
 
     const taskRow = a.taskId ? taskById.get(a.taskId) : undefined;
     const clientId = taskRow?.task.clientId ?? null;
@@ -84,6 +94,9 @@ export async function getTimeReport(f: TimeReportFilter) {
       userKey: user ? `u${user.id}` : `h${a.hubstaffUserId}`,
       userName: user?.name ?? `Hubstaff user ${a.hubstaffUserId}`,
       userHref: user ? `/reports?user=${user.id}` : undefined,
+      teamKey: team ? `team${team.id}` : "noteam",
+      teamName: team?.name ?? NO_TEAM,
+      teamHref: team ? `/reports?team=${team.id}` : undefined,
       clientKey: clientId ? `c${clientId}` : "none",
       clientName: clientId ? (taskRow?.clientName ?? `Client ${clientId}`) : NO_CLIENT,
       clientHref: clientId ? `/clients/${clientId}` : undefined,
@@ -119,6 +132,7 @@ export async function getTimeReport(f: TimeReportFilter) {
   const byTracked = (a: Row, b: Row) => b.tracked - a.tracked;
 
   const byClient = group((l) => ({ key: l.clientKey, label: l.clientName, href: l.clientHref })).sort(byTracked);
+  const byTeam = group((l) => ({ key: l.teamKey, label: l.teamName, href: l.teamHref })).sort(byTracked);
   const byUser = group((l) => ({ key: l.userKey, label: l.userName, href: l.userHref })).sort(byTracked);
   const byTask = group((l) => ({ key: l.taskKey, label: l.taskTitle, href: l.taskHref })).sort(byTracked);
   const byDay = group((l) => ({ key: l.day, label: l.day })).sort((a, b) => b.key.localeCompare(a.key));
@@ -143,12 +157,14 @@ export async function getTimeReport(f: TimeReportFilter) {
     activityPercent: total.tracked ? Math.round((total.active / total.tracked) * 100) : null,
     daysWorked: byDay.length,
     byClient,
+    byTeam,
     byUser,
     byTask,
     byDay,
     people,
     matrix,
     filterUserName: filterUser?.name ?? null,
+    filterTeamName: f.teamId ? (teamById.get(f.teamId)?.name ?? null) : null,
   };
 }
 
@@ -161,10 +177,11 @@ function cell(v: string | number) {
 
 export function reportToCsv(report: TimeReport) {
   const hours = (s: number) => (s / 3600).toFixed(2);
-  const head = ["Date", "Person", "Client", "Task", "Tracked hours", "Billable hours", "Activity %"];
+  const head = ["Date", "Person", "Team", "Client", "Task", "Tracked hours", "Billable hours", "Activity %"];
   const rows = report.lines.map((l) => [
     l.day,
     l.userName,
+    l.teamName,
     l.clientName,
     l.taskTitle,
     hours(l.tracked),
