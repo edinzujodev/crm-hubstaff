@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { DeleteTaskButton } from "@/components/delete-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
@@ -119,6 +120,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                     {tracked.get(task.id) ? fmtDuration(tracked.get(task.id)!) : "—"}
                   </td>
                   <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
                     <TimerControls
                       compact
                       taskId={task.id}
@@ -126,6 +128,8 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                       runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
                       otherTask={mine && mineTask && mine.taskId !== task.id ? { id: mineTask.id, title: mineTask.title } : null}
                     />
+                    <DeleteTaskButton taskId={task.id} title={task.title} />
+                    </div>
                   </td>
                 </tr>
               );
