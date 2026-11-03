@@ -259,30 +259,3 @@ export async function trackedByTask() {
     .groupBy(schema.hubstaffActivities.taskId);
   return new Map(rows.map((r) => [r.taskId!, r.tracked]));
 }
-
-/** Hubstaff time from the last 7 days that did not land on any CRM task. */
-export async function unmatchedTime() {
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const rows = await db
-    .select()
-    .from(schema.hubstaffActivities)
-    .where(and(isNull(schema.hubstaffActivities.taskId), gt(schema.hubstaffActivities.startsAt, since)))
-    .orderBy(asc(schema.hubstaffActivities.startsAt));
-  const users = await db.select().from(schema.users);
-  const userByHubstaffId = new Map(users.filter((u) => u.hubstaffUserId).map((u) => [u.hubstaffUserId!, u.name]));
-  const groups = new Map<string, { userName: string; hubstaffTaskId: number | null; tracked: number; last: Date }>();
-  for (const a of rows) {
-    const key = `${a.hubstaffUserId}:${a.hubstaffTaskId ?? "none"}`;
-    const g = groups.get(key) ?? {
-      userName: userByHubstaffId.get(a.hubstaffUserId) ?? `Hubstaff user ${a.hubstaffUserId}`,
-      hubstaffTaskId: a.hubstaffTaskId,
-      tracked: 0,
-      last: a.startsAt,
-    };
-    g.tracked += a.trackedSeconds;
-    g.last = a.startsAt;
-    groups.set(key, g);
-  }
-  return [...groups.values()].sort((a, b) => b.tracked - a.tracked);
-}
-

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
@@ -10,7 +9,7 @@ import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime, fmtDuration } from "@/lib/format";
-import { isSessionStale, trackedByTask, unmatchedTime } from "@/lib/report";
+import { isSessionStale, trackedByTask } from "@/lib/report";
 
 const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
 
@@ -159,38 +158,11 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
   );
 }
 
-async function UnmatchedTime() {
-  await connection();
-  const groups = await unmatchedTime();
-  if (!groups.length) return null;
-  const total = groups.reduce((n, g) => n + g.tracked, 0);
-  return (
-    <details className="card border-amber-400/60 p-3 text-sm">
-      <summary className="cursor-pointer">
-        <span className="font-medium text-amber-700 dark:text-amber-400">{fmtDuration(total)}</span> tracked in
-        Hubstaff in the last 7 days did not land on a CRM task.
-      </summary>
-      <ul className="mt-2 space-y-1 text-muted">
-        {groups.map((g, i) => (
-          <li key={i}>
-            {g.userName}: {fmtDuration(g.tracked)}{" "}
-            {g.hubstaffTaskId ? `on Hubstaff task #${g.hubstaffTaskId} (not created by the CRM)` : "with no task selected"}
-            , last {fmtDateTime(g.last, config.timeZone)}
-          </li>
-        ))}
-      </ul>
-    </details>
-  );
-}
-
 export default function Home({ searchParams }: PageProps<"/">) {
   const filter = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Tasks</h1>
-      <Suspense>
-        <UnmatchedTime />
-      </Suspense>
       <Suspense fallback={<p className="text-muted">Loading tasks…</p>}>
         <TaskList filter={filter} />
       </Suspense>

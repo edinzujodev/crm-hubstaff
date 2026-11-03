@@ -40,7 +40,7 @@ So the flow is:
 | Session open much longer than Hubstaff tracked | Marked "Hubstaff tracked Xh of Yh open". |
 | Session with no Hubstaff time at all | Marked "was the timer running on this task?" (only after the ~20 min Hubstaff delay has passed). |
 | Overlapping sessions for one person on two tasks (e.g. two tabs) | Marked on both tasks. |
-| Hubstaff time on a task the CRM doesn't know, or with no task | Shown on the task list as "did not land on a CRM task" (last 7 days), so a missing link is visible. |
+| Hubstaff time on a task the CRM doesn't know, or with no task | Not on the task list. It shows in Reports under "Not on a CRM client" so totals still match Hubstaff. |
 | Time edited or deleted in Hubstaff later | Each sync re-reads the last 3 days (and back to the oldest open session) and replaces what it had. |
 
 ## Stack
