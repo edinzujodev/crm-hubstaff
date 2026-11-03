@@ -10,12 +10,15 @@ export async function openSessionFor(userId: number) {
   });
 }
 
-/** Creates the Hubstaff task the first time a CRM task is started. */
-async function ensureHubstaffTask(task: schema.Task, user: schema.User) {
+/**
+ * Creates the Hubstaff task if the CRM task doesn't have one yet (when it is
+ * created, or on Start if that failed). `user` is who the task is assigned to.
+ */
+export async function ensureHubstaffTask(task: schema.Task, user: schema.User | null) {
   const provider = hubstaff();
   if (task.hubstaffTaskId) {
     // Hubstaff only lets the assignee track a task, so follow whoever starts it.
-    if (task.assigneeId !== user.id && user.hubstaffUserId) {
+    if (user && task.assigneeId !== user.id && user.hubstaffUserId) {
       await provider.assignTask(task.hubstaffTaskId, user.hubstaffUserId);
       await db.update(schema.tasks).set({ assigneeId: user.id }).where(eq(schema.tasks.id, task.id));
     }
@@ -33,11 +36,11 @@ async function ensureHubstaffTask(task: schema.Task, user: schema.User) {
     crmTaskId: task.id,
     projectId,
     summary: client ? `${client.name}: ${task.title} [CRM #${task.id}]` : `${task.title} [CRM #${task.id}]`,
-    assigneeHubstaffUserId: user.hubstaffUserId,
+    assigneeHubstaffUserId: user?.hubstaffUserId ?? null,
   });
   await db
     .update(schema.tasks)
-    .set({ hubstaffTaskId: created.id, hubstaffProjectId: created.projectId, assigneeId: user.id })
+    .set({ hubstaffTaskId: created.id, hubstaffProjectId: created.projectId, ...(user ? { assigneeId: user.id } : {}) })
     .where(eq(schema.tasks.id, task.id));
   return created.id;
 }

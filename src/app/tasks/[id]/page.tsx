@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { DeleteTaskButton } from "@/components/delete-task-button";
 import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
@@ -93,6 +94,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
         <div className="flex items-start gap-3">
           <TaskStatusSelect taskId={task.id} status={task.status} />
+          <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />
           <TimerControls
             taskId={task.id}
             done={task.status === "done"}

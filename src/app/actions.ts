@@ -6,7 +6,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser, USER_COOKIE } from "@/lib/current-user";
-import { finishSession, startSession } from "@/lib/sessions";
+import { ensureHubstaffTask, finishSession, startSession } from "@/lib/sessions";
 import { lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
 
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -34,10 +34,31 @@ const newTask = z.object({
   dueDate: z.string().optional().transform((v) => v || undefined),
 });
 
-export async function createTask(_prev: unknown, formData: FormData): Promise<Result> {
+/** Saves the task, then creates it in Hubstaff. If Hubstaff fails the task is kept and Start retries. */
+export async function createTask(_prev: unknown, formData: FormData): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
     const input = newTask.parse(Object.fromEntries(formData));
-    await db.insert(schema.tasks).values(input);
+    const [task] = await db.insert(schema.tasks).values(input).returning();
+    const assignee = task.assigneeId
+      ? await db.query.users.findFirst({ where: eq(schema.users.id, task.assigneeId) })
+      : null;
+    try {
+      await ensureHubstaffTask(task, assignee ?? null);
+      return {};
+    } catch (e) {
+      return { hubstaffError: e instanceof Error ? e.message : String(e) };
+    }
+  });
+}
+
+/** Removes the task and its CRM sessions. Hubstaff time stays in the mirror as unmatched; the Hubstaff task is not touched. */
+export async function deleteTask(taskId: number) {
+  return run(async () => {
+    await db.transaction(async (tx) => {
+      await tx.update(schema.hubstaffActivities).set({ taskId: null }).where(eq(schema.hubstaffActivities.taskId, taskId));
+      await tx.delete(schema.workSessions).where(eq(schema.workSessions.taskId, taskId));
+      await tx.delete(schema.tasks).where(eq(schema.tasks.id, taskId));
+    });
     return undefined;
   });
 }

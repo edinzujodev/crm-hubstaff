@@ -50,6 +50,11 @@ export function NewTaskForm({ clients, users }: { clients: Option[]; users: Opti
         {pending ? "Adding…" : "Add task"}
       </button>
       {state && !state.ok && <p className="w-full text-sm text-red-600">{state.error}</p>}
+      {state?.ok && state.data.hubstaffError && (
+        <p className="w-full text-sm text-amber-700 dark:text-amber-400">
+          Task saved, but it was not created in Hubstaff yet ({state.data.hubstaffError}). Start will try again.
+        </p>
+      )}
     </form>
   );
 }
