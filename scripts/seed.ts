@@ -16,7 +16,7 @@ async function main() {
     process.exit(1);
   }
   await db.execute(
-    sql`truncate hubstaff_activities, work_sessions, tasks, clients, users, app_state restart identity cascade`,
+    sql`truncate hubstaff_activities, work_sessions, tasks, leads, clients, users, app_state restart identity cascade`,
   );
 
   // Demo people. In live mode set hubstaff_user_id to their real Hubstaff ids on the Team page.

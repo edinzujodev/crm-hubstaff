@@ -86,6 +86,105 @@ export async function createClient(_prev: unknown, formData: FormData): Promise<
   });
 }
 
+const leadFields = {
+  name: z.string().trim().min(1, "Name is required"),
+  contactName: optionalText,
+  email: z.email().optional().or(z.literal("").transform(() => undefined)),
+  phone: optionalText,
+  source: optionalText,
+  notes: optionalText,
+  ownerId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+  expectedMonthlyValue: z.coerce.number().int().min(0).optional().or(z.literal("").transform(() => undefined)),
+};
+const newLead = z.object(leadFields);
+const editLead = z.object({
+  ...leadFields,
+  status: z.enum(["new", "contacted", "meeting", "proposal", "lost"]),
+  lostReason: optionalText,
+});
+
+export async function createLead(_prev: unknown, formData: FormData): Promise<Result<{ id: number }>> {
+  return run(async () => {
+    const input = newLead.parse(Object.fromEntries(formData));
+    const [lead] = await db.insert(schema.leads).values(input).returning({ id: schema.leads.id });
+    return lead;
+  });
+}
+
+/** Saves the lead's details. Optional fields that were cleared are set back to empty. */
+export async function updateLead(leadId: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
+    if (!lead) throw new Error("Lead not found");
+    const input = editLead.parse(Object.fromEntries(formData));
+    await db
+      .update(schema.leads)
+      .set({
+        name: input.name,
+        contactName: input.contactName ?? null,
+        email: input.email ?? null,
+        phone: input.phone ?? null,
+        source: input.source ?? null,
+        notes: input.notes ?? null,
+        ownerId: input.ownerId ?? null,
+        expectedMonthlyValue: input.expectedMonthlyValue ?? null,
+        // A converted lead stays "won".
+        ...(lead.clientId ? {} : { status: input.status, lostReason: input.status === "lost" ? (input.lostReason ?? null) : null }),
+      })
+      .where(eq(schema.leads.id, leadId));
+    return undefined;
+  });
+}
+
+export async function setLeadStatus(leadId: number, status: "new" | "contacted" | "meeting" | "proposal" | "lost") {
+  return run(async () => {
+    const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
+    if (!lead) throw new Error("Lead not found");
+    if (lead.clientId) throw new Error("This lead is already a client.");
+    await db
+      .update(schema.leads)
+      .set({ status, ...(status === "lost" ? {} : { lostReason: null }) })
+      .where(eq(schema.leads.id, leadId));
+    return undefined;
+  });
+}
+
+/** Turns a lead into a client (copying its details) and marks the lead won. */
+export async function convertLead(leadId: number): Promise<Result<{ clientId: number }>> {
+  return run(() =>
+    db.transaction(async (tx) => {
+      const lead = await tx.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
+      if (!lead) throw new Error("Lead not found");
+      if (lead.clientId) return { clientId: lead.clientId };
+      const [client] = await tx
+        .insert(schema.clients)
+        .values({
+          name: lead.name,
+          contactName: lead.contactName,
+          email: lead.email,
+          phone: lead.phone,
+          notes: lead.notes,
+        })
+        .returning({ id: schema.clients.id });
+      await tx
+        .update(schema.leads)
+        .set({ status: "won", clientId: client.id, convertedAt: new Date(), lostReason: null })
+        .where(eq(schema.leads.id, leadId));
+      return { clientId: client.id };
+    }),
+  );
+}
+
+/** Deletes a lead that was never converted. Converted leads are kept as history. */
+export async function deleteLead(leadId: number) {
+  return run(async () => {
+    const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
+    if (lead?.clientId) throw new Error("This lead became a client, so it is kept as history.");
+    await db.delete(schema.leads).where(eq(schema.leads.id, leadId));
+    return undefined;
+  });
+}
+
 export async function startTask(taskId: number) {
   return run(async () => {
     const user = await requireCurrentUser();

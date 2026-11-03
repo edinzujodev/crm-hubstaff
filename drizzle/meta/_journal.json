@@ -15,6 +15,13 @@
       "when": 1793636659995,
       "tag": "0001_clean_boomer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793708346798,
+      "tag": "0002_material_black_knight",
+      "breakpoints": true
     }
   ]
 }

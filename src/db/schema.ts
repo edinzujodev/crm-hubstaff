@@ -34,6 +34,33 @@ export const clients = pgTable("clients", {
   hubstaffProjectId: integer("hubstaff_project_id"),
 });
 
+export const leadStatus = pgEnum("lead_status", ["new", "contacted", "meeting", "proposal", "won", "lost"]);
+
+// A prospect. Converting a lead creates a client and marks the lead "won".
+export const leads = pgTable(
+  "leads",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    contactName: text("contact_name"),
+    email: text("email"),
+    phone: text("phone"),
+    // Where the lead came from (referral, website, ...).
+    source: text("source"),
+    status: leadStatus("status").notNull().default("new"),
+    // Estimated monthly fee in whole currency units, for the pipeline total.
+    expectedMonthlyValue: integer("expected_monthly_value"),
+    notes: text("notes"),
+    lostReason: text("lost_reason"),
+    ownerId: integer("owner_id").references(() => users.id),
+    // Set when the lead is converted.
+    clientId: integer("client_id").references(() => clients.id),
+    convertedAt: timestamp("converted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("leads_status_idx").on(t.status)],
+);
+
 export const taskStatus = pgEnum("task_status", ["todo", "in_progress", "done"]);
 
 export const tasks = pgTable(
@@ -112,6 +139,7 @@ export const appState = pgTable("app_state", {
 
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
+export type Lead = typeof leads.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type WorkSession = typeof workSessions.$inferSelect;
 export type HubstaffActivity = typeof hubstaffActivities.$inferSelect;
