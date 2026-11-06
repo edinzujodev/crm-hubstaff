@@ -117,14 +117,16 @@ async function CriticalTasks() {
   critical.sort(byHours);
   approaching.sort(byHours);
   const showTeam = auth.role === "super_admin";
-  const levels = auth.ledTeam ?? DEFAULT_LEVELS;
+  const ownTeam = auth.role === "leader" ? auth.ledTeam : null;
+  const levels = ownTeam ?? DEFAULT_LEVELS;
 
   return (
     <div className="space-y-6">
       <p className="max-w-2xl text-sm text-muted">
-        {auth.ledTeam ? `${auth.ledTeam.name}: ` : ""}
-        Critical means due in under {levels.criticalHours}h or overdue. Approaching means under {levels.approachingHours}h.
-        {auth.ledTeam ? " You can change these on the Team page." : " Each team sets its own on the Team page."}
+        {ownTeam ? `${ownTeam.name}: ` : ""}
+        {ownTeam
+          ? `Critical means due in under ${levels.criticalHours}h or overdue. Approaching means under ${levels.approachingHours}h. You can change these on the Team page.`
+          : "Critical means overdue or due within the team's critical hours (24h unless the team changed it). Each team sets its own levels on the Team page."}
       </p>
       <section className="space-y-2">
         <h2 className="flex items-center gap-2 font-semibold">

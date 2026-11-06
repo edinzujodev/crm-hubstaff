@@ -118,6 +118,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
               <TimerControls
                 taskId={task.id}
                 title={task.title}
+                lockedTo={task.assigneeId && task.assigneeId !== me?.id ? (row.assigneeName ?? "someone else") : null}
                 done={task.status === "done"}
                 runningSince={mine?.taskId === id ? mine.startedAt.toISOString() : null}
                 otherTask={otherTask ?? null}

@@ -9,6 +9,8 @@ import { notifyFinished } from "@/lib/toast";
 type Props = {
   taskId: number;
   title: string;
+  /** Name of the person the task is assigned to, when that isn't you. Only they can start it. */
+  lockedTo?: string | null;
   done: boolean;
   /** Start time of the current user's open session on this task, if any. */
   runningSince: string | null;
@@ -24,7 +26,7 @@ function elapsed(since: string) {
   return `${h}:${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export function TimerControls({ taskId, title, done, runningSince, otherTask, compact }: Props) {
+export function TimerControls({ taskId, title, lockedTo, done, runningSince, otherTask, compact }: Props) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ tone: "ok" | "warn" | "error"; text: string } | null>(null);
   const [nextId, setNextId] = useState<number | null>(null);
@@ -101,9 +103,15 @@ export function TimerControls({ taskId, title, done, runningSince, otherTask, co
         ) : (
           <button
             onClick={onStart}
-            disabled={pending || done}
+            disabled={pending || done || !!lockedTo}
             className="btn btn-primary"
-            title={otherTask ? `Stops your session on "${otherTask.title}"` : undefined}
+            title={
+              lockedTo
+                ? `Assigned to ${lockedTo}. Only they can start it. A team leader can reassign it.`
+                : otherTask
+                  ? `Stops your session on "${otherTask.title}"`
+                  : undefined
+            }
           >
             {otherTask ? "Switch here" : "Start"}
           </button>

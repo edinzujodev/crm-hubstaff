@@ -5,12 +5,12 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { switchUser } from "@/app/actions";
+import { signOut, switchUser } from "@/app/actions";
 import { Toaster } from "@/components/toaster";
 import { SyncButton } from "@/components/sync-button";
 import { hubstaffMode, config } from "@/lib/config";
-import { devSwitcherEnabled, getAuth } from "@/lib/auth";
-import { getCurrentUser } from "@/lib/current-user";
+import { getAuth } from "@/lib/auth";
+import { authMode } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
 import { lastSyncAt } from "@/lib/sync";
 import "./globals.css";
@@ -23,33 +23,48 @@ export const metadata: Metadata = {
   description: "Tasks with hours pulled automatically from Hubstaff",
 };
 
-async function UserSwitcher() {
-  if (!devSwitcherEnabled()) return null;
-  const [current, users] = await Promise.all([
-    getCurrentUser(),
-    db.select().from(schema.users).orderBy(asc(schema.users.name)),
-  ]);
-  if (!users.length) return null;
+async function Account() {
+  const auth = await getAuth();
+  if (!auth) return null;
+  const quickSwitch = authMode() === "mock";
+  const users = quickSwitch ? await db.select().from(schema.users).orderBy(asc(schema.users.name)) : [];
+  const roleLabel = { super_admin: "Super admin", leader: "Team leader", worker: "Member" }[auth.role];
   return (
-    <form action={switchUser} className="flex items-center gap-1 text-sm">
-      <label htmlFor="userId" className="text-muted">
-        You are
-      </label>
-      <select id="userId" name="userId" defaultValue={current?.id} className="input py-1">
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.name}
-          </option>
-        ))}
-      </select>
-      <button className="btn py-1">Switch</button>
-    </form>
+    <div className="flex flex-wrap items-center gap-3 text-sm">
+      {quickSwitch && (
+        <form action={switchUser} className="flex items-center gap-1" title="Development only: switch person without signing in again">
+          <label htmlFor="userId" className="text-muted">
+            Switch to
+          </label>
+          <select id="userId" name="userId" defaultValue={auth.user.id} className="input py-1">
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+          <button className="btn py-1">Go</button>
+        </form>
+      )}
+      <span>
+        <span className="font-medium">{auth.user.name}</span> <span className="badge ml-1">{roleLabel}</span>
+      </span>
+      <form action={signOut}>
+        <button className="btn py-1">Sign out</button>
+      </form>
+    </div>
   );
+}
+
+async function SyncControls() {
+  if (!(await getAuth())) return null;
+  return <SyncButton />;
 }
 
 async function NavLinks() {
   const auth = await getAuth();
-  const role = auth?.role;
+  if (!auth) return null;
+  const role = auth.role;
   const links: [string, string, boolean][] = [
     ["/", "Tasks", true],
     ["/critical", "Critical", role === "super_admin" || role === "leader"],
@@ -105,9 +120,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Suspense>
                 <SyncStatus />
               </Suspense>
-              <SyncButton />
               <Suspense>
-                <UserSwitcher />
+                <SyncControls />
+              </Suspense>
+              <Suspense>
+                <Account />
               </Suspense>
             </div>
           </div>

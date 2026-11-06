@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, inArray, isNotNull, lt, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNotNull, lt, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { config } from "@/lib/config";
 
@@ -169,10 +169,10 @@ export type ClientReport = Awaited<ReturnType<typeof getClientReport>>;
  * Hubstaff time on a client's CRM tasks between two calendar days (inclusive,
  * `YYYY-MM-DD` in `timeZone`), combined with the client's task list.
  */
-export async function getClientReport(clientId: number, from: string, to: string, timeZone: string) {
+export async function getClientReport(clientId: number, from: string, to: string, timeZone: string, scope?: SQL) {
   const DAY_MS = 24 * 60 * 60 * 1000;
   const [tasks, users] = await Promise.all([
-    db.select().from(schema.tasks).where(eq(schema.tasks.clientId, clientId)),
+    db.select().from(schema.tasks).where(and(eq(schema.tasks.clientId, clientId), scope)),
     db.select().from(schema.users),
   ]);
   const taskIds = tasks.map((t) => t.id);
@@ -234,7 +234,7 @@ export async function getClientReport(clientId: number, from: string, to: string
 }
 
 /** Total tracked seconds per client since an instant, for the client list. */
-export async function trackedByClient(since: Date) {
+export async function trackedByClient(since: Date, scope?: SQL) {
   const rows = await db
     .select({
       clientId: schema.tasks.clientId,
@@ -242,7 +242,7 @@ export async function trackedByClient(since: Date) {
     })
     .from(schema.hubstaffActivities)
     .innerJoin(schema.tasks, eq(schema.hubstaffActivities.taskId, schema.tasks.id))
-    .where(gte(schema.hubstaffActivities.startsAt, since))
+    .where(and(gte(schema.hubstaffActivities.startsAt, since), scope))
     .groupBy(schema.tasks.clientId);
   return new Map(rows.filter((r) => r.clientId !== null).map((r) => [r.clientId!, r.tracked]));
 }

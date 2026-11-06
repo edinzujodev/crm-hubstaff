@@ -27,6 +27,20 @@ export const users = pgTable("users", {
   role: userRole("role").notNull().default("member"),
 });
 
+// Sign-in sessions. The cookie holds a random token; only its SHA-256 hash is stored here.
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references((): AnyPgColumn => users.id),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("auth_sessions_user_idx").on(t.userId)],
+);
+
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),

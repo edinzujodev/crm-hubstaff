@@ -7,20 +7,21 @@ import { NewClientForm } from "@/components/new-client-form";
 import { config } from "@/lib/config";
 import { fmtDuration, localDay } from "@/lib/format";
 import { trackedByClient } from "@/lib/report";
-import { pageGuard } from "@/lib/auth";
+import { pageGuard, taskScope } from "@/lib/auth";
 
 async function ClientList() {
   await connection();
-  await pageGuard("super_admin", "leader");
+  const auth = await pageGuard("super_admin", "leader");
+  const scope = taskScope(auth);
   const monthStart = `${localDay(new Date(), config.timeZone).slice(0, 7)}-01`;
   const [clients, taskCounts, tracked] = await Promise.all([
     db.select().from(schema.clients).orderBy(asc(schema.clients.name)),
     db
       .select({ clientId: schema.tasks.clientId, n: count() })
       .from(schema.tasks)
-      .where(and(eq(schema.tasks.status, "in_progress"), isNull(schema.tasks.deletedAt)))
+      .where(and(eq(schema.tasks.status, "in_progress"), isNull(schema.tasks.deletedAt), scope))
       .groupBy(schema.tasks.clientId),
-    trackedByClient(new Date(Date.parse(monthStart))),
+    trackedByClient(new Date(Date.parse(monthStart)), scope),
   ]);
   const inProgress = new Map(taskCounts.map((r) => [r.clientId, r.n]));
 

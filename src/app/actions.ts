@@ -1,12 +1,13 @@
 "use server";
 
 import { and, eq, isNull, ne } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { requireCurrentUser, USER_COOKIE } from "@/lib/current-user";
-import { canManageTeam, devSwitcherEnabled, getAuth, requireAuth, requireRole, requireTask } from "@/lib/auth";
+import { requireCurrentUser } from "@/lib/current-user";
+import { authMode, createSession, destroySession, findApprovedUser } from "@/lib/session";
+import { canManageTeam, getAuth, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
 import { defaultLeadDays, hubstaffSummary, spawnNextRepeat, subtractDays } from "@/lib/recurring";
 import { localDay } from "@/lib/format";
@@ -28,12 +29,31 @@ async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
   }
 }
 
+/**
+ * Stand-in for Google sign-in, for development only: signs in as an approved email without a password.
+ * It is off as soon as GOOGLE_CLIENT_ID is set, and never works in production.
+ */
+export async function mockSignIn(_prev: unknown, formData: FormData): Promise<{ error: string } | null> {
+  if (authMode() !== "mock") return { error: "Simulated sign-in is turned off." };
+  const user = await findApprovedUser(String(formData.get("email") ?? ""));
+  if (!user) return { error: "That account isn't on the approved list. Ask a super admin to add your email on the Team page." };
+  await createSession(user.id);
+  redirect("/");
+}
+
+/** Development quick-switch between people (same rules as mockSignIn). */
 export async function switchUser(formData: FormData) {
-  // Only for local development; real sign-in replaces it.
-  if (!devSwitcherEnabled()) return;
+  if (authMode() !== "mock") return;
   const id = z.coerce.number().int().positive().parse(formData.get("userId"));
-  (await cookies()).set(USER_COOKIE, String(id), { httpOnly: true, sameSite: "lax", path: "/" });
+  const user = await db.query.users.findFirst({ where: eq(schema.users.id, id) });
+  if (!user) return;
+  await createSession(user.id);
   refresh();
+}
+
+export async function signOut() {
+  await destroySession();
+  redirect("/login");
 }
 
 const newTask = z.object({

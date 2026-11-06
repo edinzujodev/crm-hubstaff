@@ -42,7 +42,8 @@ export async function requireRole(...roles: Role[]): Promise<Auth> {
 /** For pages: sends people without one of the roles back to the task list. */
 export async function pageGuard(...roles: Role[]): Promise<Auth> {
   const auth = await getAuth();
-  if (!auth || !roles.includes(auth.role)) redirect("/");
+  if (!auth) redirect("/login");
+  if (!roles.includes(auth.role)) redirect("/");
   return auth;
 }
 
@@ -88,10 +89,4 @@ export function canManageTeam(a: Auth, teamId: number): boolean {
 export async function assignableUsers(a: Auth) {
   const where = a.role === "super_admin" || !a.ledTeam ? undefined : eq(schema.users.teamId, a.ledTeam.id);
   return db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(where).orderBy(schema.users.name);
-}
-
-
-/** The "You are" switcher is for local development only; it is off once Google sign-in is configured. */
-export function devSwitcherEnabled(): boolean {
-  return !process.env.GOOGLE_CLIENT_ID;
 }

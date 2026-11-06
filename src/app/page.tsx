@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -19,7 +20,7 @@ const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } 
 
 async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
   const [auth, show] = await Promise.all([getAuth(), filter]);
-  if (!auth) return <p className="text-muted">Add a team member first (Team page).</p>;
+  if (!auth) redirect("/login");
   const me = auth.user;
   const [tasks, clients, users, tracked, openSessions, teams] = await Promise.all([
     db
@@ -171,6 +172,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                           compact
                           taskId={task.id}
                           title={task.title}
+                          lockedTo={task.assigneeId && task.assigneeId !== me.id ? (assigneeName ?? "someone else") : null}
                           done={task.status === "done"}
                           runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
                           otherTask={

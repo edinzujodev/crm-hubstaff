@@ -6,7 +6,7 @@ import { db, schema } from "@/db";
 import { config } from "@/lib/config";
 import { fmtDuration, localDay } from "@/lib/format";
 import { getClientReport } from "@/lib/report";
-import { pageGuard } from "@/lib/auth";
+import { pageGuard, taskScope } from "@/lib/auth";
 
 const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,7 +23,7 @@ async function ClientDetail({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  await pageGuard("super_admin", "leader");
+  const auth = await pageGuard("super_admin", "leader");
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
   const client = await db.query.clients.findFirst({ where: eq(schema.clients.id, id) });
@@ -37,7 +37,7 @@ async function ClientDetail({
   let to = pick(sp.to, lastDayOfMonth(month));
   if (from > to) [from, to] = [to, from];
 
-  const report = await getClientReport(id, from, to, tz);
+  const report = await getClientReport(id, from, to, tz, taskScope(auth));
 
   return (
     <div className="space-y-6">

@@ -137,3 +137,42 @@ The helper is optional. Without it, Start/Finish still record sessions and peopl
 | `npm run helper` | Local Hubstaff timer helper |
 | `npm run hubstaff:ids` | List Hubstaff org/project/user ids (live mode) |
 | `npm run typecheck` / `lint` | Checks |
+
+## Sign-in and roles
+
+People sign in with Google. Only emails on the **Team** page can get in (the approved list). Roles:
+
+| Role | Who | Can |
+| --- | --- | --- |
+| Super admin | Set on the Team page | Everything |
+| Team leader | The person a team names as its leader | Add tasks for their team, edit or delete the team's tasks, set the team's urgency levels, see the team's Critical list, reports and clients |
+| Worker | Everyone else | See and work on their own tasks |
+
+A task stays with its assignee until a team leader reassigns it; nobody else can start it. A task with no assignee
+is claimed by whoever starts it.
+
+### Urgency
+
+Each team has two levels, set by its leader on the Team page: a task due in fewer than *Approaching* hours is
+Approaching, and fewer than *Critical* hours (or overdue) is Critical. The default is 72h and 24h. A due date counts to
+the end of that day in `APP_TIME_ZONE`.
+
+### Setting up Google sign-in
+
+Until these are set, development shows a **simulated** Google account chooser (local only; it never works in production).
+
+1. Google Cloud Console → *APIs & Services* → *Credentials* → *Create credentials* → *OAuth client ID* → type *Web application*.
+2. Add the authorized redirect URI: `http://localhost:3000/api/auth/callback/google` (and your real address, e.g.
+   `https://tracker.yourfirm.com/api/auth/callback/google`, when deployed).
+3. Put the client ID and secret in `.env`:
+
+```
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+# Optional: only accept this email domain, e.g. yourfirm.com
+AUTH_ALLOWED_DOMAIN=
+# Optional: the public address, when the app runs behind a proxy
+APP_URL=
+```
+
+4. Make sure each person's real Google email is on the Team page.

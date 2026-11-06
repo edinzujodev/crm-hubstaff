@@ -55,6 +55,11 @@ export async function startSession(taskId: number, userId: number) {
   if (!user) throw new Error("User not found");
   if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
   if (task.status === "done") throw new Error("Task is done; reopen it first.");
+  // A task stays with its assignee until someone reassigns it. Unassigned tasks are claimed by whoever starts them.
+  if (task.assigneeId && task.assigneeId !== user.id) {
+    const owner = await db.query.users.findFirst({ where: eq(schema.users.id, task.assigneeId) });
+    throw new Error(`This task is assigned to ${owner?.name ?? "someone else"}. Ask a team leader to reassign it.`);
+  }
 
   const hubstaffTaskId = await ensureHubstaffTask(task, user);
   const now = new Date();
