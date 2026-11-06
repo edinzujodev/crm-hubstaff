@@ -1,4 +1,4 @@
-# Bookkeeping CRM (MVP)
+# Client tracker (MVP)
 
 The daily task tool for a bookkeeping firm moving off ClickUp. This MVP does one thing:
 **the hours tracked in Hubstaff land on the CRM task automatically, with no manual re-entry.**
