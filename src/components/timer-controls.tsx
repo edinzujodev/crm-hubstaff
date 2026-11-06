@@ -91,17 +91,20 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
             ● {elapsed(runningSince)}
           </span>
         )}
-        <button
-          onClick={onStart}
-          disabled={pending || done || !!runningSince}
-          className="btn btn-primary"
-          title={otherTask ? `Stops your session on "${otherTask.title}"` : undefined}
-        >
-          {otherTask ? "Switch here" : "Start"}
-        </button>
-        <button onClick={onFinish} disabled={pending || !runningSince} className="btn btn-danger">
-          Stop
-        </button>
+        {runningSince ? (
+          <button onClick={onFinish} disabled={pending} className="btn btn-danger">
+            Stop
+          </button>
+        ) : (
+          <button
+            onClick={onStart}
+            disabled={pending || done}
+            className="btn btn-primary"
+            title={otherTask ? `Stops your session on "${otherTask.title}"` : undefined}
+          >
+            {otherTask ? "Switch here" : "Start"}
+          </button>
+        )}
         <button onClick={onFinishTask} disabled={pending || done} className="btn">
           Finish
         </button>
