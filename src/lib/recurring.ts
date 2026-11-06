@@ -28,6 +28,33 @@ export function addPeriod(from: string, repeat: Repeat, anchorDay?: number | nul
   return fmt(ny, nm, Math.min(anchorDay ?? d, daysInMonth(ny, nm)));
 }
 
+/** `YYYY-MM-DD` minus `days` days. */
+export function subtractDays(day: string, days: number): string {
+  const { y, m, d } = parse(day);
+  const t = new Date(Date.UTC(y, m - 1, d - days));
+  return fmt(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
+}
+
+/** How many days before the due date a copy appears in the lists, when the user didn't choose. */
+export const defaultLeadDays = (repeat: Repeat) => (repeat === "weekly" ? 2 : 7);
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** The period a repeating task covers, from its due date: "Nov 2026" or "Week of 9 Nov 2026". */
+export function periodLabel(repeat: Repeat, dueDate: string): string {
+  const { y, m, d } = parse(dueDate);
+  return repeat === "monthly" ? `${MONTHS[m - 1]} ${y}` : `Week of ${d} ${MONTHS[m - 1]} ${y}`;
+}
+
+/** The Hubstaff task name: "Acme: Do taxes – Nov 2026 [CRM #123]". Repeating tasks carry their period. */
+export function hubstaffSummary(
+  task: { id: number; title: string; repeat: Repeat | null; dueDate: string | null },
+  clientName?: string | null,
+): string {
+  const period = task.repeat && task.dueDate ? ` – ${periodLabel(task.repeat, task.dueDate)}` : "";
+  return `${clientName ? `${clientName}: ` : ""}${task.title}${period} [CRM #${task.id}]`;
+}
+
 /** Next due date: the previous one plus a period, moved forward until it is today or later. */
 export function nextDueDate(prevDue: string, repeat: Repeat, anchorDay: number | null, today: string): string {
   let next = addPeriod(prevDue, repeat, anchorDay);
@@ -43,6 +70,11 @@ export async function spawnNextRepeat(taskId: number) {
   const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
   if (!task || !task.repeat || !task.dueDate || task.deletedAt) return null;
   const today = localDay(new Date(), config.timeZone);
+  const seriesId = task.seriesId ?? task.id;
+  if (!task.seriesId) await db.update(schema.tasks).set({ seriesId }).where(eq(schema.tasks.id, task.id));
+  const dueDate = nextDueDate(task.dueDate, task.repeat, task.repeatDay, today);
+  // The copy stays out of the open-task lists until `repeatLeadDays` before it is due.
+  const startDate = subtractDays(dueDate, task.repeatLeadDays ?? defaultLeadDays(task.repeat));
   const [next] = await db
     .insert(schema.tasks)
     .values({
@@ -50,9 +82,12 @@ export async function spawnNextRepeat(taskId: number) {
       description: task.description,
       clientId: task.clientId,
       assigneeId: task.assigneeId,
-      dueDate: nextDueDate(task.dueDate, task.repeat, task.repeatDay, today),
+      dueDate,
+      startDate: startDate > today ? startDate : null,
       repeat: task.repeat,
       repeatDay: task.repeatDay,
+      repeatLeadDays: task.repeatLeadDays,
+      seriesId,
       repeatedFromId: task.id,
     })
     .onConflictDoNothing({ target: schema.tasks.repeatedFromId })

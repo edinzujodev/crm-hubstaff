@@ -96,6 +96,11 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
                 Repeats {task.repeat} · <StopRepeatingButton taskId={task.id} />
               </span>
             )}
+            {task.seriesId && (
+              <Link href={`/recurring/${task.seriesId}`} className="underline">
+                See all occurrences →
+              </Link>
+            )}
             <span>{task.hubstaffTaskId ? `Hubstaff task #${task.hubstaffTaskId}` : "Not in Hubstaff yet (created on first Start)"}</span>
           </p>
         </div>

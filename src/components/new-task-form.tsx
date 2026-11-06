@@ -4,12 +4,17 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { createTask } from "@/app/actions";
 
 type Option = { id: number; name: string };
+type Repeat = "" | "weekly" | "monthly";
+
+// How many days before it is due a new copy shows up in the open-task lists.
+const DEFAULT_LEAD = { weekly: 2, monthly: 7 } as const;
 
 export function NewTaskForm({ clients, users }: { clients: Option[]; users: Option[] }) {
   const [state, action, pending] = useActionState(createTask, null);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const [repeat, setRepeat] = useState<"" | "weekly" | "monthly">("");
+  const [repeat, setRepeat] = useState<Repeat>("");
+  const [lead, setLead] = useState("");
   const [asked, setAsked] = useState(false);
   const [hasDue, setHasDue] = useState(false);
   useEffect(() => {
@@ -21,13 +26,17 @@ export function NewTaskForm({ clients, users }: { clients: Option[]; users: Opti
     if (asked) return setAsked(false);
     e.preventDefault();
     setHasDue(!!new FormData(e.currentTarget).get("dueDate"));
+    setRepeat("");
     dialog.current?.showModal();
   }
-  function answer(value: "" | "weekly" | "monthly") {
+  function choose(value: Repeat) {
     setRepeat(value);
+    setLead(value ? String(DEFAULT_LEAD[value]) : "");
+  }
+  function confirm() {
     setAsked(true);
     dialog.current?.close();
-    // Wait a tick so the hidden input holds the answer before submitting.
+    // Wait a tick so the hidden inputs hold the answer before submitting.
     setTimeout(() => form.current?.requestSubmit(), 0);
   }
 
@@ -66,6 +75,7 @@ export function NewTaskForm({ clients, users }: { clients: Option[]; users: Opti
         <input type="date" name="dueDate" className="input text-foreground" />
       </label>
       <input type="hidden" name="repeat" value={repeat} />
+      <input type="hidden" name="repeatLeadDays" value={repeat ? lead : ""} />
       <button className="btn btn-primary" disabled={pending}>
         {pending ? "Adding…" : "Add task"}
       </button>
@@ -75,21 +85,58 @@ export function NewTaskForm({ clients, users }: { clients: Option[]; users: Opti
           Task saved, but it was not created in Hubstaff yet ({state.data.hubstaffError}). Start will try again.
         </p>
       )}
-      <dialog ref={dialog} className="card m-auto w-80 p-4 text-foreground backdrop:bg-black/40">
+      <dialog ref={dialog} className="card m-auto w-96 max-w-[calc(100vw-2rem)] p-5 text-foreground backdrop:bg-black/40">
         <p className="font-medium">Is this task recurring?</p>
         <p className="mt-1 text-sm text-muted">
-          When you mark it done, the next one is created automatically, due one period after this due date.
+          When you press Finish on it, the next one is created automatically, due one period after this due date.
         </p>
+        <div className="mt-3 flex gap-2">
+          {(
+            [
+              ["", "No, one-time"],
+              ["weekly", "Weekly"],
+              ["monthly", "Monthly"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              disabled={value !== "" && !hasDue}
+              onClick={() => choose(value)}
+              aria-pressed={repeat === value}
+              className={`btn ${repeat === value ? "btn-primary" : ""}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         {!hasDue && <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">Set a due date to make it recurring.</p>}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className="btn btn-primary" disabled={!hasDue} onClick={() => answer("weekly")}>
-            Weekly
+        {repeat && (
+          <label className="mt-3 flex flex-col gap-1 text-sm">
+            <span>
+              Show each new one in my list{" "}
+              <input
+                type="number"
+                min={0}
+                max={90}
+                value={lead}
+                onChange={(e) => setLead(e.target.value)}
+                className="input w-16 text-center"
+              />{" "}
+              days before it is due
+            </span>
+            <span className="text-xs text-muted">
+              Until then it stays out of your open tasks (you can find it under Upcoming), so finishing one
+              doesn&apos;t put the next one straight back in your list.
+            </span>
+          </label>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" className="btn" onClick={() => dialog.current?.close()}>
+            Cancel
           </button>
-          <button type="button" className="btn btn-primary" disabled={!hasDue} onClick={() => answer("monthly")}>
-            Monthly
-          </button>
-          <button type="button" className="btn" onClick={() => answer("")}>
-            No
+          <button type="button" className="btn btn-primary" onClick={confirm}>
+            Add task
           </button>
         </div>
       </dialog>

@@ -7,7 +7,9 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser, USER_COOKIE } from "@/lib/current-user";
 import { hubstaff } from "@/lib/hubstaff";
-import { spawnNextRepeat } from "@/lib/recurring";
+import { defaultLeadDays, hubstaffSummary, spawnNextRepeat, subtractDays } from "@/lib/recurring";
+import { localDay } from "@/lib/format";
+import { config } from "@/lib/config";
 import { markDeleted, unmarkDeleted } from "@/lib/soft-delete";
 import { ensureHubstaffTask, finishSession, startSession } from "@/lib/sessions";
 import { backfillHubstaff, lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
@@ -37,6 +39,8 @@ const newTask = z.object({
   assigneeId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
   dueDate: z.string().optional().transform((v) => v || undefined),
   repeat: z.enum(["weekly", "monthly"]).optional().or(z.literal("").transform(() => undefined)),
+  // Days before the due date that each new copy appears in the open lists.
+  repeatLeadDays: z.coerce.number().int().min(0).max(90).optional().or(z.literal("").transform(() => undefined)),
 });
 
 /** Saves the task, then creates it in Hubstaff. If Hubstaff fails the task is kept and Start retries. */
@@ -46,7 +50,15 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
     // The next due date is calculated from this one, so a repeating task needs it.
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : undefined;
-    const [task] = await db.insert(schema.tasks).values({ ...input, repeatDay }).returning();
+    const repeatLeadDays = input.repeat ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : undefined;
+    const [created] = await db
+      .insert(schema.tasks)
+      .values({ ...input, repeatDay, repeatLeadDays })
+      .returning();
+    // The first task of a repeating series is the series' id; every copy keeps it.
+    const [task] = input.repeat
+      ? await db.update(schema.tasks).set({ seriesId: created.id }).where(eq(schema.tasks.id, created.id)).returning()
+      : [created];
     const assignee = task.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, task.assigneeId) })
       : null;
@@ -260,14 +272,17 @@ export async function finishTask(): Promise<Result<{ sync: SyncResult | null; sy
 
 export async function setTaskStatus(taskId: number, status: "todo" | "in_progress" | "done") {
   return run(async () => {
-    await db.update(schema.tasks).set({ status }).where(eq(schema.tasks.id, taskId));
+    await db
+      .update(schema.tasks)
+      .set({ status, doneAt: status === "done" ? new Date() : null })
+      .where(eq(schema.tasks.id, taskId));
     // A repeating task creates its next copy when it is marked done.
     const next = status === "done" ? await spawnNextRepeat(taskId) : null;
     return { nextTaskId: next?.id ?? null, nextDueDate: next?.dueDate ?? null };
   });
 }
 
-/** Edits a task. If the title or client changed, its Hubstaff task is renamed to match. */
+/** Edits a task. If its name, client, due date or repeat changed, the Hubstaff task is renamed to match. */
 export async function updateTask(
   taskId: number,
   _prev: unknown,
@@ -280,6 +295,10 @@ export async function updateTask(
     const input = newTask.parse(Object.fromEntries(formData));
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : null;
+    const repeatLeadDays = input.repeat ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : null;
+    // A copy that is still waiting for its start date follows its due date when that changes.
+    const today = localDay(new Date(), config.timeZone);
+    const movedStart = task.startDate && input.dueDate && repeatLeadDays !== null ? subtractDays(input.dueDate, repeatLeadDays) : null;
     await db
       .update(schema.tasks)
       .set({
@@ -289,12 +308,23 @@ export async function updateTask(
         dueDate: input.dueDate ?? null,
         repeat: input.repeat ?? null,
         repeatDay,
+        repeatLeadDays,
+        ...(input.repeat && !task.seriesId ? { seriesId: task.id } : {}),
+        ...(task.startDate ? { startDate: movedStart && movedStart > today ? movedStart : null } : {}),
       })
       .where(eq(schema.tasks.id, taskId));
 
-    if (!task.hubstaffTaskId || (task.title === input.title && task.clientId === input.clientId)) return {};
+    const changed =
+      task.title !== input.title ||
+      task.clientId !== input.clientId ||
+      task.dueDate !== (input.dueDate ?? null) ||
+      task.repeat !== (input.repeat ?? null);
+    if (!task.hubstaffTaskId || !changed) return {};
     const client = await db.query.clients.findFirst({ where: eq(schema.clients.id, input.clientId) });
-    const summary = client ? `${client.name}: ${input.title} [CRM #${task.id}]` : `${input.title} [CRM #${task.id}]`;
+    const summary = hubstaffSummary(
+      { id: task.id, title: input.title, repeat: input.repeat ?? null, dueDate: input.dueDate ?? null },
+      client?.name,
+    );
     return renameInHubstaff(task.hubstaffTaskId, () => summary);
   });
 }

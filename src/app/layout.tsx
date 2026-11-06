@@ -67,6 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
             <nav className="flex gap-4 text-sm">
               <Link href="/">Tasks</Link>
+              <Link href="/recurring">Recurring</Link>
               <Link href="/leads">Leads</Link>
               <Link href="/clients">Clients</Link>
               <Link href="/reports">Reports</Link>

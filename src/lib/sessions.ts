@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { config } from "@/lib/config";
 import { hubstaff } from "@/lib/hubstaff";
+import { hubstaffSummary } from "@/lib/recurring";
 import { MOCK_PROJECT_ID } from "@/lib/hubstaff/mock";
 
 export async function openSessionFor(userId: number) {
@@ -35,7 +36,7 @@ export async function ensureHubstaffTask(task: schema.Task, user: schema.User | 
   const created = await provider.createTask({
     crmTaskId: task.id,
     projectId,
-    summary: client ? `${client.name}: ${task.title} [CRM #${task.id}]` : `${task.title} [CRM #${task.id}]`,
+    summary: hubstaffSummary(task, client?.name),
     assigneeHubstaffUserId: user?.hubstaffUserId ?? null,
   });
   await db

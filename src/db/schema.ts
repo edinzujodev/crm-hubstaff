@@ -96,11 +96,19 @@ export const tasks = pgTable(
     // Day of month a monthly task is anchored to, so a 31st task returns to the 31st after short months.
     repeatDay: integer("repeat_day"),
     // The task this one was created from when its predecessor was marked done. Unique: one copy per task.
+    // When the task was marked done (null while open, or if it was done before this was recorded).
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    // Days before the due date that a copy shows up in the open-task lists.
+    repeatLeadDays: integer("repeat_lead_days"),
+    // Hidden from the open-task lists until this day (set on copies made by a repeat).
+    startDate: date("start_date"),
+    // Id of the first task of a repeating series. Every copy keeps it, so the series can be shown as one.
+    seriesId: integer("series_id").references((): AnyPgColumn => tasks.id),
     repeatedFromId: integer("repeated_from_id")
       .references((): AnyPgColumn => tasks.id)
       .unique(),
   },
-  (t) => [index("tasks_assignee_idx").on(t.assigneeId)],
+  (t) => [index("tasks_assignee_idx").on(t.assigneeId), index("tasks_series_idx").on(t.seriesId)],
 );
 
 export const sessionEndReason = pgEnum("session_end_reason", [

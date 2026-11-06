@@ -13,6 +13,7 @@ type TaskFields = {
   assigneeId: number | null;
   dueDate: string | null;
   repeat: "weekly" | "monthly" | null;
+  repeatLeadDays: number | null;
 };
 
 /** The ⋯ button at the end of a row, with Edit and Delete. Both open a popup. */
@@ -160,6 +161,18 @@ function EditForm({
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
           </select>
+        </label>
+        <label className="col-span-2 flex flex-col gap-1 text-xs text-muted">
+          Show new copies in my list (days before due, for repeating tasks)
+          <input
+            type="number"
+            name="repeatLeadDays"
+            min={0}
+            max={90}
+            defaultValue={task.repeatLeadDays ?? ""}
+            placeholder="Default: 2 weekly, 7 monthly"
+            className="input text-foreground"
+          />
         </label>
       </div>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}

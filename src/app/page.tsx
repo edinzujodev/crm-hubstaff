@@ -41,9 +41,12 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
   const visible = tasks.filter(({ task }) => {
     if (show === "deleted") return task.deletedAt !== null;
     if (task.deletedAt) return false;
+    // A copy made by a repeat stays out of the open lists until its start date.
+    const upcoming = !!task.startDate && task.startDate > today && task.status !== "done";
+    if (show === "upcoming") return upcoming;
     if (show === "all") return true;
     if (show === "done") return task.status === "done";
-    return task.status !== "done" && (show === "everyone" || !me || task.assigneeId === me.id || !task.assigneeId);
+    return task.status !== "done" && !upcoming && (show === "everyone" || !me || task.assigneeId === me.id || !task.assigneeId);
   });
 
   return (
@@ -69,6 +72,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
         {[
           ["", "My open tasks"],
           ["everyone", "Everyone's open tasks"],
+          ["upcoming", "Upcoming"],
           ["done", "Done"],
           ["all", "All"],
           ["deleted", "Deleted"],
@@ -109,6 +113,11 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                         {truncate(task.title, TITLE_MAX)}
                       </Link>
                       {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
+                      {task.startDate && task.startDate > today && task.status !== "done" && (
+                        <span className="badge ml-2 text-muted" title="Shows in your open tasks from this day">
+                          Starts {fmtDay(task.startDate)}
+                        </span>
+                      )}
                       {others.length > 0 && (
                         <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400">
                           ● {others.length} working now
@@ -161,6 +170,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                             assigneeId: task.assigneeId,
                             dueDate: task.dueDate,
                             repeat: task.repeat,
+                            repeatLeadDays: task.repeatLeadDays,
                           }}
                           clients={clients}
                           users={users}
