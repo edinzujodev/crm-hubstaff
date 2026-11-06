@@ -7,6 +7,7 @@ import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { signOut, switchUser } from "@/app/actions";
 import { Toaster } from "@/components/toaster";
+import { ProfileMenu } from "@/components/profile-menu";
 import { SyncButton } from "@/components/sync-button";
 import { hubstaffMode, config } from "@/lib/config";
 import { getAuth } from "@/lib/auth";
@@ -30,35 +31,38 @@ async function Account() {
   const users = quickSwitch ? await db.select().from(schema.users).orderBy(asc(schema.users.name)) : [];
   const roleLabel = { super_admin: "Super admin", leader: "Team leader", worker: "Member" }[auth.role];
   return (
-    <div className="flex flex-wrap items-center gap-3 text-sm">
-      {quickSwitch && (
-        <form action={switchUser} className="flex items-center gap-1" title="Development only: switch person without signing in again">
-          <label htmlFor="userId" className="text-muted">
-            Switch to
-          </label>
-          <select id="userId" name="userId" defaultValue={auth.user.id} className="input py-1">
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-          <button className="btn py-1">Go</button>
-        </form>
-      )}
-      <span>
-        <span className="font-medium">{auth.user.name}</span> <span className="badge ml-1">{roleLabel}</span>
-      </span>
-      <form action={signOut}>
-        <button className="btn py-1">Sign out</button>
-      </form>
-    </div>
-  );
-}
+    <ProfileMenu name={auth.user.name} email={auth.user.email} role={roleLabel}>
+      <section className="space-y-2 border-t border-border pt-3">
+        <h2 className="text-xs font-medium text-muted">Hubstaff</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Suspense>
+            <SyncStatus />
+          </Suspense>
+          <SyncButton />
+        </div>
+      </section>
 
-async function SyncControls() {
-  if (!(await getAuth())) return null;
-  return <SyncButton />;
+      {quickSwitch && (
+        <section className="space-y-2 border-t border-border pt-3">
+          <h2 className="text-xs font-medium text-muted">Development: switch person</h2>
+          <form action={switchUser} className="flex items-center gap-2">
+            <select name="userId" defaultValue={auth.user.id} aria-label="Switch to" className="input min-w-0 flex-1 py-1">
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <button className="btn py-1">Go</button>
+          </form>
+        </section>
+      )}
+
+      <form action={signOut} className="border-t border-border pt-3">
+        <button className="btn w-full justify-center">Sign out</button>
+      </form>
+    </ProfileMenu>
+  );
 }
 
 async function NavLinks() {
@@ -116,17 +120,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             >
               Hubstaff: {mode}
             </span>
-            <div className="ml-auto flex flex-wrap items-center gap-3">
-              <Suspense>
-                <SyncStatus />
-              </Suspense>
-              <Suspense>
-                <SyncControls />
-              </Suspense>
-              <Suspense>
-                <Account />
-              </Suspense>
-            </div>
+            <Suspense>
+              <Account />
+            </Suspense>
           </div>
         </header>
         <Toaster />
