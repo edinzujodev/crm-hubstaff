@@ -4,9 +4,11 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { finishTask, setTaskStatus, startTask } from "@/app/actions";
 import { helper } from "@/lib/helper-client";
+import { notifyFinished } from "@/lib/toast";
 
 type Props = {
   taskId: number;
+  title: string;
   done: boolean;
   /** Start time of the current user's open session on this task, if any. */
   runningSince: string | null;
@@ -22,7 +24,7 @@ function elapsed(since: string) {
   return `${h}:${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export function TimerControls({ taskId, done, runningSince, otherTask, compact }: Props) {
+export function TimerControls({ taskId, title, done, runningSince, otherTask, compact }: Props) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ tone: "ok" | "warn" | "error"; text: string } | null>(null);
   const [nextId, setNextId] = useState<number | null>(null);
@@ -75,6 +77,7 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
       setNextId(res.data.nextTaskId);
       setMessage({ tone: "ok", text: res.data.nextTaskId ? "Task finished. The next one was created." : "Task finished." });
+      notifyFinished({ taskId, title, ...res.data });
     });
 
   const toneClass = {

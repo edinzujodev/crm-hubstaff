@@ -56,6 +56,6 @@ export async function spawnNextRepeat(taskId: number) {
       repeatedFromId: task.id,
     })
     .onConflictDoNothing({ target: schema.tasks.repeatedFromId })
-    .returning({ id: schema.tasks.id });
-  return next?.id ?? null;
+    .returning({ id: schema.tasks.id, dueDate: schema.tasks.dueDate });
+  return next ?? null;
 }

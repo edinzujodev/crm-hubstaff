@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { switchUser } from "@/app/actions";
+import { Toaster } from "@/components/toaster";
 import { SyncButton } from "@/components/sync-button";
 import { hubstaffMode, config } from "@/lib/config";
 import { getCurrentUser } from "@/lib/current-user";
@@ -88,6 +89,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
         </header>
+        <Toaster />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
       </body>
     </html>

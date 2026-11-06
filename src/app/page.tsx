@@ -131,6 +131,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                         <TimerControls
                           compact
                           taskId={task.id}
+                          title={task.title}
                           done={task.status === "done"}
                           runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
                           otherTask={

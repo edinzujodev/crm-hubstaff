@@ -262,8 +262,8 @@ export async function setTaskStatus(taskId: number, status: "todo" | "in_progres
   return run(async () => {
     await db.update(schema.tasks).set({ status }).where(eq(schema.tasks.id, taskId));
     // A repeating task creates its next copy when it is marked done.
-    const nextTaskId = status === "done" ? await spawnNextRepeat(taskId) : null;
-    return { nextTaskId };
+    const next = status === "done" ? await spawnNextRepeat(taskId) : null;
+    return { nextTaskId: next?.id ?? null, nextDueDate: next?.dueDate ?? null };
   });
 }
 

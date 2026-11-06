@@ -104,10 +104,11 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             <RestoreTaskButton taskId={task.id} />
           ) : (
             <>
-              <TaskStatusSelect taskId={task.id} status={task.status} />
+              <TaskStatusSelect taskId={task.id} title={task.title} status={task.status} />
               <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />
               <TimerControls
                 taskId={task.id}
+                title={task.title}
                 done={task.status === "done"}
                 runningSince={mine?.taskId === id ? mine.startedAt.toISOString() : null}
                 otherTask={otherTask ?? null}
