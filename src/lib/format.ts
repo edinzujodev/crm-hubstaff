@@ -28,3 +28,11 @@ export function localDay(d: Date, timeZone: string): string {
 export function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1).trimEnd() + "…" : text;
 }
+
+/** `2026-11-13` -> `13 Nov`. */
+export function fmtDay(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }).format(
+    new Date(Date.UTC(y, m - 1, d)),
+  );
+}

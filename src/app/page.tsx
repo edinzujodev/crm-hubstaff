@@ -2,14 +2,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { DeleteTaskButton } from "@/components/delete-task-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
+import { TaskMenu } from "@/components/task-menu";
 import { TaskRow } from "@/components/task-row";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { getCurrentUser } from "@/lib/current-user";
-import { fmtDateTime, fmtDuration, truncate } from "@/lib/format";
+import { fmtDateTime, fmtDay, fmtDuration, localDay, truncate } from "@/lib/format";
 import { isSessionStale, trackedByTask } from "@/lib/report";
 
 const TITLE_MAX = 50;
@@ -35,6 +35,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
     db.select().from(schema.workSessions).where(isNull(schema.workSessions.endedAt)),
   ]);
 
+  const today = localDay(new Date(), config.timeZone);
   const mine = openSessions.find((s) => s.userId === me?.id);
   const mineTask = mine ? tasks.find((t) => t.task.id === mine.taskId)?.task : undefined;
   const visible = tasks.filter(({ task }) => {
@@ -90,6 +91,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
               <th className="px-3 py-2 font-medium">Task</th>
               <th className="px-3 py-2 font-medium">Type</th>
               <th className="px-3 py-2 font-medium">Client</th>
+              <th className="px-3 py-2 font-medium">Due</th>
               <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium" />
             </tr>
@@ -121,6 +123,19 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                     ) : (
                       <span key="client" className="text-muted">—</span>
                     ),
+                    task.dueDate ? (
+                      <span
+                        key="due"
+                        className={task.status !== "done" && task.dueDate < today ? "font-medium text-red-600" : undefined}
+                        title={task.status !== "done" && task.dueDate < today ? "Overdue" : undefined}
+                      >
+                        {fmtDay(task.dueDate)}
+                      </span>
+                    ) : (
+                      <span key="due" className="text-muted">
+                        —
+                      </span>
+                    ),
                     <span key="status" className="badge">{statusLabel[task.status]}</span>,
                   ]}
                   actions={
@@ -138,7 +153,18 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                             mine && mineTask && mine.taskId !== task.id ? { id: mineTask.id, title: mineTask.title } : null
                           }
                         />
-                        <DeleteTaskButton taskId={task.id} title={task.title} />
+                        <TaskMenu
+                          task={{
+                            id: task.id,
+                            title: task.title,
+                            clientId: task.clientId,
+                            assigneeId: task.assigneeId,
+                            dueDate: task.dueDate,
+                            repeat: task.repeat,
+                          }}
+                          clients={clients}
+                          users={users}
+                        />
                       </>
                     )
                   }
@@ -151,10 +177,6 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                       <div>
                         <p className="text-xs text-muted">Assignee</p>
                         <p>{assigneeName ?? "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted">Due</p>
-                        <p>{task.dueDate ?? "—"}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted">Tracked in Hubstaff</p>
@@ -174,7 +196,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-muted">
+                <td colSpan={7} className="px-3 py-6 text-center text-muted">
                   No tasks here.
                 </td>
               </tr>

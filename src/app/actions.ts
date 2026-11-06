@@ -267,6 +267,38 @@ export async function setTaskStatus(taskId: number, status: "todo" | "in_progres
   });
 }
 
+/** Edits a task. If the title or client changed, its Hubstaff task is renamed to match. */
+export async function updateTask(
+  taskId: number,
+  _prev: unknown,
+  formData: FormData,
+): Promise<Result<{ hubstaffError?: string }>> {
+  return run(async () => {
+    const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
+    if (!task) throw new Error("Task not found");
+    if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
+    const input = newTask.parse(Object.fromEntries(formData));
+    if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
+    const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : null;
+    await db
+      .update(schema.tasks)
+      .set({
+        title: input.title,
+        clientId: input.clientId,
+        assigneeId: input.assigneeId ?? null,
+        dueDate: input.dueDate ?? null,
+        repeat: input.repeat ?? null,
+        repeatDay,
+      })
+      .where(eq(schema.tasks.id, taskId));
+
+    if (!task.hubstaffTaskId || (task.title === input.title && task.clientId === input.clientId)) return {};
+    const client = await db.query.clients.findFirst({ where: eq(schema.clients.id, input.clientId) });
+    const summary = client ? `${client.name}: ${input.title} [CRM #${task.id}]` : `${input.title} [CRM #${task.id}]`;
+    return renameInHubstaff(task.hubstaffTaskId, () => summary);
+  });
+}
+
 /** Stops a task from repeating (future copies only; existing ones are untouched). */
 export async function stopRepeating(taskId: number) {
   return run(async () => {
