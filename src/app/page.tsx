@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime, fmtDuration } from "@/lib/format";
 import { isSessionStale, trackedByTask } from "@/lib/report";
 
+const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
 
 async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
@@ -54,7 +55,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
             since {fmtDateTime(mine.startedAt, config.timeZone)}.
           </span>
           {isSessionStale(mine.startedAt) && (
-            <span className="text-amber-700 dark:text-amber-400">Open for a long time. Forgot to Finish?</span>
+            <span className="text-amber-700 dark:text-amber-400">Open for a long time. Forgot to Stop?</span>
           )}
         </div>
       )}
@@ -84,6 +85,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
           <thead className="border-b border-border text-left text-xs text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Task</th>
+              <th className="px-3 py-2 font-medium">Type</th>
               <th className="px-3 py-2 font-medium">Client</th>
               <th className="px-3 py-2 font-medium">Assignee</th>
               <th className="px-3 py-2 font-medium">Status</th>
@@ -106,6 +108,9 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                         ● {others.length} working now
                       </span>
                     )}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="badge">{task.repeat ? repeatLabel[task.repeat] : "One-time"}</span>
                   </td>
                   <td className="px-3 py-2 text-muted">
                     {task.clientId ? (
@@ -146,7 +151,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-muted">
+                <td colSpan={7} className="px-3 py-6 text-center text-muted">
                   No tasks here.
                 </td>
               </tr>

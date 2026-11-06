@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { finishTask, startTask } from "@/app/actions";
+import Link from "next/link";
+import { finishTask, setTaskStatus, startTask } from "@/app/actions";
 import { helper } from "@/lib/helper-client";
 
 type Props = {
@@ -24,6 +25,7 @@ function elapsed(since: string) {
 export function TimerControls({ taskId, done, runningSince, otherTask, compact }: Props) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ tone: "ok" | "warn" | "error"; text: string } | null>(null);
+  const [nextId, setNextId] = useState<number | null>(null);
   const [, tick] = useState(0);
 
   useEffect(() => {
@@ -59,6 +61,22 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
       setMessage({ tone: h.ok && !res.data.syncError ? "ok" : "warn", text: parts.join(" ") });
     });
 
+  // Marks the task done (stopping the timer first if it runs here). A repeating task creates its next copy.
+  const onFinishTask = () =>
+    startTransition(async () => {
+      setMessage(null);
+      setNextId(null);
+      if (runningSince) {
+        await helper.stop();
+        const stopped = await finishTask();
+        if (!stopped.ok) return setMessage({ tone: "error", text: stopped.error });
+      }
+      const res = await setTaskStatus(taskId, "done");
+      if (!res.ok) return setMessage({ tone: "error", text: res.error });
+      setNextId(res.data.nextTaskId);
+      setMessage({ tone: "ok", text: res.data.nextTaskId ? "Task finished. The next one was created." : "Task finished." });
+    });
+
   const toneClass = {
     ok: "text-emerald-700 dark:text-emerald-400",
     warn: "text-amber-700 dark:text-amber-400",
@@ -68,27 +86,39 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
   return (
     <div className={compact ? "flex items-center gap-2" : "space-y-2"}>
       <div className="flex items-center gap-2">
-        {runningSince ? (
-          <>
-            <span suppressHydrationWarning className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400">
-              ● {elapsed(runningSince)}
-            </span>
-            <button onClick={onFinish} disabled={pending} className="btn btn-danger">
-              {pending ? "…" : "Stop"}
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={onStart}
-            disabled={pending || done}
-            className="btn btn-primary"
-            title={otherTask ? `Stops your session on "${otherTask.title}"` : undefined}
-          >
-            {pending ? "…" : otherTask ? "Switch here" : "Start"}
-          </button>
+        {runningSince && (
+          <span suppressHydrationWarning className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400">
+            ● {elapsed(runningSince)}
+          </span>
         )}
+        <button
+          onClick={onStart}
+          disabled={pending || done || !!runningSince}
+          className="btn btn-primary"
+          title={otherTask ? `Stops your session on "${otherTask.title}"` : undefined}
+        >
+          {otherTask ? "Switch here" : "Start"}
+        </button>
+        <button onClick={onFinish} disabled={pending || !runningSince} className="btn btn-danger">
+          Stop
+        </button>
+        <button onClick={onFinishTask} disabled={pending || done} className="btn">
+          Finish task
+        </button>
       </div>
-      {message && !compact && <p className={`text-sm ${toneClass[message.tone]}`}>{message.text}</p>}
+      {message && !compact && (
+        <p className={`text-sm ${toneClass[message.tone]}`}>
+          {message.text}
+          {nextId && (
+            <>
+              {" "}
+              <Link className="underline" href={`/tasks/${nextId}`}>
+                Open it
+              </Link>
+            </>
+          )}
+        </p>
+      )}
       {message && compact && message.tone !== "ok" && (
         <span className={`text-xs ${toneClass[message.tone]}`} title={message.text}>
           ⚠

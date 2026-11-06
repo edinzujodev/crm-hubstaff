@@ -5,7 +5,6 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
 import { StopRepeatingButton } from "@/components/stop-repeating-button";
-import { MarkFinishedButton } from "@/components/mark-finished-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
@@ -19,7 +18,7 @@ const endReasonLabel = { finished: "Finished", switched: "Switched task", auto_c
 function FlagText({ flag }: { flag: SessionFlag }) {
   switch (flag.kind) {
     case "open_too_long":
-      return <>Open for {flag.hours}h. Forgot to Finish? It will auto-close after {config.autoCloseSessionHours}h.</>;
+      return <>Open for {flag.hours}h. Forgot to Stop? It will auto-close after {config.autoCloseSessionHours}h.</>;
     case "no_hubstaff_time":
       return <>Hubstaff tracked nothing in this session. Was the timer running on this task?</>;
     case "partly_tracked":
@@ -106,7 +105,6 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           ) : (
             <>
               <TaskStatusSelect taskId={task.id} status={task.status} />
-              {task.status !== "done" && <MarkFinishedButton taskId={task.id} repeats={!!task.repeat} />}
               <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />
               <TimerControls
                 taskId={task.id}
