@@ -23,3 +23,8 @@ export function fmtTime(d: Date, timeZone: string): string {
 export function localDay(d: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
+
+/** Shortens long text to `max` characters, ending with an ellipsis. */
+export function truncate(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max - 1).trimEnd() + "…" : text;
+}

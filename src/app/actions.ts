@@ -20,6 +20,7 @@ async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
     refresh();
     return { ok: true, data };
   } catch (e) {
+    if (e instanceof z.ZodError) return { ok: false, error: e.issues.map((i) => i.message).join(". ") };
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
@@ -123,6 +124,20 @@ export async function createClient(_prev: unknown, formData: FormData): Promise<
   });
 }
 
+/** Whole currency units. Accepts "1,500", "$1 500" or "1500.40"; empty means not set. */
+const money = z.preprocess(
+  (v) => {
+    if (typeof v !== "string") return v;
+    const cleaned = v.replace(/[\s,$€£]/g, "");
+    return cleaned === "" ? undefined : Number(cleaned);
+  },
+  z
+    .number({ error: "Expected monthly value must be a number" })
+    .min(0, "Expected monthly value can't be negative")
+    .transform(Math.round)
+    .optional(),
+);
+
 const leadFields = {
   name: z.string().trim().min(1, "Name is required"),
   contactName: optionalText,
@@ -131,7 +146,7 @@ const leadFields = {
   source: optionalText,
   notes: optionalText,
   ownerId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
-  expectedMonthlyValue: z.coerce.number().int().min(0).optional().or(z.literal("").transform(() => undefined)),
+  expectedMonthlyValue: money,
 };
 const newLead = z.object(leadFields);
 const editLead = z.object({

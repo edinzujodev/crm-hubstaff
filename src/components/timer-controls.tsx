@@ -103,7 +103,7 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
           Stop
         </button>
         <button onClick={onFinishTask} disabled={pending || done} className="btn">
-          Finish task
+          Finish
         </button>
       </div>
       {message && !compact && (
