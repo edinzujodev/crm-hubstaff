@@ -73,6 +73,7 @@ export const leads = pgTable(
 );
 
 export const taskStatus = pgEnum("task_status", ["todo", "in_progress", "done"]);
+export const taskRepeat = pgEnum("task_repeat", ["weekly", "monthly"]);
 
 export const tasks = pgTable(
   "tasks",
@@ -90,6 +91,14 @@ export const tasks = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     // Soft delete: the row, its sessions and its Hubstaff time are kept; lists hide it.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    // Recurring: marking the task done creates the next copy, due one period after this due date.
+    repeat: taskRepeat("repeat"),
+    // Day of month a monthly task is anchored to, so a 31st task returns to the 31st after short months.
+    repeatDay: integer("repeat_day"),
+    // The task this one was created from when its predecessor was marked done. Unique: one copy per task.
+    repeatedFromId: integer("repeated_from_id")
+      .references((): AnyPgColumn => tasks.id)
+      .unique(),
   },
   (t) => [index("tasks_assignee_idx").on(t.assigneeId)],
 );

@@ -53,7 +53,7 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
       const h = await helper.stop();
       const res = await finishTask();
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
-      const parts = [h.ok ? "Hubstaff timer stopped." : "Session finished. Stop the timer in the Hubstaff app if it's still running."];
+      const parts = [h.ok ? "Hubstaff timer stopped." : "Session stopped. Stop the timer in the Hubstaff app if it's still running."];
       if (res.data.syncError) parts.push(`Sync failed: ${res.data.syncError}`);
       else parts.push("Hours synced; Hubstaff can take up to ~20 min to report the last minutes.");
       setMessage({ tone: h.ok && !res.data.syncError ? "ok" : "warn", text: parts.join(" ") });
@@ -74,7 +74,7 @@ export function TimerControls({ taskId, done, runningSince, otherTask, compact }
               ● {elapsed(runningSince)}
             </span>
             <button onClick={onFinish} disabled={pending} className="btn btn-danger">
-              {pending ? "…" : "Finish"}
+              {pending ? "…" : "Stop"}
             </button>
           </>
         ) : (

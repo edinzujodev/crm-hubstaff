@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser, USER_COOKIE } from "@/lib/current-user";
 import { hubstaff } from "@/lib/hubstaff";
+import { spawnNextRepeat } from "@/lib/recurring";
 import { markDeleted, unmarkDeleted } from "@/lib/soft-delete";
 import { ensureHubstaffTask, finishSession, startSession } from "@/lib/sessions";
 import { backfillHubstaff, lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
@@ -34,13 +35,17 @@ const newTask = z.object({
   clientId: z.coerce.number({ error: "Pick a client" }).int().positive("Pick a client"),
   assigneeId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
   dueDate: z.string().optional().transform((v) => v || undefined),
+  repeat: z.enum(["weekly", "monthly"]).optional().or(z.literal("").transform(() => undefined)),
 });
 
 /** Saves the task, then creates it in Hubstaff. If Hubstaff fails the task is kept and Start retries. */
 export async function createTask(_prev: unknown, formData: FormData): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
     const input = newTask.parse(Object.fromEntries(formData));
-    const [task] = await db.insert(schema.tasks).values(input).returning();
+    // The next due date is calculated from this one, so a repeating task needs it.
+    if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
+    const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : undefined;
+    const [task] = await db.insert(schema.tasks).values({ ...input, repeatDay }).returning();
     const assignee = task.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, task.assigneeId) })
       : null;
@@ -241,6 +246,16 @@ export async function finishTask(): Promise<Result<{ sync: SyncResult | null; sy
 export async function setTaskStatus(taskId: number, status: "todo" | "in_progress" | "done") {
   return run(async () => {
     await db.update(schema.tasks).set({ status }).where(eq(schema.tasks.id, taskId));
+    // A repeating task creates its next copy when it is marked done.
+    const nextTaskId = status === "done" ? await spawnNextRepeat(taskId) : null;
+    return { nextTaskId };
+  });
+}
+
+/** Stops a task from repeating (future copies only; existing ones are untouched). */
+export async function stopRepeating(taskId: number) {
+  return run(async () => {
+    await db.update(schema.tasks).set({ repeat: null, repeatDay: null }).where(eq(schema.tasks.id, taskId));
     return undefined;
   });
 }

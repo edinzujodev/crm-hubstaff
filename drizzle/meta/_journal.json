@@ -36,6 +36,13 @@
       "when": 1793714757004,
       "tag": "0004_loud_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793960589044,
+      "tag": "0005_solid_daredevil",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
+import { StopRepeatingButton } from "@/components/stop-repeating-button";
+import { MarkFinishedButton } from "@/components/mark-finished-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
@@ -90,6 +92,11 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             </span>
             <span>Assignee: {row.assigneeName ?? "—"}</span>
             {task.dueDate && <span>Due: {task.dueDate}</span>}
+            {task.repeat && (
+              <span>
+                Repeats {task.repeat} · <StopRepeatingButton taskId={task.id} />
+              </span>
+            )}
             <span>{task.hubstaffTaskId ? `Hubstaff task #${task.hubstaffTaskId}` : "Not in Hubstaff yet (created on first Start)"}</span>
           </p>
         </div>
@@ -99,6 +106,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           ) : (
             <>
               <TaskStatusSelect taskId={task.id} status={task.status} />
+              {task.status !== "done" && <MarkFinishedButton taskId={task.id} repeats={!!task.repeat} />}
               <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />
               <TimerControls
                 taskId={task.id}
