@@ -7,9 +7,11 @@ import { NewClientForm } from "@/components/new-client-form";
 import { config } from "@/lib/config";
 import { fmtDuration, localDay } from "@/lib/format";
 import { trackedByClient } from "@/lib/report";
+import { pageGuard } from "@/lib/auth";
 
 async function ClientList() {
   await connection();
+  await pageGuard("super_admin", "leader");
   const monthStart = `${localDay(new Date(), config.timeZone).slice(0, 7)}-01`;
   const [clients, taskCounts, tracked] = await Promise.all([
     db.select().from(schema.clients).orderBy(asc(schema.clients.name)),

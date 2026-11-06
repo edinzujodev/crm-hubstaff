@@ -8,17 +8,20 @@ import { TaskMenu } from "@/components/task-menu";
 import { TaskRow } from "@/components/task-row";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
-import { getCurrentUser } from "@/lib/current-user";
+import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
 import { fmtDateTime, fmtDay, fmtDuration, localDay, truncate } from "@/lib/format";
 import { isSessionStale, trackedByTask } from "@/lib/report";
+import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
 const TITLE_MAX = 50;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
 
 async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
-  const [me, show] = await Promise.all([getCurrentUser(), filter]);
-  const [tasks, clients, users, tracked, openSessions] = await Promise.all([
+  const [auth, show] = await Promise.all([getAuth(), filter]);
+  if (!auth) return <p className="text-muted">Add a team member first (Team page).</p>;
+  const me = auth.user;
+  const [tasks, clients, users, tracked, openSessions, teams] = await Promise.all([
     db
       .select({
         task: schema.tasks,
@@ -28,12 +31,16 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
       .from(schema.tasks)
       .leftJoin(schema.clients, eq(schema.tasks.clientId, schema.clients.id))
       .leftJoin(schema.users, eq(schema.tasks.assigneeId, schema.users.id))
+      .where(taskScope(auth))
       .orderBy(asc(schema.tasks.status), desc(schema.tasks.id)),
     db.select({ id: schema.clients.id, name: schema.clients.name }).from(schema.clients).orderBy(schema.clients.name),
-    db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).orderBy(schema.users.name),
+    assignableUsers(auth),
     trackedByTask(),
     db.select().from(schema.workSessions).where(isNull(schema.workSessions.endedAt)),
+    db.select().from(schema.teams),
   ]);
+  const teamLevels = new Map(teams.map((t) => [t.id, { approachingHours: t.approachingHours, criticalHours: t.criticalHours }]));
+  const isWorker = auth.role === "worker";
 
   const today = localDay(new Date(), config.timeZone);
   const mine = openSessions.find((s) => s.userId === me?.id);
@@ -66,17 +73,19 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
         </div>
       )}
 
-      <NewTaskForm clients={clients} users={users} />
+      {!isWorker && <NewTaskForm clients={clients} users={users} />}
 
       <div className="flex gap-3 text-sm">
         {[
           ["", "My open tasks"],
-          ["everyone", "Everyone's open tasks"],
+          ["everyone", auth.role === "super_admin" ? "Everyone's open tasks" : "Team's open tasks"],
           ["upcoming", "Upcoming"],
           ["done", "Done"],
           ["all", "All"],
           ["deleted", "Deleted"],
-        ].map(([key, label]) => (
+        ]
+          .filter(([key]) => !isWorker || (key !== "everyone" && key !== "deleted"))
+          .map(([key, label]) => (
           <Link
             key={key}
             href={key ? `/?show=${key}` : "/"}
@@ -104,6 +113,8 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
             {visible.map(({ task, clientName, assigneeName }) => {
               const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
               const trackedSeconds = tracked.get(task.id);
+              const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
+              const manage = canManageTask(auth, task);
               return (
                 <TaskRow
                   key={task.id}
@@ -133,12 +144,16 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                       <span key="client" className="text-muted">—</span>
                     ),
                     task.dueDate ? (
-                      <span
-                        key="due"
-                        className={task.status !== "done" && task.dueDate < today ? "font-medium text-red-600" : undefined}
-                        title={task.status !== "done" && task.dueDate < today ? "Overdue" : undefined}
-                      >
+                      <span key="due" className="flex items-center gap-2 whitespace-nowrap">
                         {fmtDay(task.dueDate)}
+                        {urgency && urgency !== "on_track" && (
+                          <span
+                            className={`badge ${URGENCY_CLASS[urgency]}`}
+                            title={timeLeftLabel(task.dueDate, config.timeZone)}
+                          >
+                            {URGENCY_LABEL[urgency]}
+                          </span>
+                        )}
                       </span>
                     ) : (
                       <span key="due" className="text-muted">
@@ -149,7 +164,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                   ]}
                   actions={
                     task.deletedAt ? (
-                      <RestoreTaskButton compact taskId={task.id} />
+                      manage ? <RestoreTaskButton compact taskId={task.id} /> : null
                     ) : (
                       <>
                         <TimerControls
@@ -162,19 +177,20 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                             mine && mineTask && mine.taskId !== task.id ? { id: mineTask.id, title: mineTask.title } : null
                           }
                         />
-                        <TaskMenu
-                          task={{
-                            id: task.id,
-                            title: task.title,
-                            clientId: task.clientId,
-                            assigneeId: task.assigneeId,
-                            dueDate: task.dueDate,
-                            repeat: task.repeat,
-                            repeatLeadDays: task.repeatLeadDays,
-                          }}
-                          clients={clients}
-                          users={users}
-                        />
+                        {manage && (
+                          <TaskMenu
+                            task={{
+                              id: task.id,
+                              title: task.title,
+                              clientId: task.clientId,
+                              assigneeId: task.assigneeId,
+                              dueDate: task.dueDate,
+                              repeat: task.repeat,
+                              repeatLeadDays: task.repeatLeadDays,
+                            }}
+                            clients={clients}
+                            users={users}
+                          />)}
                       </>
                     )
                   }

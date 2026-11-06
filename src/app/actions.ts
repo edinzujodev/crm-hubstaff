@@ -6,6 +6,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser, USER_COOKIE } from "@/lib/current-user";
+import { canManageTeam, devSwitcherEnabled, getAuth, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
 import { defaultLeadDays, hubstaffSummary, spawnNextRepeat, subtractDays } from "@/lib/recurring";
 import { localDay } from "@/lib/format";
@@ -28,6 +29,8 @@ async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
 }
 
 export async function switchUser(formData: FormData) {
+  // Only for local development; real sign-in replaces it.
+  if (!devSwitcherEnabled()) return;
   const id = z.coerce.number().int().positive().parse(formData.get("userId"));
   (await cookies()).set(USER_COOKIE, String(id), { httpOnly: true, sameSite: "lax", path: "/" });
   refresh();
@@ -46,14 +49,22 @@ const newTask = z.object({
 /** Saves the task, then creates it in Hubstaff. If Hubstaff fails the task is kept and Start retries. */
 export async function createTask(_prev: unknown, formData: FormData): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
+    const auth = await requireRole("super_admin", "leader");
     const input = newTask.parse(Object.fromEntries(formData));
     // The next due date is calculated from this one, so a repeating task needs it.
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : undefined;
     const repeatLeadDays = input.repeat ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : undefined;
+    const picked = input.assigneeId
+      ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })
+      : null;
+    if (auth.role === "leader" && picked && picked.teamId !== auth.ledTeam?.id) {
+      throw new Error("You can only assign tasks to people in your team.");
+    }
+    const teamId = picked?.teamId ?? auth.ledTeam?.id ?? null;
     const [created] = await db
       .insert(schema.tasks)
-      .values({ ...input, repeatDay, repeatLeadDays })
+      .values({ ...input, repeatDay, repeatLeadDays, teamId })
       .returning();
     // The first task of a repeating series is the series' id; every copy keeps it.
     const [task] = input.repeat
@@ -78,8 +89,7 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
  */
 export async function deleteTask(taskId: number): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
-    const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
-    if (!task) throw new Error("Task not found");
+    const { task } = await requireTask(taskId, "manage");
     if (task.deletedAt) return {};
     const now = new Date();
     await db.transaction(async (tx) => {
@@ -95,8 +105,7 @@ export async function deleteTask(taskId: number): Promise<Result<{ hubstaffError
 
 export async function restoreTask(taskId: number): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
-    const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
-    if (!task) throw new Error("Task not found");
+    const { task } = await requireTask(taskId, "manage");
     await db.update(schema.tasks).set({ deletedAt: null }).where(eq(schema.tasks.id, taskId));
     return renameInHubstaff(task.hubstaffTaskId, unmarkDeleted);
   });
@@ -130,6 +139,7 @@ const newClient = z.object({
 
 export async function createClient(_prev: unknown, formData: FormData): Promise<Result<{ id: number }>> {
   return run(async () => {
+    await requireRole("super_admin", "leader");
     const input = newClient.parse(Object.fromEntries(formData));
     const [client] = await db.insert(schema.clients).values(input).returning({ id: schema.clients.id });
     return client;
@@ -169,6 +179,7 @@ const editLead = z.object({
 
 export async function createLead(_prev: unknown, formData: FormData): Promise<Result<{ id: number }>> {
   return run(async () => {
+    await requireRole("super_admin");
     const input = newLead.parse(Object.fromEntries(formData));
     const [lead] = await db.insert(schema.leads).values(input).returning({ id: schema.leads.id });
     return lead;
@@ -178,6 +189,7 @@ export async function createLead(_prev: unknown, formData: FormData): Promise<Re
 /** Saves the lead's details. Optional fields that were cleared are set back to empty. */
 export async function updateLead(leadId: number, _prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
+    await requireRole("super_admin");
     const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
     if (!lead) throw new Error("Lead not found");
     const input = editLead.parse(Object.fromEntries(formData));
@@ -202,6 +214,7 @@ export async function updateLead(leadId: number, _prev: unknown, formData: FormD
 
 export async function setLeadStatus(leadId: number, status: "new" | "contacted" | "meeting" | "proposal" | "lost") {
   return run(async () => {
+    await requireRole("super_admin");
     const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
     if (!lead) throw new Error("Lead not found");
     if (lead.clientId) throw new Error("This lead is already a client.");
@@ -215,8 +228,9 @@ export async function setLeadStatus(leadId: number, status: "new" | "contacted" 
 
 /** Turns a lead into a client (copying its details) and marks the lead won. */
 export async function convertLead(leadId: number): Promise<Result<{ clientId: number }>> {
-  return run(() =>
-    db.transaction(async (tx) => {
+  return run(async () => {
+    await requireRole("super_admin");
+    return db.transaction(async (tx) => {
       const lead = await tx.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
       if (!lead) throw new Error("Lead not found");
       if (lead.clientId) return { clientId: lead.clientId };
@@ -235,13 +249,14 @@ export async function convertLead(leadId: number): Promise<Result<{ clientId: nu
         .set({ status: "won", clientId: client.id, convertedAt: new Date(), lostReason: null })
         .where(eq(schema.leads.id, leadId));
       return { clientId: client.id };
-    }),
-  );
+    });
+  });
 }
 
 /** Deletes a lead that was never converted. Converted leads are kept as history. */
 export async function deleteLead(leadId: number) {
   return run(async () => {
+    await requireRole("super_admin");
     const lead = await db.query.leads.findFirst({ where: eq(schema.leads.id, leadId) });
     if (lead?.clientId) throw new Error("This lead became a client, so it is kept as history.");
     await db.delete(schema.leads).where(eq(schema.leads.id, leadId));
@@ -251,6 +266,7 @@ export async function deleteLead(leadId: number) {
 
 export async function startTask(taskId: number) {
   return run(async () => {
+    await requireTask(taskId, "view");
     const user = await requireCurrentUser();
     return startSession(taskId, user.id);
   });
@@ -272,6 +288,7 @@ export async function finishTask(): Promise<Result<{ sync: SyncResult | null; sy
 
 export async function setTaskStatus(taskId: number, status: "todo" | "in_progress" | "done") {
   return run(async () => {
+    await requireTask(taskId, "view");
     await db
       .update(schema.tasks)
       .set({ status, doneAt: status === "done" ? new Date() : null })
@@ -289,10 +306,16 @@ export async function updateTask(
   formData: FormData,
 ): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
-    const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
-    if (!task) throw new Error("Task not found");
+    const { auth, task } = await requireTask(taskId, "manage");
     if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
     const input = newTask.parse(Object.fromEntries(formData));
+    const picked = input.assigneeId
+      ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })
+      : null;
+    if (auth.role === "leader" && picked && picked.teamId !== auth.ledTeam?.id) {
+      throw new Error("You can only assign tasks to people in your team.");
+    }
+    const teamId = picked ? (picked.teamId ?? task.teamId) : task.teamId;
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : null;
     const repeatLeadDays = input.repeat ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : null;
@@ -309,6 +332,7 @@ export async function updateTask(
         repeat: input.repeat ?? null,
         repeatDay,
         repeatLeadDays,
+        teamId,
         ...(input.repeat && !task.seriesId ? { seriesId: task.id } : {}),
         ...(task.startDate ? { startDate: movedStart && movedStart > today ? movedStart : null } : {}),
       })
@@ -332,6 +356,7 @@ export async function updateTask(
 /** Stops a task from repeating (future copies only; existing ones are untouched). */
 export async function stopRepeating(taskId: number) {
   return run(async () => {
+    await requireTask(taskId, "manage");
     await db.update(schema.tasks).set({ repeat: null, repeatDay: null }).where(eq(schema.tasks.id, taskId));
     return undefined;
   });
@@ -339,15 +364,22 @@ export async function stopRepeating(taskId: number) {
 
 /** Pulls older Hubstaff time for the range being reported, so reports can cover it. */
 export async function loadHubstaffRange(from: string, to: string) {
-  return run(() => backfillHubstaff(from, to));
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    return backfillHubstaff(from, to);
+  });
 }
 
 export async function syncNow() {
-  return run(() => syncHubstaff());
+  return run(async () => {
+    await requireAuth();
+    return syncHubstaff();
+  });
 }
 
 /** Called by the page every few minutes; skips if a sync ran recently. */
 export async function syncIfStale() {
+  if (!(await getAuth())) return { ok: false as const, error: "Sign in first." };
   const last = await lastSyncAt();
   if (last && Date.now() - last.getTime() < 2 * 60 * 1000) return { ok: true as const, data: null };
   return run(() => syncHubstaff());
@@ -361,7 +393,12 @@ const member = z.object({
 
 export async function addMember(_prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
-    await db.insert(schema.users).values(member.parse(Object.fromEntries(formData)));
+    // The very first person added becomes super admin; after that only a super admin adds people.
+    const first = (await db.select({ id: schema.users.id }).from(schema.users).limit(1)).length === 0;
+    if (!first) await requireRole("super_admin");
+    await db
+      .insert(schema.users)
+      .values({ ...member.parse(Object.fromEntries(formData)), ...(first ? { role: "super_admin" as const } : {}) });
     return undefined;
   });
 }
@@ -385,6 +422,7 @@ async function assignLeader(tx: Pick<typeof db, "update">, teamId: number, leade
 
 export async function createTeam(_prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
+    await requireRole("super_admin");
     const input = newTeam.parse(Object.fromEntries(formData));
     try {
       await db.transaction(async (tx) => {
@@ -403,6 +441,7 @@ export async function createTeam(_prev: unknown, formData: FormData): Promise<Re
 
 export async function setTeamLeader(teamId: number, leaderId: number | null) {
   return run(async () => {
+    await requireRole("super_admin");
     await db.transaction((tx) => assignLeader(tx, teamId, leaderId));
     return undefined;
   });
@@ -411,6 +450,7 @@ export async function setTeamLeader(teamId: number, leaderId: number | null) {
 /** Moves a person into a team, or out of any team with null. A leader who moves out stops leading. */
 export async function setUserTeam(userId: number, teamId: number | null) {
   return run(async () => {
+    await requireRole("super_admin");
     await db.transaction(async (tx) => {
       await tx.update(schema.users).set({ teamId }).where(eq(schema.users.id, userId));
       const leads = and(eq(schema.teams.leaderId, userId), teamId ? ne(schema.teams.id, teamId) : undefined);
@@ -423,6 +463,7 @@ export async function setUserTeam(userId: number, teamId: number | null) {
 /** Deletes the team itself; its members stay and become "no team". */
 export async function deleteTeam(teamId: number) {
   return run(async () => {
+    await requireRole("super_admin");
     await db.transaction(async (tx) => {
       await tx.update(schema.users).set({ teamId: null }).where(eq(schema.users.teamId, teamId));
       await tx.update(schema.teams).set({ leaderId: null }).where(eq(schema.teams.id, teamId));
@@ -433,8 +474,42 @@ export async function deleteTeam(teamId: number) {
 }
 
 export async function setHubstaffUserId(userId: number, formData: FormData) {
+  await requireRole("super_admin");
   const raw = formData.get("hubstaffUserId");
   const hubstaffUserId = raw ? z.coerce.number().int().positive().parse(raw) : null;
   await db.update(schema.users).set({ hubstaffUserId }).where(eq(schema.users.id, userId));
   refresh();
+}
+
+const levels = z
+  .object({
+    approachingHours: z.coerce.number({ error: "Approaching must be a number of hours" }).int().min(1).max(24 * 90),
+    criticalHours: z.coerce.number({ error: "Critical must be a number of hours" }).int().min(1).max(24 * 90),
+  })
+  .refine((v) => v.criticalHours < v.approachingHours, {
+    message: "Critical must be fewer hours than Approaching",
+  });
+
+/** A team leader (or the super admin) sets when the team's tasks turn Approaching and Critical. */
+export async function setTeamLevels(teamId: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    const auth = await requireAuth();
+    if (!canManageTeam(auth, teamId)) throw new Error("You don't have permission to do that.");
+    const input = levels.parse(Object.fromEntries(formData));
+    await db.update(schema.teams).set(input).where(eq(schema.teams.id, teamId));
+    return undefined;
+  });
+}
+
+/** Makes someone super admin, or back to a regular member. The last super admin can't be removed. */
+export async function setUserRole(userId: number, role: "super_admin" | "member") {
+  return run(async () => {
+    await requireRole("super_admin");
+    if (role === "member") {
+      const admins = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.role, "super_admin"));
+      if (admins.length <= 1 && admins[0]?.id === userId) throw new Error("There must be at least one super admin.");
+    }
+    await db.update(schema.users).set({ role }).where(eq(schema.users.id, userId));
+    return undefined;
+  });
 }

@@ -8,8 +8,10 @@ import { DeleteLeadButton } from "@/components/delete-lead-button";
 import { LeadEditForm } from "@/components/lead-edit-form";
 import { config } from "@/lib/config";
 import { fmtDateTime } from "@/lib/format";
+import { pageGuard } from "@/lib/auth";
 
 async function LeadDetail({ params }: { params: Promise<{ id: string }> }) {
+  await pageGuard("super_admin");
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
   const [lead, users] = await Promise.all([

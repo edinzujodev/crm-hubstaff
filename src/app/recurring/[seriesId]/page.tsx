@@ -7,14 +7,16 @@ import { config } from "@/lib/config";
 import { fmtDateTime, fmtDay, fmtDuration, localDay } from "@/lib/format";
 import { periodLabel } from "@/lib/recurring";
 import { getSeries } from "@/lib/series";
+import { pageGuard } from "@/lib/auth";
 
 const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
 
 async function SeriesDetail({ params }: { params: Promise<{ seriesId: string }> }) {
   await connection();
+  const auth = await pageGuard("super_admin", "leader");
   const id = Number((await params).seriesId);
   if (!Number.isInteger(id)) notFound();
-  const data = await getSeries(id);
+  const data = await getSeries(id, auth);
   if (!data) notFound();
   const { summary, occurrences } = data;
 

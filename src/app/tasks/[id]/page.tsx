@@ -9,6 +9,7 @@ import { RestoreTaskButton } from "@/components/restore-task-button";
 import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
+import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime, fmtDuration, fmtTime } from "@/lib/format";
 import { getTaskReport, type SessionFlag } from "@/lib/report";
@@ -55,6 +56,9 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
     .where(eq(schema.tasks.id, id));
   if (!row) notFound();
   const { task } = row;
+  const auth = await getAuth();
+  if (!auth || !canViewTask(auth, task)) notFound();
+  const manage = canManageTask(auth, task);
 
   const tz = config.timeZone;
   const [report, mine] = await Promise.all([
@@ -93,7 +97,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             {task.dueDate && <span>Due: {task.dueDate}</span>}
             {task.repeat && (
               <span>
-                Repeats {task.repeat} · <StopRepeatingButton taskId={task.id} />
+                Repeats {task.repeat}{manage && <> · <StopRepeatingButton taskId={task.id} /></>}
               </span>
             )}
             {task.seriesId && (
@@ -110,7 +114,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           ) : (
             <>
               <TaskStatusSelect taskId={task.id} title={task.title} status={task.status} />
-              <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />
+              {manage && <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />}
               <TimerControls
                 taskId={task.id}
                 title={task.title}

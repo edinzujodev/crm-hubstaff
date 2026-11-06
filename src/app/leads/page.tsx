@@ -7,6 +7,7 @@ import { ConvertLeadButton } from "@/components/convert-lead-button";
 import { DeleteLeadButton } from "@/components/delete-lead-button";
 import { LeadStatusSelect } from "@/components/lead-status-select";
 import { NewLeadForm } from "@/components/new-lead-form";
+import { pageGuard } from "@/lib/auth";
 
 const FILTERS = [
   ["", "Open"],
@@ -19,6 +20,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 
 async function LeadList({ filter }: { filter: Promise<string | undefined> }) {
   await connection();
+  await pageGuard("super_admin");
   const show = await filter;
   const [rows, users] = await Promise.all([
     db

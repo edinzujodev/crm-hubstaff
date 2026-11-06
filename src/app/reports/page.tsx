@@ -13,6 +13,7 @@ import { longDay } from "@/lib/chart";
 import { fmtDuration } from "@/lib/format";
 import { parseReportParams, rangePresets, reportQuery } from "@/lib/report-range";
 import { dailySeries, getTimeReport, type Row } from "@/lib/time-report";
+import { pageGuard } from "@/lib/auth";
 
 const pct = (tracked: number, active: number) => (tracked ? `${Math.round((active / tracked) * 100)}%` : "—");
 
@@ -159,14 +160,19 @@ ${longDay(d.day)}`,
 
 async function Report({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   await connection();
+  const auth = await pageGuard("super_admin", "leader");
   const tz = config.timeZone;
-  const filter = parseReportParams(await searchParams, tz);
-  const [report, clients, users, teams] = await Promise.all([
+  const parsed = parseReportParams(await searchParams, tz);
+  // A team leader's reports are always limited to their own team.
+  const filter = auth.role === "leader" ? { ...parsed, teamId: auth.ledTeam!.id } : parsed;
+  const [report, clients, allUsers, allTeams] = await Promise.all([
     getTimeReport(filter),
     db.select({ id: schema.clients.id, name: schema.clients.name }).from(schema.clients).orderBy(asc(schema.clients.name)),
-    db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).orderBy(asc(schema.users.name)),
+    db.select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId }).from(schema.users).orderBy(asc(schema.users.name)),
     db.select({ id: schema.teams.id, name: schema.teams.name }).from(schema.teams).orderBy(asc(schema.teams.name)),
   ]);
+  const users = auth.role === "leader" ? allUsers.filter((u) => u.teamId === auth.ledTeam!.id) : allUsers;
+  const teams = auth.role === "leader" ? allTeams.filter((t) => t.id === auth.ledTeam!.id) : allTeams;
   const presets = rangePresets(tz);
   const query = reportQuery(filter);
 

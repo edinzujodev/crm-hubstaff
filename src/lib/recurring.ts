@@ -87,6 +87,7 @@ export async function spawnNextRepeat(taskId: number) {
       repeat: task.repeat,
       repeatDay: task.repeatDay,
       repeatLeadDays: task.repeatLeadDays,
+      teamId: task.teamId,
       seriesId,
       repeatedFromId: task.id,
     })

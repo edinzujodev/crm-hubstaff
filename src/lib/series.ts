@@ -1,5 +1,6 @@
-import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { taskScope, type Auth } from "@/lib/auth";
 import { trackedByTask } from "@/lib/report";
 import type { Repeat } from "@/lib/recurring";
 
@@ -31,7 +32,7 @@ export type SeriesSummary = {
   latestTaskId: number;
 };
 
-async function occurrencesBySeries(onlySeriesId?: number) {
+async function occurrencesBySeries(scope: SQL | undefined, onlySeriesId?: number) {
   const [rows, tracked] = await Promise.all([
     db
       .select({
@@ -46,6 +47,7 @@ async function occurrencesBySeries(onlySeriesId?: number) {
         and(
           onlySeriesId ? eq(schema.tasks.seriesId, onlySeriesId) : isNotNull(schema.tasks.seriesId),
           isNull(schema.tasks.deletedAt),
+          scope,
         ),
       )
       .orderBy(asc(schema.tasks.dueDate), asc(schema.tasks.id)),
@@ -89,13 +91,13 @@ function summarize(id: number, g: { occurrences: Occurrence[]; clientId: number 
   };
 }
 
-export async function listSeries(): Promise<SeriesSummary[]> {
-  const bySeries = await occurrencesBySeries();
+export async function listSeries(auth: Auth): Promise<SeriesSummary[]> {
+  const bySeries = await occurrencesBySeries(taskScope(auth));
   return [...bySeries].map(([id, g]) => summarize(id, g)).sort((a, b) => a.title.localeCompare(b.title));
 }
 
-export async function getSeries(id: number) {
-  const g = (await occurrencesBySeries(id)).get(id);
+export async function getSeries(id: number, auth: Auth) {
+  const g = (await occurrencesBySeries(taskScope(auth), id)).get(id);
   if (!g) return null;
   return { summary: summarize(id, g), occurrences: g.occurrences };
 }

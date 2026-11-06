@@ -57,6 +57,13 @@
       "when": 1793970200389,
       "tag": "0007_free_diamondback",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793971505404,
+      "tag": "0008_shallow_king_bedlam",
+      "breakpoints": true
     }
   ]
 }

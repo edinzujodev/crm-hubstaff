@@ -9,6 +9,7 @@ import { switchUser } from "@/app/actions";
 import { Toaster } from "@/components/toaster";
 import { SyncButton } from "@/components/sync-button";
 import { hubstaffMode, config } from "@/lib/config";
+import { devSwitcherEnabled, getAuth } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime } from "@/lib/format";
 import { lastSyncAt } from "@/lib/sync";
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
 };
 
 async function UserSwitcher() {
+  if (!devSwitcherEnabled()) return null;
   const [current, users] = await Promise.all([
     getCurrentUser(),
     db.select().from(schema.users).orderBy(asc(schema.users.name)),
@@ -42,6 +44,31 @@ async function UserSwitcher() {
       </select>
       <button className="btn py-1">Switch</button>
     </form>
+  );
+}
+
+async function NavLinks() {
+  const auth = await getAuth();
+  const role = auth?.role;
+  const links: [string, string, boolean][] = [
+    ["/", "Tasks", true],
+    ["/critical", "Critical", role === "super_admin" || role === "leader"],
+    ["/recurring", "Recurring", role === "super_admin" || role === "leader"],
+    ["/leads", "Leads", role === "super_admin"],
+    ["/clients", "Clients", role === "super_admin" || role === "leader"],
+    ["/reports", "Reports", role === "super_admin" || role === "leader"],
+    ["/team", "Team", role === "super_admin" || role === "leader"],
+  ];
+  return (
+    <nav className="flex gap-4 text-sm">
+      {links
+        .filter(([, , show]) => show)
+        .map(([href, label]) => (
+          <Link key={href} href={href}>
+            {label}
+          </Link>
+        ))}
+    </nav>
   );
 }
 
@@ -65,14 +92,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-semibold">
               Client tracker
             </Link>
-            <nav className="flex gap-4 text-sm">
-              <Link href="/">Tasks</Link>
-              <Link href="/recurring">Recurring</Link>
-              <Link href="/leads">Leads</Link>
-              <Link href="/clients">Clients</Link>
-              <Link href="/reports">Reports</Link>
-              <Link href="/team">Team</Link>
-            </nav>
+            <Suspense>
+              <NavLinks />
+            </Suspense>
             <span
               className={`badge ${mode === "mock" ? "border-amber-400 text-amber-700 dark:text-amber-400" : "border-emerald-500 text-emerald-700 dark:text-emerald-400"}`}
               title={mode === "mock" ? "Hours are generated from CRM sessions. Set HUBSTAFF_* in .env for live data." : "Using the Hubstaff API"}

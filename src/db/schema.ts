@@ -13,6 +13,9 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
+// A team leader is whoever a team names as its leader (teams.leader_id), so only super admin is stored.
+export const userRole = pgEnum("user_role", ["super_admin", "member"]);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -21,6 +24,7 @@ export const users = pgTable("users", {
   hubstaffUserId: integer("hubstaff_user_id").unique(),
   // A person is in at most one team, so team totals never double count.
   teamId: integer("team_id").references((): AnyPgColumn => teams.id),
+  role: userRole("role").notNull().default("member"),
 });
 
 export const teams = pgTable("teams", {
@@ -28,6 +32,9 @@ export const teams = pgTable("teams", {
   name: text("name").notNull().unique(),
   // The team leader; also a member of the team.
   leaderId: integer("leader_id").references((): AnyPgColumn => users.id),
+  // Urgency levels, set by the team leader: a task due in fewer hours than this is "approaching" / "critical".
+  approachingHours: integer("approaching_hours").notNull().default(72),
+  criticalHours: integer("critical_hours").notNull().default(24),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -83,6 +90,8 @@ export const tasks = pgTable(
     description: text("description"),
     clientId: integer("client_id").references(() => clients.id),
     assigneeId: integer("assignee_id").references(() => users.id),
+    // The team that owns the task: its leader sees it and sets its urgency levels.
+    teamId: integer("team_id").references((): AnyPgColumn => teams.id),
     status: taskStatus("status").notNull().default("todo"),
     dueDate: date("due_date"),
     // Set once the task has been created in Hubstaff (on first Start).
@@ -108,7 +117,11 @@ export const tasks = pgTable(
       .references((): AnyPgColumn => tasks.id)
       .unique(),
   },
-  (t) => [index("tasks_assignee_idx").on(t.assigneeId), index("tasks_series_idx").on(t.seriesId)],
+  (t) => [
+    index("tasks_assignee_idx").on(t.assigneeId),
+    index("tasks_series_idx").on(t.seriesId),
+    index("tasks_team_idx").on(t.teamId),
+  ],
 );
 
 export const sessionEndReason = pgEnum("session_end_reason", [

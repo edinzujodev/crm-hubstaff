@@ -3,12 +3,14 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { fmtDay, fmtDuration } from "@/lib/format";
 import { listSeries } from "@/lib/series";
+import { pageGuard } from "@/lib/auth";
 
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 
 async function SeriesList() {
   await connection();
-  const series = await listSeries();
+  const auth = await pageGuard("super_admin", "leader");
+  const series = await listSeries(auth);
 
   return (
     <div className="card overflow-x-auto">
