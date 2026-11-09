@@ -59,7 +59,7 @@ async function Dashboard() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<h1 className="text-xl font-semibold">Dashboard</h1>}>
+    <Suspense fallback={<h1 className="sr-only">Dashboard</h1>}>
       <Dashboard />
     </Suspense>
   );

@@ -300,7 +300,7 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
 export default function ReportsPage({ searchParams }: PageProps<"/reports">) {
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Reports</h1>
+      <h1 className="sr-only">Reports</h1>
       <Suspense fallback={<p className="text-muted">Loading report…</p>}>
         <Report searchParams={searchParams} />
       </Suspense>

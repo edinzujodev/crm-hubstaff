@@ -48,7 +48,7 @@ export function ProfileMenu({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 rounded-full border border-border py-1 pl-1 pr-3 text-sm transition-colors duration-200 hover:bg-primary/10"
+        className="flex w-full cursor-pointer items-center gap-2 rounded-full border border-border py-1 pl-1 pr-3 text-sm transition-colors duration-200 hover:bg-primary/10"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-(--primary-fg)">
           {initials}

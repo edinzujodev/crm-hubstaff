@@ -208,8 +208,8 @@ export function DashboardGrid({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-xl font-semibold">Dashboard</h1>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <h1 className="sr-only">Dashboard</h1>
         {editing && (
           <>
             <button className="btn" onClick={() => setAdding(true)}>

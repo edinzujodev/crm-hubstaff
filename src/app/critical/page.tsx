@@ -149,7 +149,7 @@ async function CriticalTasks() {
 export default function CriticalPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Critical tasks</h1>
+      <h1 className="sr-only">Critical tasks</h1>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <CriticalTasks />
       </Suspense>

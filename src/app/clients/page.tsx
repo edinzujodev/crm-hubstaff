@@ -67,7 +67,7 @@ async function ClientList() {
 export default function ClientsPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Clients</h1>
+      <h1 className="sr-only">Clients</h1>
       <NewClientForm />
       <Suspense fallback={<p className="text-muted">Loading clients…</p>}>
         <ClientList />

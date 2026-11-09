@@ -255,7 +255,7 @@ async function TeamContent() {
 export default function TeamPage() {
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Team</h1>
+      <h1 className="sr-only">Team</h1>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <TeamContent />
       </Suspense>

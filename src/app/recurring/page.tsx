@@ -71,7 +71,7 @@ export default function RecurringPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold">Recurring tasks</h1>
+        <h1 className="sr-only">Recurring tasks</h1>
         <p className="text-sm text-muted">Each row is one repeating task. Open it to see every time it was done.</p>
       </div>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>

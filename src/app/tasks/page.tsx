@@ -240,7 +240,7 @@ export default function Home({ searchParams }: PageProps<"/tasks">) {
   const filter = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Tasks</h1>
+      <h1 className="sr-only">Tasks</h1>
       <Suspense fallback={<p className="text-muted">Loading tasks…</p>}>
         <TaskList filter={filter} />
       </Suspense>

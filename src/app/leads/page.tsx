@@ -142,7 +142,7 @@ export default function LeadsPage({ searchParams }: PageProps<"/leads">) {
   const filter = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Leads</h1>
+      <h1 className="sr-only">Leads</h1>
       <Suspense fallback={<p className="text-muted">Loading leads…</p>}>
         <LeadList filter={filter} />
       </Suspense>
