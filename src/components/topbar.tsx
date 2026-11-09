@@ -14,7 +14,7 @@ const SECTIONS: Record<string, string> = {
   reports: "Reports",
   team: "Team",
 };
-const DETAIL: Record<string, string> = { tasks: "Task", clients: "Client", leads: "Lead", recurring: "Series" };
+const DETAIL: Record<string, string> = { tasks: "Task", clients: "Client", leads: "Lead", recurring: "Series", team: "Team" };
 
 /** Where you are: Home › Tasks › Task #12. Detail pages are named by kind and id. */
 function Breadcrumb() {

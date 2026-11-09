@@ -6,7 +6,6 @@ import { setHubstaffUserId } from "@/app/actions";
 import { Avatar } from "@/components/avatar";
 import { RoleSelect } from "@/components/role-select";
 import { TeamSelect } from "@/components/team-select";
-import { URGENCY_CLASS, URGENCY_LABEL, type Urgency } from "@/lib/urgency";
 
 export type Person = {
   id: number;
@@ -16,9 +15,6 @@ export type Person = {
   role: "super_admin" | "member";
   hubstaffUserId: number | null;
   isLeader: boolean;
-  level: Urgency;
-  critical: number;
-  approaching: number;
 };
 
 type Team = { id: number; name: string };
@@ -28,11 +24,10 @@ const chip = (on: boolean) =>
     on ? "border-primary bg-primary/10 font-medium text-foreground" : "border-border text-muted hover:bg-primary/5 hover:text-foreground"
   }`;
 
-/** Everyone the viewer manages, with search and quick filters. Super admins can edit team, role and Hubstaff id inline. */
+/** Everyone the viewer manages, with search and filters. Super admins can edit team, role and Hubstaff id inline. */
 export function PeopleList({ people, teams, admin }: { people: Person[]; teams: Team[]; admin: boolean }) {
   const [q, setQ] = useState("");
   const [team, setTeam] = useState("all");
-  const [attention, setAttention] = useState(false);
   const [missingId, setMissingId] = useState(false);
 
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
@@ -41,7 +36,6 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
     (p) =>
       (!needle || p.name.toLowerCase().includes(needle) || p.email.toLowerCase().includes(needle)) &&
       (team === "all" || (team === "none" ? p.teamId === null : String(p.teamId) === team)) &&
-      (!attention || p.level !== "on_track") &&
       (!missingId || p.hubstaffUserId === null),
   );
   const missingCount = people.filter((p) => p.hubstaffUserId === null).length;
@@ -68,9 +62,6 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
             <option value="none">No team</option>
           </select>
         )}
-        <button type="button" className={chip(attention)} aria-pressed={attention} onClick={() => setAttention((v) => !v)}>
-          Needs attention
-        </button>
         {admin && (
           <button type="button" className={chip(missingId)} aria-pressed={missingId} onClick={() => setMissingId((v) => !v)}>
             No Hubstaff id ({missingCount})
@@ -86,7 +77,6 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
           <thead className="border-b border-border text-left text-xs text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Person</th>
-              <th className="px-3 py-2 font-medium">Most urgent task</th>
               <th className="px-3 py-2 font-medium">Team</th>
               {admin && <th className="px-3 py-2 font-medium">Role</th>}
               {admin && <th className="px-3 py-2 font-medium">Hubstaff user id</th>}
@@ -108,18 +98,6 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
                       </p>
                       <p className="truncate text-xs text-muted">{p.email}</p>
                     </div>
-                  </div>
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`badge ${URGENCY_CLASS[p.level]}`}>{URGENCY_LABEL[p.level]}</span>
-                    {(p.critical > 0 || p.approaching > 0) && (
-                      <span className="text-xs text-muted">
-                        {[p.critical ? `${p.critical} critical` : "", p.approaching ? `${p.approaching} approaching` : ""]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    )}
                   </div>
                 </td>
                 <td className="px-3 py-2">
@@ -153,14 +131,13 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={admin ? 5 : 3} className="px-3 py-8 text-center text-muted">
+                <td colSpan={admin ? 4 : 2} className="px-3 py-8 text-center text-muted">
                   No one matches.{" "}
                   <button
                     className="cursor-pointer underline"
                     onClick={() => {
                       setQ("");
                       setTeam("all");
-                      setAttention(false);
                       setMissingId(false);
                     }}
                   >
