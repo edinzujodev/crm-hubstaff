@@ -9,7 +9,8 @@ type Repeat = "" | "weekly" | "monthly";
 // How many days before it is due a new copy shows up in the open-task lists.
 const DEFAULT_LEAD = { weekly: 2, monthly: 7 } as const;
 
-export function NewTaskForm({ clients, users }: { clients: Option[]; users: Option[] }) {
+/** `bare` drops the card styling, for use inside something that already is one (a dashboard widget). */
+export function NewTaskForm({ clients, users, bare = false }: { clients: Option[]; users: Option[]; bare?: boolean }) {
   const [state, action, pending] = useActionState(createTask, null);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -41,7 +42,7 @@ export function NewTaskForm({ clients, users }: { clients: Option[]; users: Opti
   }
 
   return (
-    <form ref={form} action={action} onSubmit={ask} className="card flex flex-wrap items-end gap-2 p-3">
+    <form ref={form} action={action} onSubmit={ask} className={`flex flex-wrap items-end gap-2 ${bare ? "" : "card p-3"}`}>
       <label className="flex min-w-60 flex-1 flex-col gap-1 text-xs text-muted">
         New task
         <input name="title" required placeholder="e.g. Monthly bank reconciliation" className="input text-foreground" />

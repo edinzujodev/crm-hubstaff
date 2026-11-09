@@ -30,6 +30,7 @@ export const RANGE_LABEL: Record<RangeKey, string> = {
 };
 
 export const WIDGET_TYPES = [
+  "new-task",
   "tasks",
   "task-counts",
   "stats",
@@ -52,6 +53,7 @@ const who = {
 };
 
 export const schemas = {
+  "new-task": z.object({}),
   tasks: z.object({
     ...who,
     show: z.enum(["open", "in_progress", "done"]).default("open"),
@@ -152,6 +154,14 @@ const limitField: FieldDef = {
 };
 
 export const WIDGETS: Record<WidgetType, WidgetDef> = {
+  "new-task": {
+    label: "Add task",
+    description: "The new-task form, right on your dashboard.",
+    roles: LEADERS,
+    defaultSize: "full",
+    fields: [],
+    presets: [{ id: "new", label: "Add task", description: "Create a task without leaving the dashboard.", config: {} }],
+  },
   tasks: {
     label: "Task list",
     description: "Tasks filtered by person, status, client and how late they are.",
@@ -423,6 +433,7 @@ export function starterLayout(role: Role): Starter[] {
   }
   const who = role === "super_admin" ? "everyone" : "team";
   return [
+    { type: "new-task", size: "full", config: {} },
     { type: "task-counts", size: "s", config: { who } },
     { type: "tasks", size: "l", config: { who, due: "overdue" } },
     { type: "stats", size: "full", config: { who, range: role === "super_admin" ? "this_month" : "this_week" } },

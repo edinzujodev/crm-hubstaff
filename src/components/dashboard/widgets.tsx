@@ -6,7 +6,8 @@ import { BarList } from "@/components/charts/bar-list";
 import { ChartTip } from "@/components/charts/chart-tip";
 import { ColumnChart } from "@/components/charts/column-chart";
 import { LineChart } from "@/components/charts/line-chart";
-import type { Auth } from "@/lib/auth";
+import { NewTaskForm } from "@/components/new-task-form";
+import { assignableUsers, type Auth } from "@/lib/auth";
 import { pct, toBars } from "@/lib/bars";
 import { longDay } from "@/lib/chart";
 import { config } from "@/lib/config";
@@ -286,6 +287,11 @@ async function ClientsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   );
 }
 
+async function NewTaskWidget({ auth }: { auth: Auth }) {
+  const [dir, users] = await Promise.all([getDirectory(), assignableUsers(auth)]);
+  return <NewTaskForm bare clients={dir.clients} users={users} />;
+}
+
 async function openSessions() {
   return db
     .select({
@@ -460,6 +466,8 @@ export async function WidgetBody({ type, raw, auth }: { type: WidgetType; raw: u
   // A widget saved before the person's role changed may no longer be theirs to see.
   if (!WIDGETS[type].roles.includes(auth.role)) return <Note>This widget isn&apos;t available for your role.</Note>;
   switch (type) {
+    case "new-task":
+      return <NewTaskWidget auth={auth} />;
     case "tasks":
       return <TasksWidget auth={auth} raw={raw} />;
     case "task-counts":
