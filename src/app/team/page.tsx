@@ -61,56 +61,59 @@ async function Teams({ auth }: { auth: Auth }) {
   return (
     <div className="space-y-4">
       {admin && <NewTeamForm users={options} />}
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">Team</th>
-              <th className="px-3 py-2 font-medium">Leader</th>
-              <th className="px-3 py-2 font-medium">Members</th>
-              <th className="px-3 py-2 font-medium">Urgency levels</th>
-              <th className="px-3 py-2 font-medium" />
-            </tr>
-          </thead>
-          <tbody>
-            {teams.map((t) => {
-              const members = users.filter((u) => u.teamId === t.id);
-              return (
-                <tr key={t.id} className="border-b border-border align-top last:border-0">
-                  <td className="px-3 py-2 font-medium">{t.name}</td>
-                  <td className="px-3 py-2">
-                    {admin ? (
-                      <TeamLeaderSelect teamId={t.id} leaderId={t.leaderId} users={options} teamName={t.name} />
-                    ) : (
-                      (users.find((u) => u.id === t.leaderId)?.name ?? "—")
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-muted">
-                    {members.length ? members.map((m) => m.name).join(", ") : "No members yet. Pick a team for someone below."}
-                  </td>
-                  <td className="px-3 py-2">
-                    <TeamLevelsForm teamId={t.id} approachingHours={t.approachingHours} criticalHours={t.criticalHours} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link href={`/reports?team=${t.id}`} className="btn py-1">
-                        Team report →
-                      </Link>
-                      {admin && <DeleteTeamButton teamId={t.id} title={t.name} />}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {teams.map((t) => {
+          const members = users.filter((u) => u.teamId === t.id);
+          return (
+            <section key={t.id} className="card space-y-4 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-base font-semibold">{t.name}</h3>
+                <div className="flex items-center gap-2">
+                  <Link href={`/reports?team=${t.id}`} className="btn py-1">
+                    Team report →
+                  </Link>
+                  {admin && <DeleteTeamButton teamId={t.id} title={t.name} />}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted">Leader</p>
+                  {admin ? (
+                    <TeamLeaderSelect teamId={t.id} leaderId={t.leaderId} users={options} teamName={t.name} />
+                  ) : (
+                    <p className="text-sm">{users.find((u) => u.id === t.leaderId)?.name ?? "—"}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted">Members ({members.length})</p>
+                  {members.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {members.map((m) => (
+                        <span key={m.id} className="badge">
+                          {m.name}
+                          {m.id === t.leaderId && <span className="ml-1 text-muted">· leader</span>}
+                        </span>
+                      ))}
                     </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {teams.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-muted">
-                  {admin ? "No teams yet. Add the first one above." : "You don't lead a team yet."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  ) : (
+                    <p className="text-sm text-muted">No members yet. Pick a team for someone below.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t border-border pt-3">
+                <p className="text-xs text-muted">Urgency levels: hours left before the due date</p>
+                <TeamLevelsForm teamId={t.id} approachingHours={t.approachingHours} criticalHours={t.criticalHours} />
+              </div>
+            </section>
+          );
+        })}
+        {teams.length === 0 && (
+          <p className="card p-6 text-center text-muted lg:col-span-2">
+            {admin ? "No teams yet. Add the first one above." : "You don't lead a team yet."}
+          </p>
+        )}
       </div>
     </div>
   );

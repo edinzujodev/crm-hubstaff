@@ -15,38 +15,46 @@ export function TeamLevelsForm({
 }) {
   const [state, action, pending] = useActionState(setTeamLevels.bind(null, teamId), null);
   return (
-    <form action={action} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-      <label className="flex items-center gap-1">
-        <span className="badge border-amber-500/60 text-amber-700 dark:text-amber-400">Approaching</span>
-        under
-        <input
-          name="approachingHours"
-          type="number"
-          min={1}
-          defaultValue={approachingHours}
-          className="input w-16 py-1 text-center"
-          aria-label="Approaching: hours before the due date"
-        />
-        h
-      </label>
-      <label className="flex items-center gap-1">
-        <span className="badge border-red-500/60 text-red-700 dark:text-red-400">Critical</span>
-        under
-        <input
-          name="criticalHours"
-          type="number"
-          min={1}
-          defaultValue={criticalHours}
-          className="input w-16 py-1 text-center"
-          aria-label="Critical: hours before the due date"
-        />
-        h
-      </label>
-      <button className="btn py-1" disabled={pending}>
-        {pending ? "Saving…" : "Save"}
-      </button>
-      {state?.ok && <span className="text-emerald-700 dark:text-emerald-400">Saved</span>}
-      {state && !state.ok && <span className="w-full text-red-600">{state.error}</span>}
+    <form action={action} className="space-y-2">
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="badge w-fit border-amber-500/60 text-amber-700 dark:text-amber-400">Approaching</span>
+          <span className="flex items-center gap-2 text-sm">
+            <span className="text-muted">under</span>
+            <input
+              name="approachingHours"
+              type="number"
+              min={1}
+              defaultValue={approachingHours}
+              className="input w-20 text-center"
+              aria-label="Approaching: hours before the due date"
+            />
+            <span className="text-muted">hours</span>
+          </span>
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="badge w-fit border-red-500/60 text-red-700 dark:text-red-400">Critical</span>
+          <span className="flex items-center gap-2 text-sm">
+            <span className="text-muted">under</span>
+            <input
+              name="criticalHours"
+              type="number"
+              min={1}
+              defaultValue={criticalHours}
+              className="input w-20 text-center"
+              aria-label="Critical: hours before the due date"
+            />
+            <span className="text-muted">hours</span>
+          </span>
+        </label>
+        <div className="flex items-center gap-3">
+          <button className="btn btn-primary" disabled={pending}>
+            {pending ? "Saving…" : "Save"}
+          </button>
+          {state?.ok && <span className="text-sm text-emerald-700 dark:text-emerald-400">✓ Saved</span>}
+        </div>
+      </div>
+      {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
     </form>
   );
 }
