@@ -3,11 +3,11 @@
 import { useActionState, useEffect } from "react";
 import { addMember } from "@/app/actions";
 
-/** The add-member form, shown inside a popup. Closes itself once the person is added. */
-export function AddMemberForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+/** The add-member form. In a popup it closes itself once the person is added; on its own (first sign-in) it stays. */
+export function AddMemberForm({ onDone, onCancel }: { onDone?: () => void; onCancel?: () => void }) {
   const [state, action, pending] = useActionState(addMember, null);
   useEffect(() => {
-    if (state?.ok) onDone();
+    if (state?.ok) onDone?.();
   }, [state, onDone]);
 
   return (
@@ -28,9 +28,11 @@ export function AddMemberForm({ onDone, onCancel }: { onDone: () => void; onCanc
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancel
-        </button>
+        {onCancel && (
+          <button type="button" className="btn" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
         <button className="btn btn-primary" disabled={pending}>
           {pending ? "Adding…" : "Add member"}
         </button>

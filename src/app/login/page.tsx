@@ -27,7 +27,9 @@ async function LoginContent({ searchParams }: { searchParams: Promise<{ [key: st
     return (
       <div className="space-y-3">
         <p className="text-sm text-muted">No one has been added yet. The first person you add becomes the super admin.</p>
-        <AddMemberForm />
+        <div className="card p-4">
+          <AddMemberForm />
+        </div>
       </div>
     );
   }
