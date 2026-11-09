@@ -1,6 +1,6 @@
 "use server";
 
-import { and, count, eq, max } from "drizzle-orm";
+import { and, count, eq, min } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
@@ -60,13 +60,14 @@ export async function addWidget(input: {
       .from(schema.dashboardWidgets)
       .where(eq(schema.dashboardWidgets.userId, auth.user.id));
     if (n >= MAX_WIDGETS) throw new Error(`A dashboard holds up to ${MAX_WIDGETS} widgets. Remove one first.`);
-    const [{ last }] = await db
-      .select({ last: max(schema.dashboardWidgets.position) })
+    // New widgets go on top, so the person sees straight away that it was added.
+    const [{ first }] = await db
+      .select({ first: min(schema.dashboardWidgets.position) })
       .from(schema.dashboardWidgets)
       .where(eq(schema.dashboardWidgets.userId, auth.user.id));
     const [row] = await db
       .insert(schema.dashboardWidgets)
-      .values({ userId: auth.user.id, type: input.type, config, title, size, position: (last ?? -1) + 1 })
+      .values({ userId: auth.user.id, type: input.type, config, title, size, position: (first ?? 1) - 1 })
       .returning({ id: schema.dashboardWidgets.id });
     return { id: row.id };
   });
