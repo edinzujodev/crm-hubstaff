@@ -132,11 +132,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </aside>
           <Toaster />
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar>
-              <Suspense>
-                <TopbarStatus />
-              </Suspense>
-            </Topbar>
+            <Suspense>
+              <Topbar>
+                <Suspense>
+                  <TopbarStatus />
+                </Suspense>
+              </Topbar>
+            </Suspense>
             <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
           </div>
         </div>
