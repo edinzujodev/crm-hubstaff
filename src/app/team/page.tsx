@@ -6,8 +6,6 @@ import { db, schema } from "@/db";
 import { Avatar } from "@/components/avatar";
 import { DeleteTeamButton } from "@/components/delete-team-button";
 import { PeopleList, type Person } from "@/components/people-list";
-import { TeamLeaderSelect } from "@/components/team-leader-select";
-import { TeamLevelsForm } from "@/components/team-levels-form";
 import { AddMemberButton, NewTeamButton } from "@/components/team-popups";
 import { pageGuard } from "@/lib/auth";
 
@@ -125,32 +123,6 @@ async function TeamContent() {
                   </p>
                 )}
 
-                <details className="group border-t border-border">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-primary/5">
-                    <span className="font-medium">Team settings</span>
-                    <span className="flex items-center gap-2 text-xs text-muted">
-                      Approaching under {t.approachingHours}h · Critical under {t.criticalHours}h
-                      <span aria-hidden className="transition-transform group-open:rotate-90">
-                        ›
-                      </span>
-                    </span>
-                  </summary>
-                  <div className="space-y-4 border-t border-border p-4">
-                    {admin && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted">Leader</p>
-                        <TeamLeaderSelect teamId={t.id} leaderId={t.leaderId} users={options} teamName={t.name} />
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted">
-                        When a task turns <b>Approaching</b> or <b>Critical</b>, in hours before its due date. Overdue tasks
-                        are always Critical.
-                      </p>
-                      <TeamLevelsForm teamId={t.id} approachingHours={t.approachingHours} criticalHours={t.criticalHours} />
-                    </div>
-                  </div>
-                </details>
               </section>
             );
           })}

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { TeamLeaderSelect } from "@/components/team-leader-select";
+import { TeamLevelsForm } from "@/components/team-levels-form";
 import { WidgetBody } from "@/components/dashboard/widgets";
 import { canManageTeam, pageGuard } from "@/lib/auth";
 
@@ -19,7 +21,9 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   if (!team) notFound();
   // A leader can only open their own team.
   if (!canManageTeam(auth, id)) redirect("/team");
-  const leader = team.leaderId ? await db.query.users.findFirst({ where: eq(schema.users.id, team.leaderId) }) : null;
+  const allUsers = await db.select().from(schema.users).orderBy(asc(schema.users.name));
+  const options = allUsers.map((u) => ({ id: u.id, name: u.name }));
+  const leader = allUsers.find((u) => u.id === team.leaderId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -35,6 +39,33 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
           Hours report →
         </Link>
       </div>
+
+      <details className="card group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm">
+          <span className="font-medium">Team settings</span>
+          <span className="flex items-center gap-2 text-xs text-muted">
+            Approaching under {team.approachingHours}h · Critical under {team.criticalHours}h
+            <span aria-hidden className="transition-transform group-open:rotate-90">
+              ›
+            </span>
+          </span>
+        </summary>
+        <div className="space-y-4 border-t border-border p-4">
+          {auth.role === "super_admin" && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted">Leader</p>
+              <TeamLeaderSelect teamId={team.id} leaderId={team.leaderId} users={options} teamName={team.name} />
+            </div>
+          )}
+          <div className="space-y-2">
+            <p className="text-xs text-muted">
+              When a task turns <b>Approaching</b> or <b>Critical</b>, in hours before its due date. Overdue tasks are
+              always Critical.
+            </p>
+            <TeamLevelsForm teamId={team.id} approachingHours={team.approachingHours} criticalHours={team.criticalHours} />
+          </div>
+        </div>
+      </details>
 
       <section className="card p-4">
         <Suspense fallback={<Loading />}>
