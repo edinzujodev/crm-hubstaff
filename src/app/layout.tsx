@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { signOut, switchUser } from "@/app/actions";
+import { NavLink } from "@/components/nav-link";
 import { Toaster } from "@/components/toaster";
 import { ProfileMenu } from "@/components/profile-menu";
 import { SyncButton } from "@/components/sync-button";
@@ -80,13 +81,13 @@ async function NavLinks() {
     ["/team", "Team", role === "super_admin" || role === "leader"],
   ];
   return (
-    <nav className="flex gap-4 text-sm">
+    <nav aria-label="Main" className="flex flex-wrap gap-1 md:flex-col">
       {links
         .filter(([, , show]) => show)
         .map(([href, label]) => (
-          <Link key={href} href={href}>
+          <NavLink key={href} href={href}>
             {label}
-          </Link>
+          </NavLink>
         ))}
     </nav>
   );
@@ -106,28 +107,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   const mode = hubstaffMode();
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col font-sans">
-        <header className="border-b border-border bg-surface">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-            <Link href="/" className="font-semibold">
+      <body className="min-h-full font-sans">
+        <div className="flex min-h-screen flex-col md:flex-row">
+          <aside className="flex flex-col gap-4 border-b border-border bg-surface px-3 py-3 md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:overflow-y-auto md:border-b-0 md:border-r md:py-5">
+            <Link href="/" className="px-3 font-semibold">
               Client tracker
             </Link>
             <Suspense>
               <NavLinks />
             </Suspense>
-            <span
-              className={`badge ${mode === "mock" ? "border-amber-400 text-amber-700 dark:text-amber-400" : "border-emerald-500 text-emerald-700 dark:text-emerald-400"}`}
-              title={mode === "mock" ? "Hours are generated from CRM sessions. Set HUBSTAFF_* in .env for live data." : "Using the Hubstaff API"}
-            >
-              Hubstaff: {mode}
-            </span>
-            <Suspense>
-              <Account />
-            </Suspense>
-          </div>
-        </header>
-        <Toaster />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+            <div className="flex flex-col items-start gap-3 md:mt-auto">
+              <span
+                className={`badge ${mode === "mock" ? "border-amber-400 text-amber-700 dark:text-amber-400" : "border-emerald-500 text-emerald-700 dark:text-emerald-400"}`}
+                title={mode === "mock" ? "Hours are generated from CRM sessions. Set HUBSTAFF_* in .env for live data." : "Using the Hubstaff API"}
+              >
+                Hubstaff: {mode}
+              </span>
+              <Suspense>
+                <Account />
+              </Suspense>
+            </div>
+          </aside>
+          <Toaster />
+          <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6">{children}</main>
+        </div>
       </body>
     </html>
   );
