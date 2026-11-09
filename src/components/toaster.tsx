@@ -34,7 +34,7 @@ export function Toaster() {
         </div>
         <p>
           <span className="font-medium">{truncate(notice.title, 50)}</span> was moved to{" "}
-          <Link className="underline" href="/?show=done">
+          <Link className="underline" href="/tasks?show=done">
             Done
           </Link>
           .

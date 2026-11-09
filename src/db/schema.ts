@@ -25,7 +25,29 @@ export const users = pgTable("users", {
   // A person is in at most one team, so team totals never double count.
   teamId: integer("team_id").references((): AnyPgColumn => teams.id),
   role: userRole("role").notNull().default("member"),
+  // Set once the person's dashboard has been given its starter widgets, so removing them all stays removed.
+  dashboardSeededAt: timestamp("dashboard_seeded_at", { withTimezone: true }),
 });
+
+// One widget on a person's dashboard. Dashboards are personal; `config` holds the widget's settings
+// (see src/lib/dashboard/config.ts) and is validated again every time it is read.
+export const dashboardWidgets = pgTable(
+  "dashboard_widgets",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    // A custom heading; the widget's default title is used when null.
+    title: text("title"),
+    config: jsonb("config").notNull().default({}),
+    position: integer("position").notNull(),
+    size: text("size").notNull().default("m"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("dashboard_widgets_user_idx").on(t.userId)],
+);
 
 // Sign-in sessions. The cookie holds a random token; only its SHA-256 hash is stored here.
 export const authSessions = pgTable(
@@ -200,4 +222,5 @@ export type Client = typeof clients.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type WorkSession = typeof workSessions.$inferSelect;
-export type HubstaffActivity = typeof hubstaffActivities.$inferSelect;
+export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
+export type HubstaffActivity =typeof hubstaffActivities.$inferSelect;

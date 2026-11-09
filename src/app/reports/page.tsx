@@ -3,19 +3,18 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { BarList, type BarDatum } from "@/components/charts/bar-list";
+import { BarList } from "@/components/charts/bar-list";
 import { ChartTip } from "@/components/charts/chart-tip";
 import { ColumnChart } from "@/components/charts/column-chart";
 import { LineChart } from "@/components/charts/line-chart";
 import { LoadRangeButton } from "@/components/load-range-button";
+import { pct, toBars } from "@/lib/bars";
 import { config } from "@/lib/config";
 import { longDay } from "@/lib/chart";
 import { fmtDuration } from "@/lib/format";
 import { parseReportParams, rangePresets, reportQuery } from "@/lib/report-range";
 import { dailySeries, getTimeReport, type Row } from "@/lib/time-report";
 import { pageGuard } from "@/lib/auth";
-
-const pct = (tracked: number, active: number) => (tracked ? `${Math.round((active / tracked) * 100)}%` : "—");
 
 function Table({ title, rows, firstColumn }: { title: string; rows: Row[]; firstColumn: string }) {
   return (
@@ -60,38 +59,6 @@ function Table({ title, rows, firstColumn }: { title: string; rows: Row[]; first
       </div>
     </section>
   );
-}
-
-const MAX_BARS = 8;
-
-/** Ranked bars: the top rows, then everything else folded into one "Other" row. */
-function toBars(rows: Row[], total: number): BarDatum[] {
-  const share = (n: number) => (total ? `${Math.round((n / total) * 100)}%` : "");
-  const tip = (label: string, r: { tracked: number; billable: number; active: number }) =>
-    `${fmtDuration(r.tracked)}
-${label}
-Billable ${fmtDuration(r.billable)} · Activity ${pct(r.tracked, r.active)}`;
-  const shown = rows.slice(0, MAX_BARS).map((r) => ({
-    key: r.key,
-    label: r.label,
-    href: r.href,
-    value: r.tracked,
-    display: fmtDuration(r.tracked),
-    share: share(r.tracked),
-    tip: tip(r.label, r),
-  }));
-  const rest = rows.slice(MAX_BARS);
-  if (rest.length) {
-    const sum = { tracked: 0, billable: 0, active: 0 };
-    for (const r of rest) {
-      sum.tracked += r.tracked;
-      sum.billable += r.billable;
-      sum.active += r.active;
-    }
-    const label = `Other (${rest.length})`;
-    shown.push({ key: "other", label, href: undefined, value: sum.tracked, display: fmtDuration(sum.tracked), share: share(sum.tracked), tip: tip(label, sum) });
-  }
-  return shown;
 }
 
 function Charts({ report, from, to }: { report: Awaited<ReturnType<typeof getTimeReport>>; from: string; to: string }) {

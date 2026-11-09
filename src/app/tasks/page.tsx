@@ -89,7 +89,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
           .map(([key, label]) => (
           <Link
             key={key}
-            href={key ? `/?show=${key}` : "/"}
+            href={key ? `/tasks?show=${key}` : "/tasks"}
             className={(show ?? "") === key ? "font-semibold underline" : "text-muted"}
           >
             {label}
@@ -236,7 +236,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
   );
 }
 
-export default function Home({ searchParams }: PageProps<"/">) {
+export default function Home({ searchParams }: PageProps<"/tasks">) {
   const filter = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
   return (
     <div className="space-y-4">

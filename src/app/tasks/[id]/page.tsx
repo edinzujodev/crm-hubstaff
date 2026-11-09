@@ -78,7 +78,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/" className="text-sm text-muted hover:underline">
+          <Link href="/tasks" className="text-sm text-muted hover:underline">
             ← Tasks
           </Link>
           <h1 className="mt-1 text-xl font-semibold">{task.title}</h1>
@@ -114,7 +114,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           ) : (
             <>
               <TaskStatusSelect taskId={task.id} title={task.title} status={task.status} />
-              {manage && <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/" />}
+              {manage && <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/tasks" />}
               <TimerControls
                 taskId={task.id}
                 title={task.title}

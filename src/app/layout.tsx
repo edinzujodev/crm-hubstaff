@@ -70,7 +70,8 @@ async function NavLinks() {
   if (!auth) return null;
   const role = auth.role;
   const links: [string, string, boolean][] = [
-    ["/", "Tasks", true],
+    ["/dashboard", "Dashboard", true],
+    ["/tasks", "Tasks", true],
     ["/critical", "Critical", role === "super_admin" || role === "leader"],
     ["/recurring", "Recurring", role === "super_admin" || role === "leader"],
     ["/leads", "Leads", role === "super_admin"],
