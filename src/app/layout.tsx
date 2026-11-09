@@ -7,6 +7,8 @@ import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { signOut, switchUser } from "@/app/actions";
 import { NavLink } from "@/components/nav-link";
+import { Topbar } from "@/components/topbar";
+import { TopbarStatus } from "@/components/topbar-status";
 import { Toaster } from "@/components/toaster";
 import { ProfileMenu } from "@/components/profile-menu";
 import { SyncButton } from "@/components/sync-button";
@@ -129,7 +131,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </aside>
           <Toaster />
-          <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6">{children}</main>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar>
+              <Suspense>
+                <TopbarStatus />
+              </Suspense>
+            </Topbar>
+            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+          </div>
         </div>
       </body>
     </html>
