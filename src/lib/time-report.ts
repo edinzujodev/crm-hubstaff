@@ -168,29 +168,6 @@ export async function getTimeReport(f: TimeReportFilter) {
   };
 }
 
-/** Quoted CSV cell. A leading =, +, - or @ is prefixed so spreadsheets don't run it as a formula. */
-function cell(v: string | number) {
-  let s = String(v);
-  if (/^[=+\-@]/.test(s)) s = `'${s}`;
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-export function reportToCsv(report: TimeReport) {
-  const hours = (s: number) => (s / 3600).toFixed(2);
-  const head = ["Date", "Person", "Team", "Client", "Task", "Tracked hours", "Billable hours", "Activity %"];
-  const rows = report.lines.map((l) => [
-    l.day,
-    l.userName,
-    l.teamName,
-    l.clientName,
-    l.taskTitle,
-    hours(l.tracked),
-    hours(l.billable),
-    l.tracked ? Math.round((l.active / l.tracked) * 100) : 0,
-  ]);
-  return [head, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
-}
-
 /** One entry per calendar day in the range, zero-filled, for charts. */
 export function dailySeries(report: TimeReport, from: string, to: string) {
   const byDay = new Map(report.byDay.map((r) => [r.key, r]));

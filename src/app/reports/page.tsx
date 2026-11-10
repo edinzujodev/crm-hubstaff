@@ -8,6 +8,7 @@ import { ChartTip } from "@/components/charts/chart-tip";
 import { ColumnChart } from "@/components/charts/column-chart";
 import { LineChart } from "@/components/charts/line-chart";
 import { LoadRangeButton } from "@/components/load-range-button";
+import { RangeSelect } from "@/components/range-select";
 import { pct, toBars } from "@/lib/bars";
 import { config } from "@/lib/config";
 import { longDay } from "@/lib/chart";
@@ -141,7 +142,6 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
   const users = auth.role === "leader" ? allUsers.filter((u) => u.teamId === auth.ledTeam!.id) : allUsers;
   const teams = auth.role === "leader" ? allTeams.filter((t) => t.id === auth.ledTeam!.id) : allTeams;
   const presets = rangePresets(tz);
-  const query = reportQuery(filter);
 
   return (
     <div className="space-y-6">
@@ -188,21 +188,16 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
           </select>
         </label>
         <button className="btn btn-primary">Show</button>
-        <a href={`/reports/export?${query}`} className="btn" download>
-          Download CSV
-        </a>
       </form>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        {presets.map((p) => (
-          <Link
-            key={p.label}
-            href={`/reports?${reportQuery({ ...filter, from: p.from, to: p.to })}`}
-            className={p.from === filter.from && p.to === filter.to ? "font-semibold underline" : "text-muted hover:underline"}
-          >
-            {p.label}
-          </Link>
-        ))}
+        <RangeSelect
+          options={presets.map((p) => ({
+            label: p.label,
+            href: `/reports?${reportQuery({ ...filter, from: p.from, to: p.to })}`,
+            selected: p.from === filter.from && p.to === filter.to,
+          }))}
+        />
         <span className="ml-auto">
           <LoadRangeButton from={filter.from} to={filter.to} />
         </span>

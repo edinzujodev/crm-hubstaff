@@ -107,7 +107,7 @@ async function TasksWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   }
 
   const showAssignee = r.scope.userId === null;
-  const link = auth.role === "worker" || r.scope.userId === auth.user.id ? "/tasks" : "/tasks?show=everyone";
+  const link = auth.role === "worker" || r.scope.userId === auth.user.id ? "/tasks" : "/tasks?scope=team";
   return (
     <>
       {r.clamped && <Narrowed />}

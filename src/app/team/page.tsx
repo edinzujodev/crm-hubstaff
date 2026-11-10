@@ -75,11 +75,6 @@ async function TeamContent() {
       <section className="space-y-3">
         <SectionHead
           title={admin ? "Teams" : "Your team"}
-          hint={
-            admin
-              ? "Each person is in one team, so team totals never count the same hours twice. A team's leader is also a member of it. Open a team to see its tasks."
-              : "Open your team to see its tasks."
-          }
           action={admin ? <NewTeamButton users={options} /> : undefined}
         />
         <div className="grid gap-4 lg:grid-cols-2">
@@ -137,11 +132,6 @@ async function TeamContent() {
       <section className="space-y-3">
         <SectionHead
           title="People"
-          hint={
-            admin
-              ? "Hubstaff time is matched to people by their Hubstaff user id. Without it, Start can't assign the Hubstaff task to them and their hours show as unmatched."
-              : undefined
-          }
           action={admin ? <AddMemberButton /> : undefined}
         />
         <PeopleList people={people} teams={teamOptions} admin={admin} />

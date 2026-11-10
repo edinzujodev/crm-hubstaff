@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { TASK_SCOPE_COOKIE, TaskScopeToggle, type TaskScope } from "@/components/task-scope-toggle";
 import { Suspense } from "react";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { Avatar } from "@/components/avatar";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskMenu } from "@/components/task-menu";
@@ -18,8 +21,8 @@ const TITLE_MAX = 50;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
 
-async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
-  const [auth, show] = await Promise.all([getAuth(), filter]);
+async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: string }> }) {
+  const [auth, { show, scope: scopeParam }] = await Promise.all([getAuth(), filter]);
   if (!auth) redirect("/login");
   const me = auth.user;
   const [tasks, clients, users, tracked, openSessions, teams] = await Promise.all([
@@ -46,16 +49,25 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
   const today = localDay(new Date(), config.timeZone);
   const mine = openSessions.find((s) => s.userId === me?.id);
   const mineTask = mine ? tasks.find((t) => t.task.id === mine.taskId)?.task : undefined;
-  const visible = tasks.filter(({ task }) => {
-    if (show === "deleted") return task.deletedAt !== null;
-    if (task.deletedAt) return false;
-    // A copy made by a repeat stays out of the open lists until its start date.
-    const upcoming = !!task.startDate && task.startDate > today && task.status !== "done";
-    if (show === "upcoming") return upcoming;
-    if (show === "all") return true;
-    if (show === "done") return task.status === "done";
-    return task.status !== "done" && !upcoming && (show === "everyone" || !me || task.assigneeId === me.id || !task.assigneeId);
-  });
+  // Workers only ever see their own tasks. Everyone else picks mine / team, and the pick is remembered.
+  const saved = (await cookies()).get(TASK_SCOPE_COOKIE)?.value;
+  const wanted = scopeParam ?? saved;
+  const scope: TaskScope = isWorker || wanted !== "team" ? "mine" : "team";
+  const inScope = tasks.filter(
+    ({ task }) => scope === "team" || !me || task.assigneeId === me.id || !task.assigneeId,
+  );
+  const tab = show === "finished" || show === "deleted" ? show : "open";
+  const matches = {
+    open: ({ task }: (typeof tasks)[number]) => !task.deletedAt && task.status !== "done",
+    finished: ({ task }: (typeof tasks)[number]) => !task.deletedAt && task.status === "done",
+    deleted: ({ task }: (typeof tasks)[number]) => task.deletedAt !== null,
+  };
+  const counts = {
+    open: inScope.filter(matches.open).length,
+    finished: inScope.filter(matches.finished).length,
+    deleted: inScope.filter(matches.deleted).length,
+  };
+  const visible = inScope.filter(matches[tab]);
 
   return (
     <div className="space-y-4">
@@ -76,25 +88,41 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
 
       {!isWorker && <NewTaskForm clients={clients} users={users} />}
 
-      <div className="flex gap-3 text-sm">
-        {[
-          ["", "My open tasks"],
-          ["everyone", auth.role === "super_admin" ? "Everyone's open tasks" : "Team's open tasks"],
-          ["upcoming", "Upcoming"],
-          ["done", "Done"],
-          ["all", "All"],
-          ["deleted", "Deleted"],
-        ]
-          .filter(([key]) => !isWorker || (key !== "everyone" && key !== "deleted"))
-          .map(([key, label]) => (
-          <Link
-            key={key}
-            href={key ? `/tasks?show=${key}` : "/tasks"}
-            className={(show ?? "") === key ? "font-semibold underline" : "text-muted"}
-          >
-            {label}
-          </Link>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5 text-sm">
+          {(
+            [
+              ["open", "Open Tasks"],
+              ["finished", "Finished"],
+              ["deleted", "Deleted"],
+            ] as const
+          )
+            .filter(([key]) => !isWorker || key !== "deleted")
+            .map(([key, label]) => (
+              <Link
+                key={key}
+                href={key === "open" ? "/tasks" : `/tasks?show=${key}`}
+                aria-current={tab === key ? "page" : undefined}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 transition-colors ${
+                  tab === key
+                    ? "border-transparent bg-primary font-medium text-(--primary-fg)"
+                    : "border-border text-muted hover:border-primary/50 hover:bg-primary/10 hover:text-foreground"
+                }`}
+              >
+                {label}
+                <span
+                  className={`rounded-full px-1.5 font-mono text-xs tabular-nums ${
+                    tab === key ? "bg-white/20" : "bg-black/5 dark:bg-white/10"
+                  }`}
+                >
+                  {counts[key]}
+                </span>
+              </Link>
+            ))}
+        </div>
+        {!isWorker && (
+          <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
+        )}
       </div>
 
       <div className="card overflow-x-auto">
@@ -104,6 +132,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
               <th className="w-8" />
               <th className="px-3 py-2 font-medium">Task</th>
               <th className="px-3 py-2 font-medium">Type</th>
+              <th className="px-3 py-2 font-medium">Assignee</th>
               <th className="px-3 py-2 font-medium">Client</th>
               <th className="px-3 py-2 font-medium">Due</th>
               <th className="px-3 py-2 font-medium">Status</th>
@@ -137,6 +166,14 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
                       )}
                     </div>,
                     <span key="type" className="badge">{task.repeat ? repeatLabel[task.repeat] : "One-time"}</span>,
+                    assigneeName ? (
+                      <span key="assignee" className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <Avatar name={assigneeName} size="sm" />
+                        {assigneeName}
+                      </span>
+                    ) : (
+                      <span key="assignee" className="text-muted">Unassigned</span>
+                    ),
                     task.clientId ? (
                       <Link key="client" href={`/clients/${task.clientId}`} className="text-muted hover:underline">
                         {clientName}
@@ -224,7 +261,7 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-muted">
+                <td colSpan={8} className="px-3 py-6 text-center text-muted">
                   No tasks here.
                 </td>
               </tr>
@@ -237,7 +274,10 @@ async function TaskList({ filter }: { filter: Promise<string | undefined> }) {
 }
 
 export default function Home({ searchParams }: PageProps<"/tasks">) {
-  const filter = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
+  const filter = searchParams.then((p) => ({
+    show: typeof p.show === "string" ? p.show : undefined,
+    scope: typeof p.scope === "string" ? p.scope : undefined,
+  }));
   return (
     <div className="space-y-4">
       <h1 className="sr-only">Tasks</h1>
