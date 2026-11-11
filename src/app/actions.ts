@@ -174,6 +174,7 @@ const optionalText = z
 
 const newClient = z.object({
   name: z.string().trim().min(1, "Name is required"),
+  kind: z.enum(["company", "group"]).default("company"),
   contactName: optionalText,
   email: z.email().optional().or(z.literal("").transform(() => undefined)),
   phone: optionalText,
@@ -245,10 +246,15 @@ export async function updateClient(clientId: number, _prev: unknown, formData: F
   return run(async () => {
     await requireRole("super_admin", "leader");
     const input = newClient.parse(Object.fromEntries(formData));
+    if (input.kind === "company") {
+      const [{ n }] = await db.select({ n: count() }).from(schema.clientCompanies).where(eq(schema.clientCompanies.clientId, clientId));
+      if (n > 0) throw new Error("This client still lists companies. Remove them before making it a single company.");
+    }
     await db
       .update(schema.clients)
       .set({
         name: input.name,
+        kind: input.kind,
         contactName: input.contactName ?? null,
         email: input.email ?? null,
         phone: input.phone ?? null,
@@ -284,8 +290,58 @@ export async function deleteClient(clientId: number): Promise<Result> {
         .set({ clientId: null, convertedAt: null, status: "proposal" })
         .where(eq(schema.leads.clientId, clientId));
       await tx.delete(schema.projects).where(eq(schema.projects.clientId, clientId));
+      await tx.delete(schema.clientCompanies).where(eq(schema.clientCompanies.clientId, clientId));
       await tx.delete(schema.clients).where(eq(schema.clients.id, clientId));
     });
+    return undefined;
+  });
+}
+
+const companyFields = z.object({ name: z.string().trim().min(1, "Name is required").max(120), notes: optionalText });
+
+/** Adds a company to a group client. */
+export async function createCompany(clientId: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    const input = companyFields.parse(Object.fromEntries(formData));
+    const client = await db.query.clients.findFirst({ where: eq(schema.clients.id, clientId) });
+    if (!client) throw new Error("Client not found");
+    if (client.kind !== "group") throw new Error("Make this client a group of companies first.");
+    const clash = await db.query.clientCompanies.findFirst({
+      where: and(eq(schema.clientCompanies.clientId, clientId), sql`lower(${schema.clientCompanies.name}) = lower(${input.name})`),
+    });
+    if (clash) throw new Error("This group already has a company with that name.");
+    await db.insert(schema.clientCompanies).values({ clientId, ...input });
+    return undefined;
+  });
+}
+
+export async function updateCompany(companyId: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    const input = companyFields.parse(Object.fromEntries(formData));
+    const company = await db.query.clientCompanies.findFirst({ where: eq(schema.clientCompanies.id, companyId) });
+    if (!company) throw new Error("Company not found");
+    const clash = await db.query.clientCompanies.findFirst({
+      where: and(
+        eq(schema.clientCompanies.clientId, company.clientId),
+        sql`lower(${schema.clientCompanies.name}) = lower(${input.name})`,
+        ne(schema.clientCompanies.id, companyId),
+      ),
+    });
+    if (clash) throw new Error("This group already has a company with that name.");
+    await db
+      .update(schema.clientCompanies)
+      .set({ name: input.name, notes: input.notes ?? null })
+      .where(eq(schema.clientCompanies.id, companyId));
+    return undefined;
+  });
+}
+
+export async function deleteCompany(companyId: number): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    await db.delete(schema.clientCompanies).where(eq(schema.clientCompanies.id, companyId));
     return undefined;
   });
 }

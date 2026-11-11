@@ -15,7 +15,7 @@ async function ClientList() {
   const auth = await pageGuard("super_admin", "leader");
   const scope = taskScope(auth);
   const monthStart = `${localDay(new Date(), config.timeZone).slice(0, 7)}-01`;
-  const [clients, taskCounts, tracked, projectCounts] = await Promise.all([
+  const [clients, taskCounts, tracked, projectCounts, companyRows] = await Promise.all([
     db.select().from(schema.clients).orderBy(asc(schema.clients.name)),
     db
       .select({ clientId: schema.tasks.clientId, n: count() })
@@ -24,7 +24,9 @@ async function ClientList() {
       .groupBy(schema.tasks.clientId),
     trackedByClient(new Date(Date.parse(monthStart)), scope),
     db.select({ clientId: schema.projects.clientId, n: count() }).from(schema.projects).groupBy(schema.projects.clientId),
+    db.select({ clientId: schema.clientCompanies.clientId, n: count() }).from(schema.clientCompanies).groupBy(schema.clientCompanies.clientId),
   ]);
+  const companyCounts = new Map(companyRows.map((r) => [r.clientId, r.n]));
   const projectsOf = new Map(projectCounts.map((r) => [r.clientId, r.n]));
   const inProgress = new Map(taskCounts.map((r) => [r.clientId, r.n]));
 
@@ -48,6 +50,11 @@ async function ClientList() {
                 <Link href={`/clients/${c.id}`} className="font-medium hover:underline">
                   {c.name}
                 </Link>
+                {c.kind === "group" && (
+                  <span className="badge ml-2" title="A group with several companies">
+                    Group · {companyCounts.get(c.id) ?? 0}
+                  </span>
+                )}
               </td>
               <td className="px-3 py-2 text-muted">{[c.contactName, c.email].filter(Boolean).join(" · ") || "—"}</td>
               <td className="px-3 py-2 text-right font-mono tabular-nums">{inProgress.get(c.id) ?? 0}</td>
@@ -61,6 +68,7 @@ async function ClientList() {
                     client={{
                       id: c.id,
                       name: c.name,
+                      kind: c.kind,
                       contactName: c.contactName,
                       email: c.email,
                       phone: c.phone,

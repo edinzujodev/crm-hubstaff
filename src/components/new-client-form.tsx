@@ -22,6 +22,13 @@ export function NewClientForm() {
         <input name="name" required placeholder="e.g. Acme LLC" className="input text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
+        Type
+        <select name="kind" defaultValue="company" className="input text-foreground">
+          <option value="company">Single company</option>
+          <option value="group">Group of companies</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-muted">
         Contact
         <input name="contactName" className="input text-foreground" />
       </label>

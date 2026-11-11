@@ -10,6 +10,7 @@ import { RowMenu } from "@/components/row-menu";
 export type ClientFields = {
   id: number;
   name: string;
+  kind: "company" | "group";
   contactName: string | null;
   email: string | null;
   phone: string | null;
@@ -70,6 +71,13 @@ function EditClient({ client, onDone }: { client: ClientFields; onDone: () => vo
       <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
         Name
         <input name="name" required autoFocus defaultValue={client.name} className="input text-foreground" />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-muted">
+        Type
+        <select name="kind" defaultValue={client.kind} className="input text-foreground">
+          <option value="company">Single company</option>
+          <option value="group">Group of companies</option>
+        </select>
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Contact

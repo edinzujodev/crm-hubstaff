@@ -75,9 +75,13 @@ export const teams = pgTable("teams", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// A client is one company, or a group that has several companies listed under it.
+export const clientKind = pgEnum("client_kind", ["company", "group"]);
+
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  kind: clientKind("kind").notNull().default("company"),
   contactName: text("contact_name"),
   email: text("email"),
   phone: text("phone"),
@@ -88,6 +92,21 @@ export const clients = pgTable("clients", {
   // Overrides HUBSTAFF_PROJECT_ID for this client's tasks.
   hubstaffProjectId: integer("hubstaff_project_id"),
 });
+
+// The companies of a group client. Tasks and reports stay at the client; these are the companies it covers.
+export const clientCompanies = pgTable(
+  "client_companies",
+  {
+    id: serial("id").primaryKey(),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => clients.id),
+    name: text("name").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("client_companies_client_name_idx").on(t.clientId, t.name)],
+);
 
 export const leadStatus = pgEnum("lead_status", ["new", "contacted", "meeting", "proposal", "won", "lost"]);
 
@@ -245,6 +264,7 @@ export const appState = pgTable("app_state", {
 export type User = typeof users.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Client = typeof clients.$inferSelect;
+export type ClientCompany = typeof clientCompanies.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type Task = typeof tasks.$inferSelect;

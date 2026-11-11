@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { asc, count, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ClientActions } from "@/components/client-actions";
+import { CompanyList } from "@/components/company-list";
 import { DateInput } from "@/components/date-input";
 import { NewProjectButton, ProjectActions } from "@/components/project-actions";
 import { config } from "@/lib/config";
@@ -41,7 +42,7 @@ async function ClientDetail({
   let to = pick(sp.to, lastDayOfMonth(month));
   if (from > to) [from, to] = [to, from];
 
-  const [report, projects, taskTotals] = await Promise.all([
+  const [report, projects, taskTotals, companies] = await Promise.all([
     getClientReport(id, from, to, tz, taskScope(auth)),
     db.select().from(schema.projects).where(eq(schema.projects.clientId, id)).orderBy(asc(schema.projects.name)),
     // Every task per project, deleted ones too: they still block deleting the project.
@@ -50,6 +51,7 @@ async function ClientDetail({
       .from(schema.tasks)
       .where(eq(schema.tasks.clientId, id))
       .groupBy(schema.tasks.projectId),
+    db.select().from(schema.clientCompanies).where(eq(schema.clientCompanies.clientId, id)).orderBy(asc(schema.clientCompanies.name)),
   ]);
   const totalByProject = new Map(taskTotals.map((r) => [r.projectId, r.n]));
   // Per project: its tasks and the time tracked on them in the period.
@@ -68,10 +70,12 @@ async function ClientDetail({
       <header className="card p-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{client.name}</h1>
+          {client.kind === "group" && <span className="badge">Group of {companies.length} {companies.length === 1 ? "company" : "companies"}</span>}
           <ClientActions
             client={{
               id: client.id,
               name: client.name,
+              kind: client.kind,
               contactName: client.contactName,
               email: client.email,
               phone: client.phone,
@@ -130,6 +134,8 @@ async function ClientDetail({
           </p>
         </div>
       </section>
+
+      {client.kind === "group" && <CompanyList clientId={client.id} companies={companies} />}
 
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-3">
