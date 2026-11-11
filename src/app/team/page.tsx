@@ -77,55 +77,79 @@ async function TeamContent() {
           title={admin ? "Teams" : "Your team"}
           action={admin ? <NewTeamButton users={options} /> : undefined}
         />
-        <div className="grid gap-4 lg:grid-cols-2">
-          {teams.map((t) => {
-            const members = allUsers.filter((u) => u.teamId === t.id);
-            const leader = allUsers.find((u) => u.id === t.leaderId);
-            return (
-              <section key={t.id} className="card overflow-hidden">
-                <header className="flex flex-wrap items-start justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-base font-semibold">
-                      <Link href={`/team/${t.id}`} className="hover:underline">
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border text-left text-xs text-muted">
+              <tr>
+                <th className="px-3 py-2 font-medium">Team</th>
+                <th className="px-3 py-2 font-medium">Leader</th>
+                <th className="px-3 py-2 font-medium">Members</th>
+                <th className="px-3 py-2 font-medium">Urgency</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {teams.map((t) => {
+                const members = allUsers.filter((u) => u.teamId === t.id);
+                const leader = allUsers.find((u) => u.id === t.leaderId);
+                return (
+                  <tr key={t.id} className="border-b border-border transition-colors last:border-0 hover:bg-primary/5">
+                    <td className="px-3 py-2">
+                      <Link href={`/team/${t.id}`} className="font-medium hover:underline" title="Open this team">
                         {t.name}
                       </Link>
-                    </h3>
-                    <p className="text-xs text-muted">
-                      {members.length} {members.length === 1 ? "member" : "members"} · Leader: {leader?.name ?? "none yet"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/team/${t.id}`} className="btn py-1">
-                      Tasks &amp; details →
-                    </Link>
-                    {admin && <DeleteTeamButton teamId={t.id} title={t.name} />}
-                  </div>
-                </header>
-
-                {members.length ? (
-                  <ul className="max-h-64 divide-y divide-border overflow-y-auto border-t border-border">
-                    {members.map((m) => (
-                      <li key={m.id} className="flex items-center gap-3 px-4 py-2">
-                        <Avatar name={m.name} size="sm" />
-                        <span className="min-w-0 flex-1 truncate text-sm">{m.name}</span>
-                        {m.id === t.leaderId && <span className="badge">Leader</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="border-t border-border px-4 py-5 text-sm text-muted">
-                    No members yet.{admin ? " Pick this team for someone in the People list below." : ""}
-                  </p>
-                )}
-
-              </section>
-            );
-          })}
-          {teams.length === 0 && (
-            <p className="card p-6 text-center text-muted lg:col-span-2">
-              {admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
-            </p>
-          )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {leader ? (
+                        <span className="flex items-center gap-2">
+                          <Avatar name={leader.name} size="sm" />
+                          {leader.name}
+                        </span>
+                      ) : (
+                        <span className="text-muted">None yet</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {members.length ? (
+                        <span className="flex items-center gap-2">
+                          <span className="flex -space-x-2">
+                            {members.slice(0, 4).map((m) => (
+                              <span key={m.id} title={m.name} className="rounded-full ring-2 ring-surface">
+                                <Avatar name={m.name} size="sm" />
+                              </span>
+                            ))}
+                          </span>
+                          <span className="text-muted">
+                            {members.length} {members.length === 1 ? "member" : "members"}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-muted">No members yet</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-xs text-muted">
+                      Approaching {t.approachingHours}h · Critical {t.criticalHours}h
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/team/${t.id}`} className="btn py-1">
+                          Tasks &amp; details →
+                        </Link>
+                        {admin && <DeleteTeamButton teamId={t.id} title={t.name} />}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {teams.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-3 py-8 text-center text-muted">
+                    {admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 
