@@ -24,10 +24,7 @@ async function LeadDetail({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/leads" className="text-sm text-muted hover:underline">
-            ← Leads
-          </Link>
-          <h1 className="mt-1 text-xl font-semibold">{lead.name}</h1>
+          <h1 className="text-xl font-semibold">{lead.name}</h1>
           <p className="mt-1 text-sm text-muted">
             Added {fmtDateTime(lead.createdAt, config.timeZone)}
             {lead.convertedAt && <> · became a client {fmtDateTime(lead.convertedAt, config.timeZone)}</>}

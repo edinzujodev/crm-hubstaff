@@ -78,10 +78,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/tasks" className="text-sm text-muted hover:underline">
-            ← Tasks
-          </Link>
-          <h1 className="mt-1 text-xl font-semibold">{task.title}</h1>
+          <h1 className="text-xl font-semibold">{task.title}</h1>
           <p className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted">
             <span>
               Client:{" "}

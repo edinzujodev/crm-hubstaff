@@ -66,10 +66,7 @@ async function ClientDetail({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/clients" className="text-sm text-muted hover:underline">
-          ← Clients
-        </Link>
-        <div className="mt-1 flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{client.name}</h1>
           <ClientActions
             client={{
