@@ -118,7 +118,7 @@ export function autoTitle(type: WidgetType, cfg: AnyConfig, owner: string, dir: 
   const lower = (s: string) => s.toLowerCase();
   switch (type) {
     case "tasks": {
-      const status = cfg.show === "done" ? "done" : cfg.show === "in_progress" ? "in progress" : "open";
+      const status = cfg.show === "done" ? "done" : "open";
       const due = { overdue: "running late", critical: "critical", attention: "critical & approaching", any: "" }[String(cfg.due)] ?? "";
       const what = due ? `${due} tasks` : `${status} tasks`;
       return `${owner} ${what}${client ? ` · ${client}` : ""}`;

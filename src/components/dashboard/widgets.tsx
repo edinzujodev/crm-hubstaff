@@ -86,7 +86,6 @@ async function TasksWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   } else {
     const all = (await openTasks(r.scope))
       .filter((t) => (cfg.clientId ? t.task.clientId === cfg.clientId : true))
-      .filter((t) => (cfg.show === "in_progress" ? t.task.status === "in_progress" : true))
       .filter((t) => {
         if (cfg.due === "overdue") return t.hours !== null && t.hours < 0;
         if (cfg.due === "critical") return t.urgency === "critical";
@@ -145,9 +144,8 @@ async function TaskCountsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   return (
     <>
       {r.clamped && <Narrowed />}
-      <div className="grid grid-cols-2 gap-2 @md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 @md:grid-cols-3">
         <Stat label="Open" value={open.length} />
-        <Stat label="In progress" value={open.filter((t) => t.task.status === "in_progress").length} />
         <Stat label="Running late" value={late} tone={late ? "bad" : undefined} />
         <Stat label="Due soon" value={soon} tone={soon ? "warn" : undefined} />
       </div>

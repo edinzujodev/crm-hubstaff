@@ -174,8 +174,7 @@ export const WIDGETS: Record<WidgetType, WidgetDef> = {
         key: "show",
         label: "Status",
         options: [
-          { value: "open", label: "Open (to do and in progress)" },
-          { value: "in_progress", label: "In progress" },
+          { value: "open", label: "Open" },
           { value: "done", label: "Done" },
         ],
       },

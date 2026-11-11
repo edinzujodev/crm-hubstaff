@@ -79,9 +79,6 @@ export async function startSession(taskId: number, userId: number) {
     .insert(schema.workSessions)
     .values({ taskId, userId, startedAt: now })
     .returning({ id: schema.workSessions.id });
-  if (task.status === "todo") {
-    await db.update(schema.tasks).set({ status: "in_progress" }).where(eq(schema.tasks.id, taskId));
-  }
   return { sessionId: session.id, hubstaffTaskId };
 }
 

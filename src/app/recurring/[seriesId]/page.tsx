@@ -9,7 +9,7 @@ import { periodLabel } from "@/lib/recurring";
 import { getSeries } from "@/lib/series";
 import { pageGuard } from "@/lib/auth";
 
-const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
+const statusLabel = { todo: "Open", in_progress: "Open", done: "Done" } as const;
 
 async function SeriesDetail({ params }: { params: Promise<{ seriesId: string }> }) {
   await connection();

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { and, asc, count, eq, isNull } from "drizzle-orm";
+import { and, asc, count, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ClientActions } from "@/components/client-actions";
 import { NewClientForm } from "@/components/new-client-form";
@@ -20,7 +20,7 @@ async function ClientList() {
     db
       .select({ clientId: schema.tasks.clientId, n: count() })
       .from(schema.tasks)
-      .where(and(eq(schema.tasks.status, "in_progress"), isNull(schema.tasks.deletedAt), scope))
+      .where(and(ne(schema.tasks.status, "done"), isNull(schema.tasks.deletedAt), scope))
       .groupBy(schema.tasks.clientId),
     trackedByClient(new Date(Date.parse(monthStart)), scope),
     db.select({ clientId: schema.projects.clientId, n: count() }).from(schema.projects).groupBy(schema.projects.clientId),
@@ -35,7 +35,7 @@ async function ClientList() {
           <tr>
             <th className="px-3 py-2 font-medium">Client</th>
             <th className="px-3 py-2 font-medium">Contact</th>
-            <th className="px-3 py-2 text-right font-medium">In progress</th>
+            <th className="px-3 py-2 text-right font-medium">Open tasks</th>
             <th className="px-3 py-2 text-right font-medium">Projects</th>
             <th className="px-3 py-2 text-right font-medium">Tracked this month</th>
             <th className="px-3 py-2" />

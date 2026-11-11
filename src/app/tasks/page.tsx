@@ -21,7 +21,6 @@ import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLa
 
 const TITLE_MAX = 50;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
-const statusLabel = { todo: "To do", in_progress: "In progress", done: "Done" } as const;
 
 function SeriesTable({ series }: { series: Awaited<ReturnType<typeof listSeries>> }) {
   return (
@@ -125,12 +124,12 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   );
   const now = new Date();
   type Row = (typeof tasks)[number];
-  // Critical: open tasks that are overdue or close to due, by their team's levels. A repeat copy that
+  // Critical: open tasks that are overdue or due within their team's critical hours. A repeat copy that
   // has not reached its start date is not active yet.
   const urgent = ({ task }: Row) => {
     if (!task.dueDate || (task.startDate && task.startDate > today)) return false;
     const level = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone, now);
-    return level === "critical" || level === "approaching";
+    return level === "critical";
   };
   const tabs = ["open", "critical", "recurring", "finished", "deleted"] as const;
   type Tab = (typeof tabs)[number];
@@ -227,7 +226,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
               <th className="px-3 py-2 font-medium">Client</th>
               <th className="px-3 py-2 font-medium">Project</th>
               <th className="px-3 py-2 font-medium">Due</th>
-              <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium" />
             </tr>
           </thead>
@@ -302,7 +300,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                         —
                       </span>
                     ),
-                    <span key="status" className="badge">{statusLabel[task.status]}</span>,
                   ]}
                   actions={
                     task.deletedAt ? (
@@ -368,7 +365,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-muted">
+                <td colSpan={8} className="px-3 py-6 text-center text-muted">
                   No tasks here.
                 </td>
               </tr>

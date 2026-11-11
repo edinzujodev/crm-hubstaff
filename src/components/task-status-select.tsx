@@ -12,7 +12,7 @@ export function TaskStatusSelect({ taskId, title, status }: { taskId: number; ti
     <select
       aria-label="Status"
       className="input"
-      value={status}
+      value={status === "done" ? "done" : "todo"}
       disabled={pending}
       onChange={(e) =>
         startTransition(async () => {
@@ -22,8 +22,7 @@ export function TaskStatusSelect({ taskId, title, status }: { taskId: number; ti
         })
       }
     >
-      <option value="todo">To do</option>
-      <option value="in_progress">In progress</option>
+      <option value="todo">Open</option>
       <option value="done">Done</option>
     </select>
   );
