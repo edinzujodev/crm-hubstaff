@@ -55,10 +55,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
             </div>
           )}
           <div className="space-y-2">
-            <p className="text-xs text-muted">
-              When a task turns <b>Approaching</b> or <b>Critical</b>, in hours before its due date. Overdue tasks are
-              always Critical.
-            </p>
+            <p className="text-xs text-muted">Urgency levels: how many hours before its due date a task changes level.</p>
             <TeamLevelsForm teamId={team.id} approachingHours={team.approachingHours} criticalHours={team.criticalHours} />
           </div>
         </div>
