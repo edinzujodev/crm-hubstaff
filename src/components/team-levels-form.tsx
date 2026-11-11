@@ -119,11 +119,32 @@ export function TeamLevelsForm({
       </div>
 
       {numbersOk && orderOk ? (
-        <p className="rounded-md bg-black/[0.03] px-3 py-2 text-sm dark:bg-white/[0.05]">
-          A task is <b className="text-red-700 dark:text-red-400">Critical</b> when it is overdue or due within{" "}
-          <b>{long(c)}</b>, <b className="text-amber-700 dark:text-amber-400">Approaching</b> within <b>{long(a)}</b>, and
-          on track after that.
-        </p>
+        <div aria-label="What the levels mean" className="space-y-1.5">
+          <div className="flex h-2 overflow-hidden rounded-full">
+            <span className="flex-1 bg-red-500/70" />
+            <span className="flex-1 bg-amber-500/70" />
+            <span className="flex-1 bg-emerald-500/70" />
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <span>
+              <b className="text-red-700 dark:text-red-400">Critical</b>
+              <br />
+              <span className="text-muted">overdue to {long(c)} left</span>
+            </span>
+            <span>
+              <b className="text-amber-700 dark:text-amber-400">Approaching</b>
+              <br />
+              <span className="text-muted">
+                {long(c)} to {long(a)} left
+              </span>
+            </span>
+            <span>
+              <b className="text-emerald-700 dark:text-emerald-400">On track</b>
+              <br />
+              <span className="text-muted">more than {long(a)} left</span>
+            </span>
+          </div>
+        </div>
       ) : (
         <p role="alert" className="text-sm text-red-600">
           {numbersOk

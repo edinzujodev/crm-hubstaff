@@ -37,30 +37,6 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
         </Link>
       </header>
 
-      <details className="card group">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm">
-          <span className="font-medium">Team settings</span>
-          <span className="flex items-center gap-2 text-xs text-muted">
-            Approaching under {team.approachingHours}h · Critical under {team.criticalHours}h
-            <span aria-hidden className="transition-transform group-open:rotate-90">
-              ›
-            </span>
-          </span>
-        </summary>
-        <div className="space-y-4 border-t border-border p-4">
-          {auth.role === "super_admin" && (
-            <div className="space-y-1">
-              <p className="text-xs text-muted">Leader</p>
-              <TeamLeaderSelect teamId={team.id} leaderId={team.leaderId} users={options} teamName={team.name} />
-            </div>
-          )}
-          <div className="space-y-2">
-            <p className="text-xs text-muted">Urgency levels: how many hours before its due date a task changes level.</p>
-            <TeamLevelsForm teamId={team.id} approachingHours={team.approachingHours} criticalHours={team.criticalHours} />
-          </div>
-        </div>
-      </details>
-
       <section className="card p-4">
         <Suspense fallback={<Loading />}>
           <WidgetBody type="task-counts" raw={{ who: "team", teamId: id }} auth={auth} />
@@ -79,6 +55,26 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
         <Suspense fallback={<Loading />}>
           <WidgetBody type="tasks" raw={{ who: "team", teamId: id, limit: 50 }} auth={auth} />
         </Suspense>
+      </section>
+
+      <section className="card overflow-hidden">
+        <header className="border-b border-border px-4 py-3">
+          <h2 className="font-semibold">Team settings</h2>
+        </header>
+        <div className={`grid gap-6 p-4 ${auth.role === "super_admin" ? "lg:grid-cols-[18rem_1fr]" : ""}`}>
+          {auth.role === "super_admin" && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Team leader</h3>
+              <p className="text-xs text-muted">Sees this team&apos;s tasks and reports, and sets its urgency levels.</p>
+              <TeamLeaderSelect teamId={team.id} leaderId={team.leaderId} users={options} teamName={team.name} />
+            </div>
+          )}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Urgency levels</h3>
+            <p className="text-xs text-muted">How many hours before its due date a task becomes Approaching or Critical.</p>
+            <TeamLevelsForm teamId={team.id} approachingHours={team.approachingHours} criticalHours={team.criticalHours} />
+          </div>
+        </div>
       </section>
     </div>
   );
