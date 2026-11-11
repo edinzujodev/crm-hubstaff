@@ -152,8 +152,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const hoursLeft = (r: Row) => hoursUntilDue(r.task.dueDate!, config.timeZone, now);
   const visible =
     tab === "recurring" ? [] : inScope.filter(matches[tab]).sort((a, b) => (tab === "critical" ? hoursLeft(a) - hoursLeft(b) : 0));
-  const ownTeam = auth.role === "leader" ? auth.ledTeam : null;
-  const levels = ownTeam ?? DEFAULT_LEVELS;
 
   return (
     <div className="space-y-4">
@@ -212,17 +210,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
           <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
         )}
       </div>
-
-      {tab === "critical" && (
-        <p className="max-w-2xl text-sm text-muted">
-          {ownTeam ? `${ownTeam.name}: ` : ""}
-          Critical means overdue or due in under {levels.criticalHours}h. Approaching means under {levels.approachingHours}h.{" "}
-          {ownTeam ? "Change these on your team's page." : "Each team sets its own levels on its team page."}
-        </p>
-      )}
-      {tab === "recurring" && (
-        <p className="text-sm text-muted">Each row is one repeating task. Open it to see every time it was done.</p>
-      )}
 
       {tab === "recurring" ? (
         <SeriesTable series={series} />

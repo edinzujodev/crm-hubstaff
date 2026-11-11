@@ -33,25 +33,23 @@ function HoursField({
   const n = Number(value);
   const valid = Number.isInteger(n) && n >= 1;
   return (
-    <div className="space-y-2">
-      <label className="flex flex-col gap-1.5">
-        <span className={`badge w-fit ${badgeClass}`}>{badge}</span>
-        <span className="flex items-center gap-2 text-sm">
-          <span className="text-muted">under</span>
-          <input
-            name={name}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={MAX_HOURS}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            aria-invalid={invalid || !valid}
-            className={`input w-24 text-center ${invalid || !valid ? "border-red-500" : ""}`}
-          />
-          <span className="text-muted">hours</span>
-          {valid && n >= 48 && <span className="text-xs text-muted">= {long(n)}</span>}
-        </span>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <label className="flex items-center gap-2 text-sm">
+        <span className={`badge w-28 justify-center ${badgeClass}`}>{badge}</span>
+        <span className="text-muted">under</span>
+        <input
+          name={name}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={MAX_HOURS}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={invalid || !valid}
+          className={`input w-24 text-center ${invalid || !valid ? "border-red-500" : ""}`}
+        />
+        <span className="text-muted">hours</span>
+        <span className="w-16 text-xs text-muted">{valid && n >= 48 ? `= ${long(n)}` : ""}</span>
       </label>
       <div className="flex flex-wrap gap-1.5">
         {presets.map((p) => (
@@ -97,7 +95,7 @@ export function TeamLevelsForm({
 
   return (
     <form action={action} className="space-y-4">
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="space-y-3">
         <HoursField
           name="criticalHours"
           badge="Critical"

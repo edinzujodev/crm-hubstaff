@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { TeamLeaderSelect } from "@/components/team-leader-select";
 import { TeamLevelsForm } from "@/components/team-levels-form";
 import { WidgetBody } from "@/components/dashboard/widgets";
 import { canManageTeam, pageGuard } from "@/lib/auth";
@@ -22,7 +21,6 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   // A leader can only open their own team.
   if (!canManageTeam(auth, id)) redirect("/team");
   const allUsers = await db.select().from(schema.users).orderBy(asc(schema.users.name));
-  const options = allUsers.map((u) => ({ id: u.id, name: u.name, teamId: u.teamId }));
   const leader = allUsers.find((u) => u.id === team.leaderId) ?? null;
 
   return (
@@ -36,6 +34,17 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
           Hours report →
         </Link>
       </header>
+
+      <section className="card overflow-hidden">
+        <header className="border-b border-border px-4 py-3">
+          <h2 className="font-semibold">Team settings</h2>
+        </header>
+        <div className="space-y-2 p-4">
+          <h3 className="text-sm font-medium">Urgency levels</h3>
+          <p className="text-xs text-muted">How many hours before its due date a task becomes Critical or Approaching.</p>
+          <TeamLevelsForm teamId={team.id} approachingHours={team.approachingHours} criticalHours={team.criticalHours} />
+        </div>
+      </section>
 
       <section className="card p-4">
         <Suspense fallback={<Loading />}>
@@ -55,26 +64,6 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
         <Suspense fallback={<Loading />}>
           <WidgetBody type="tasks" raw={{ who: "team", teamId: id, limit: 50 }} auth={auth} />
         </Suspense>
-      </section>
-
-      <section className="card overflow-hidden">
-        <header className="border-b border-border px-4 py-3">
-          <h2 className="font-semibold">Team settings</h2>
-        </header>
-        <div className={`grid gap-6 p-4 ${auth.role === "super_admin" ? "lg:grid-cols-[18rem_1fr]" : ""}`}>
-          {auth.role === "super_admin" && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Team leader</h3>
-              <p className="text-xs text-muted">The leader sees this team&apos;s tasks and reports, and sets its urgency levels. Pick one person; the change saves straight away.</p>
-              <TeamLeaderSelect teamId={team.id} leaderId={team.leaderId} users={options} teamName={team.name} />
-            </div>
-          )}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Urgency levels</h3>
-            <p className="text-xs text-muted">How many hours before its due date a task becomes Approaching or Critical.</p>
-            <TeamLevelsForm teamId={team.id} approachingHours={team.approachingHours} criticalHours={team.criticalHours} />
-          </div>
-        </div>
       </section>
     </div>
   );

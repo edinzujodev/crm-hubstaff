@@ -48,6 +48,26 @@ body {
   color: var(--foreground);
 }
 
+/* Tailwind resets buttons to the default arrow. Anything clickable gets the hand; disabled things say so.
+   In the base layer, so utilities such as cursor-grab still win. */
+@layer base {
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"],
+  summary,
+  select:not(:disabled),
+  label[for],
+  input:is([type="checkbox"], [type="radio"], [type="range"], [type="submit"], [type="button"], [type="file"], [type="date"]):not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50;
