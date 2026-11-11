@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser } from "@/lib/current-user";
 import { authMode, createSession, destroySession, findApprovedUser } from "@/lib/session";
-import { canManageTeam, getAuth, requireAuth, requireRole, requireTask } from "@/lib/auth";
+import { canManageTeam, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
 import { defaultLeadDays, hubstaffSummary, spawnNextRepeat, subtractDays } from "@/lib/recurring";
 import { localDay } from "@/lib/format";
@@ -15,7 +15,7 @@ import { config } from "@/lib/config";
 import { resolveProject } from "@/lib/projects";
 import { markDeleted, unmarkDeleted } from "@/lib/soft-delete";
 import { ensureHubstaffTask, finishSession, startSession } from "@/lib/sessions";
-import { backfillHubstaff, lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
+import { backfillHubstaff, syncHubstaff, type SyncResult } from "@/lib/sync";
 
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -397,21 +397,6 @@ export async function loadHubstaffRange(from: string, to: string) {
     await requireRole("super_admin", "leader");
     return backfillHubstaff(from, to);
   });
-}
-
-export async function syncNow() {
-  return run(async () => {
-    await requireAuth();
-    return syncHubstaff();
-  });
-}
-
-/** Called by the page every few minutes; skips if a sync ran recently. */
-export async function syncIfStale() {
-  if (!(await getAuth())) return { ok: false as const, error: "Sign in first." };
-  const last = await lastSyncAt();
-  if (last && Date.now() - last.getTime() < 2 * 60 * 1000) return { ok: true as const, data: null };
-  return run(() => syncHubstaff());
 }
 
 const member = z.object({
