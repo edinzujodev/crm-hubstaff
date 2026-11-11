@@ -5,7 +5,7 @@ import { DashboardGrid, type GridItem } from "@/components/dashboard/dashboard-g
 import type { Lookups } from "@/components/dashboard/widget-form";
 import { WidgetBody } from "@/components/dashboard/widgets";
 import { getAuth } from "@/lib/auth";
-import { WIDGETS, isSize, isWidgetType, parseConfig, type AnyConfig, type WidgetType } from "@/lib/dashboard/config";
+import { WIDGETS, isRows, isSize, isWidgetType, parseConfig, type AnyConfig, type WidgetType } from "@/lib/dashboard/config";
 import { getWidgets } from "@/lib/dashboard/data";
 import { autoTitle, getDirectory, resolveScope } from "@/lib/dashboard/scope";
 
@@ -42,6 +42,7 @@ async function Dashboard() {
           id: r.id,
           type,
           size: isSize(r.size) ? r.size : WIDGETS[type].defaultSize,
+          rows: isRows(r.rows) ? r.rows : 1,
           title: r.title || autoTitle(type, config, owner, dir),
           customTitle: r.title,
           config,

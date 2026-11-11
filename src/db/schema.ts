@@ -45,6 +45,8 @@ export const dashboardWidgets = pgTable(
     config: jsonb("config").notNull().default({}),
     position: integer("position").notNull(),
     size: text("size").notNull().default("m"),
+    // How many grid rows the widget is tall (1 to 3), so one tall widget can sit beside several stacked ones.
+    rows: integer("rows").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("dashboard_widgets_user_idx").on(t.userId)],

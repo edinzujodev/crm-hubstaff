@@ -93,6 +93,15 @@ export async function resizeWidget(widgetId: number, size: Size) {
   });
 }
 
+/** How many grid rows tall a widget is. */
+export async function setWidgetRows(widgetId: number, rows: number) {
+  return run(async () => {
+    const { widget } = await ownWidget(widgetId);
+    const value = z.union([z.literal(1), z.literal(2), z.literal(3)]).parse(rows);
+    await db.update(schema.dashboardWidgets).set({ rows: value }).where(eq(schema.dashboardWidgets.id, widget.id));
+  });
+}
+
 export async function removeWidget(widgetId: number) {
   return run(async () => {
     const { widget } = await ownWidget(widgetId);

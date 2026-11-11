@@ -16,6 +16,8 @@ import { Modal } from "@/components/modal";
 import { WidgetForm, type Lookups } from "@/components/dashboard/widget-form";
 import type { Role } from "@/lib/auth";
 import {
+  ROWS,
+  ROW_CLASS,
   SIZES,
   SIZE_CLASS,
   SIZE_LABEL,
@@ -24,15 +26,18 @@ import {
   widgetsFor,
   type AnyConfig,
   type Preset,
+  type Rows,
   type Size,
   type WidgetType,
 } from "@/lib/dashboard/config";
-import { addWidget, removeWidget, resetDashboard, resizeWidget, saveOrder, updateWidget } from "@/app/dashboard/actions";
+import { addWidget, removeWidget, resetDashboard, resizeWidget, saveOrder, setWidgetRows, updateWidget } from "@/app/dashboard/actions";
 
 export type GridItem = {
   id: number;
   type: WidgetType;
   size: Size;
+  /** How many grid rows tall. */
+  rows: Rows;
   /** The heading shown: the custom title, or one built from the settings. */
   title: string;
   customTitle: string | null;
@@ -46,18 +51,22 @@ type Result = { ok: true } | { ok: false; error: string };
 function Frame({
   item,
   size,
+  rows,
   editing,
   busy,
   onConfigure,
   onResize,
+  onRows,
   onRemove,
 }: {
   item: GridItem;
   size: Size;
+  rows: Rows;
   editing: boolean;
   busy: boolean;
   onConfigure: () => void;
   onResize: (s: Size) => void;
+  onRows: (r: Rows) => void;
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -72,7 +81,7 @@ function Frame({
       ref={setNodeRef}
       style={style}
       aria-label={item.title}
-      className={`card @container relative min-w-0 p-4 ${SIZE_CLASS[size]} ${editing ? "outline-1 outline-dashed outline-border" : ""} ${isDragging ? "z-10" : ""}`}
+      className={`card @container relative min-w-0 p-4 ${SIZE_CLASS[size]} ${ROW_CLASS[rows]} ${editing ? "outline-1 outline-dashed outline-border" : ""} ${isDragging ? "z-10" : ""}`}
     >
       <header className="mb-3 flex items-center gap-2">
         {editing && (
@@ -104,6 +113,21 @@ function Frame({
                   className={`px-1.5 py-1 ${s === size ? "bg-primary text-(--primary-fg)" : "hover:bg-border/40"}`}
                 >
                   {s === "full" ? "XL" : s.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="hidden overflow-hidden rounded-md border border-border text-xs md:flex" role="group" aria-label="Height">
+              {ROWS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => onRows(r)}
+                  disabled={busy}
+                  aria-pressed={r === rows}
+                  title={r === 1 ? "Normal height" : `${r} rows tall`}
+                  className={`px-1.5 py-1 ${r === rows ? "bg-primary text-(--primary-fg)" : "hover:bg-border/40"}`}
+                >
+                  {r}↕
                 </button>
               ))}
             </div>
@@ -156,11 +180,13 @@ export function DashboardGrid({
   const serverKey = items.map((i) => i.id).join(",");
   const [order, setOrder] = useState(() => items.map((i) => i.id));
   const [sizes, setSizes] = useState<Record<number, Size>>({});
+  const [heights, setHeights] = useState<Record<number, Rows>>({});
   const [seen, setSeen] = useState(serverKey);
   if (seen !== serverKey) {
     setSeen(serverKey);
     setOrder(items.map((i) => i.id));
     setSizes({});
+    setHeights({});
   }
 
   const byId = new Map(items.map((i) => [i.id, i]));
@@ -201,6 +227,16 @@ export function DashboardGrid({
       () => resizeWidget(id, size),
       undefined,
       () => setSizes((s) => ({ ...s, [id]: before ?? items.find((i) => i.id === id)!.size })),
+    );
+  }
+
+  function setRows(id: number, rows: Rows) {
+    const before = heights[id];
+    setHeights((h) => ({ ...h, [id]: rows }));
+    act(
+      () => setWidgetRows(id, rows),
+      undefined,
+      () => setHeights((h) => ({ ...h, [id]: before ?? items.find((i) => i.id === id)!.rows })),
     );
   }
 
@@ -263,10 +299,12 @@ export function DashboardGrid({
                   key={item.id}
                   item={item}
                   size={sizes[item.id] ?? item.size}
+                  rows={heights[item.id] ?? item.rows}
                   editing={editing}
                   busy={pending}
                   onConfigure={() => setConfiguring(item.id)}
                   onResize={(s) => resize(item.id, s)}
+                  onRows={(r) => setRows(item.id, r)}
                   onRemove={() => act(() => removeWidget(item.id))}
                 />
               ))}

@@ -1,0 +1,1 @@
+ALTER TABLE "dashboard_widgets" ADD COLUMN "rows" integer DEFAULT 1 NOT NULL;
