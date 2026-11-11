@@ -3,9 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { saveTaskScope } from "@/app/tasks/scope-action";
-
-export type TaskScope = "mine" | "team";
-export const TASK_SCOPE_COOKIE = "tasks_scope";
+import type { TaskScope } from "@/lib/task-scope";
 
 /** My tasks / team tasks switch. The choice is saved in a cookie, so it survives a refresh. */
 export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLabel: string }) {
@@ -32,6 +30,7 @@ export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLa
         [
           ["mine", "My tasks"],
           ["team", teamLabel],
+          ["unassigned", "Unassigned"],
         ] as const
       ).map(([key, label]) => (
         <button

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { TASK_SCOPE_COOKIE, TaskScopeToggle, type TaskScope } from "@/components/task-scope-toggle";
+import { TaskScopeToggle } from "@/components/task-scope-toggle";
+import { TASK_SCOPE_COOKIE, TASK_SCOPES, type TaskScope } from "@/lib/task-scope";
 import { Suspense } from "react";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { Avatar } from "@/components/avatar";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskMenu } from "@/components/task-menu";
@@ -15,6 +15,7 @@ import { config } from "@/lib/config";
 import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
 import { fmtDateTime, fmtDay, fmtDuration, localDay, truncate } from "@/lib/format";
 import { isSessionStale, trackedByTask } from "@/lib/report";
+import { KIND_LABEL } from "@/lib/project-kind";
 import { listSeries } from "@/lib/series";
 import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
@@ -118,9 +119,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   // Workers only ever see their own tasks. Everyone else picks mine / team, and the pick is remembered.
   const saved = (await cookies()).get(TASK_SCOPE_COOKIE)?.value;
   const wanted = scopeParam ?? saved;
-  const scope: TaskScope = isWorker || wanted !== "team" ? "mine" : "team";
-  const inScope = tasks.filter(
-    ({ task }) => scope === "team" || !me || task.assigneeId === me.id || !task.assigneeId,
+  const scope: TaskScope = !isWorker && TASK_SCOPES.find((s) => s === wanted) ? (wanted as TaskScope) : "mine";
+  const inScope = tasks.filter(({ task }) =>
+    scope === "team" ? true : scope === "unassigned" ? !task.assigneeId : !me || task.assigneeId === me.id,
   );
   const now = new Date();
   type Row = (typeof tasks)[number];
@@ -258,8 +259,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                     </div>,
                     <span key="type" className="badge">{task.repeat ? repeatLabel[task.repeat] : "One-time"}</span>,
                     assigneeName ? (
-                      <span key="assignee" className="inline-flex items-center gap-2 whitespace-nowrap">
-                        <Avatar name={assigneeName} size="sm" />
+                      <span key="assignee" className="whitespace-nowrap">
                         {assigneeName}
                       </span>
                     ) : (
@@ -273,17 +273,22 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                       <span key="client" className="text-muted">—</span>
                     ),
                     projectName ? (
-                      <span key="project" className="inline-flex items-center gap-2">
+                      <span key="project" className="flex flex-col items-start gap-1">
+                        <span className="badge text-muted">{KIND_LABEL[projectKind ?? "one_off"]}</span>
                         {projectName}
-                        {projectKind === "ongoing" && <span className="badge text-muted">Ongoing</span>}
                       </span>
                     ) : (
                       <span key="project" className="text-muted">—</span>
                     ),
                     task.dueDate ? (
                       <span key="due" className="flex items-center gap-2 whitespace-nowrap">
-                        {fmtDay(task.dueDate)}
-                        {urgency && urgency !== "on_track" && (
+                        <span
+                          className={urgency === "critical" ? "font-medium text-red-600 dark:text-red-400" : undefined}
+                          title={urgency === "critical" ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
+                        >
+                          {fmtDay(task.dueDate)}
+                        </span>
+                        {urgency && urgency !== "on_track" && urgency !== "critical" && (
                           <span
                             className={`badge ${URGENCY_CLASS[urgency]}`}
                             title={timeLeftLabel(task.dueDate, config.timeZone)}
