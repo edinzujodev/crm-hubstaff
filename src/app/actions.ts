@@ -190,6 +190,24 @@ export async function createClient(_prev: unknown, formData: FormData): Promise<
   });
 }
 
+/** Adds a project to a client. */
+export async function createProject(clientId: number, _prev: unknown, formData: FormData): Promise<Result<{ id: number }>> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    const input = z
+      .object({ name: z.string().trim().min(1, "Name is required").max(120), kind: z.enum(["one_off", "ongoing"]) })
+      .parse(Object.fromEntries(formData));
+    const client = await db.query.clients.findFirst({ where: eq(schema.clients.id, clientId) });
+    if (!client) throw new Error("Client not found");
+    const clash = await db.query.projects.findFirst({
+      where: and(eq(schema.projects.clientId, clientId), sql`lower(${schema.projects.name}) = lower(${input.name})`),
+    });
+    if (clash) throw new Error("This client already has a project with that name.");
+    const [project] = await db.insert(schema.projects).values({ clientId, ...input }).returning({ id: schema.projects.id });
+    return project;
+  });
+}
+
 /** Renames a project or changes whether it is one-off or ongoing. */
 export async function updateProject(projectId: number, _prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {

@@ -5,7 +5,7 @@ import { asc, count, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ClientActions } from "@/components/client-actions";
 import { DateInput } from "@/components/date-input";
-import { ProjectActions } from "@/components/project-actions";
+import { NewProjectButton, ProjectActions } from "@/components/project-actions";
 import { config } from "@/lib/config";
 import { fmtDuration, localDay } from "@/lib/format";
 import { KIND_LABEL } from "@/lib/project-kind";
@@ -65,7 +65,7 @@ async function ClientDetail({
 
   return (
     <div className="space-y-6">
-      <div>
+      <header className="card p-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{client.name}</h1>
           <ClientActions
@@ -95,7 +95,7 @@ async function ClientDetail({
           </span>
         </p>
         {client.notes && <p className="mt-2 max-w-2xl text-sm">{client.notes}</p>}
-      </div>
+      </header>
 
       <form className="card flex flex-wrap items-end gap-2 p-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
@@ -132,7 +132,10 @@ async function ClientDetail({
       </section>
 
       <section className="space-y-2">
-        <h2 className="font-semibold">Projects</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold">Projects</h2>
+          <NewProjectButton clientId={client.id} />
+        </div>
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs text-muted">
