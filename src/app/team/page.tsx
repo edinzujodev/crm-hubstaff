@@ -4,7 +4,7 @@ import { asc } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { Avatar } from "@/components/avatar";
-import { DeleteTeamButton } from "@/components/delete-team-button";
+import { TeamMenu } from "@/components/team-menu";
 import { PeopleList, type Person } from "@/components/people-list";
 import { AddMemberButton, NewTeamButton } from "@/components/team-popups";
 import { pageGuard } from "@/lib/auth";
@@ -84,7 +84,6 @@ async function TeamContent() {
                 <th className="px-3 py-2 font-medium">Team</th>
                 <th className="px-3 py-2 font-medium">Leader</th>
                 <th className="px-3 py-2 font-medium">Members</th>
-                <th className="px-3 py-2 font-medium">Urgency</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -127,15 +126,20 @@ async function TeamContent() {
                         <span className="text-muted">No members yet</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-xs text-muted">
-                      Approaching {t.approachingHours}h · Critical {t.criticalHours}h
-                    </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/team/${t.id}`} className="btn py-1">
-                          Tasks &amp; details →
+                        <Link
+                          href={`/team/${t.id}`}
+                          className="btn px-2"
+                          title="Team details and tasks"
+                          aria-label={`Details for ${t.name}`}
+                        >
+                          <svg aria-hidden viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7 17 17 7" />
+                            <path d="M8 7h9v9" />
+                          </svg>
                         </Link>
-                        {admin && <DeleteTeamButton teamId={t.id} title={t.name} />}
+                        {admin && <TeamMenu teamId={t.id} name={t.name} />}
                       </div>
                     </td>
                   </tr>
@@ -143,7 +147,7 @@ async function TeamContent() {
               })}
               {teams.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-muted">
+                  <td colSpan={4} className="px-3 py-8 text-center text-muted">
                     {admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
                   </td>
                 </tr>

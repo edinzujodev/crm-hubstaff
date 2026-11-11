@@ -22,7 +22,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   // A leader can only open their own team.
   if (!canManageTeam(auth, id)) redirect("/team");
   const allUsers = await db.select().from(schema.users).orderBy(asc(schema.users.name));
-  const options = allUsers.map((u) => ({ id: u.id, name: u.name }));
+  const options = allUsers.map((u) => ({ id: u.id, name: u.name, teamId: u.teamId }));
   const leader = allUsers.find((u) => u.id === team.leaderId) ?? null;
 
   return (
@@ -65,7 +65,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
           {auth.role === "super_admin" && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Team leader</h3>
-              <p className="text-xs text-muted">Sees this team&apos;s tasks and reports, and sets its urgency levels.</p>
+              <p className="text-xs text-muted">The leader sees this team&apos;s tasks and reports, and sets its urgency levels. Pick one person; the change saves straight away.</p>
               <TeamLeaderSelect teamId={team.id} leaderId={team.leaderId} users={options} teamName={team.name} />
             </div>
           )}
