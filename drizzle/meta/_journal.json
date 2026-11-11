@@ -113,6 +113,20 @@
       "when": 1794408384310,
       "tag": "0015_gray_toad_men",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794408734931,
+      "tag": "0016_wise_gravity",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794408745715,
+      "tag": "0017_crazy_nightcrawler",
+      "breakpoints": true
     }
   ]
 }

@@ -18,15 +18,17 @@ export const SIZE_CLASS: Record<Size, string> = {
   full: "md:col-span-12",
 };
 
-/** Height in grid rows. A 2-row widget beside two 1-row widgets fills the same space as both of them. */
-export const ROWS = [1, 2, 3] as const;
-export type Rows = (typeof ROWS)[number];
-export const ROW_CLASS: Record<Rows, string> = {
-  1: "",
-  2: "md:row-span-2 md:self-stretch",
-  3: "md:row-span-3 md:self-stretch",
-};
-export const isRows = (v: unknown): v is Rows => ROWS.some((r) => r === v);
+/** Column layouts of the dashboard. Widgets sit in a column and stack top to bottom; phones show one column. */
+export const LAYOUTS = {
+  "1": { label: "1 column", count: 1, class: "md:grid-cols-1" },
+  "2": { label: "2 columns", count: 2, class: "md:grid-cols-2" },
+  "2-1": { label: "2 columns, wide left", count: 2, class: "md:grid-cols-[2fr_1fr]" },
+  "1-2": { label: "2 columns, wide right", count: 2, class: "md:grid-cols-[1fr_2fr]" },
+  "3": { label: "3 columns", count: 3, class: "md:grid-cols-3" },
+} as const;
+export type Layout = keyof typeof LAYOUTS;
+export const LAYOUT_KEYS = Object.keys(LAYOUTS) as Layout[];
+export const isLayout = (v: unknown): v is Layout => typeof v === "string" && v in LAYOUTS;
 
 export const RANGE_KEYS = ["today", "this_week", "last_7", "this_month", "last_month", "last_30"] as const;
 export type RangeKey = (typeof RANGE_KEYS)[number];

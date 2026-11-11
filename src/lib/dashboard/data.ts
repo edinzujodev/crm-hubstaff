@@ -37,6 +37,8 @@ export async function insertStarter(auth: Auth) {
     type: w.type,
     config: w.config,
     size: w.size satisfies Size,
+    // The starter layout is two columns; widgets alternate between them.
+    columnIndex: i % 2,
     position: i,
   }));
   if (rows.length) await db.insert(schema.dashboardWidgets).values(rows);

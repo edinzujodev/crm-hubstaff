@@ -5,39 +5,36 @@ import {
   DndContext,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
+  closestCorners,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Modal } from "@/components/modal";
 import { WidgetForm, type Lookups } from "@/components/dashboard/widget-form";
 import type { Role } from "@/lib/auth";
 import {
-  ROWS,
-  ROW_CLASS,
-  SIZES,
-  SIZE_CLASS,
-  SIZE_LABEL,
+  LAYOUTS,
+  LAYOUT_KEYS,
   WIDGETS,
   presetsFor,
   widgetsFor,
   type AnyConfig,
+  type Layout,
   type Preset,
-  type Rows,
-  type Size,
   type WidgetType,
 } from "@/lib/dashboard/config";
-import { addWidget, removeWidget, resetDashboard, resizeWidget, saveOrder, setWidgetRows, updateWidget } from "@/app/dashboard/actions";
+import { addWidget, removeWidget, resetDashboard, saveLayout, updateWidget } from "@/app/dashboard/actions";
 
 export type GridItem = {
   id: number;
   type: WidgetType;
-  size: Size;
-  /** How many grid rows tall. */
-  rows: Rows;
+  /** The column the widget is in; 0 is the left one. */
+  column: number;
   /** The heading shown: the custom title, or one built from the settings. */
   title: string;
   customTitle: string | null;
@@ -48,25 +45,27 @@ export type GridItem = {
 
 type Result = { ok: true } | { ok: false; error: string };
 
+const colId = (i: number) => `col-${i}`;
+const isColId = (id: unknown): id is string => typeof id === "string" && id.startsWith("col-");
+
+/** Widget ids per column, top to bottom. A widget in a column the layout no longer has goes in the last one. */
+function toColumns(items: GridItem[], count: number): number[][] {
+  const cols: number[][] = Array.from({ length: count }, () => []);
+  for (const item of items) cols[Math.min(Math.max(item.column, 0), count - 1)].push(item.id);
+  return cols;
+}
+
 function Frame({
   item,
-  size,
-  rows,
   editing,
   busy,
   onConfigure,
-  onResize,
-  onRows,
   onRemove,
 }: {
   item: GridItem;
-  size: Size;
-  rows: Rows;
   editing: boolean;
   busy: boolean;
   onConfigure: () => void;
-  onResize: (s: Size) => void;
-  onRows: (r: Rows) => void;
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -81,7 +80,7 @@ function Frame({
       ref={setNodeRef}
       style={style}
       aria-label={item.title}
-      className={`card @container relative min-w-0 p-4 ${SIZE_CLASS[size]} ${ROW_CLASS[rows]} ${editing ? "outline-1 outline-dashed outline-border" : ""} ${isDragging ? "z-10" : ""}`}
+      className={`card @container relative min-w-0 p-4 ${editing ? "outline-1 outline-dashed outline-border" : ""} ${isDragging ? "z-10" : ""}`}
     >
       <header className="mb-3 flex items-center gap-2">
         {editing && (
@@ -101,36 +100,6 @@ function Frame({
         </h2>
         {editing && (
           <div className="flex shrink-0 items-center gap-1">
-            <div className="flex overflow-hidden rounded-md border border-border text-xs" role="group" aria-label="Width">
-              {SIZES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onResize(s)}
-                  disabled={busy}
-                  aria-pressed={s === size}
-                  title={SIZE_LABEL[s]}
-                  className={`px-1.5 py-1 ${s === size ? "bg-primary text-(--primary-fg)" : "hover:bg-border/40"}`}
-                >
-                  {s === "full" ? "XL" : s.toUpperCase()}
-                </button>
-              ))}
-            </div>
-            <div className="hidden overflow-hidden rounded-md border border-border text-xs md:flex" role="group" aria-label="Height">
-              {ROWS.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => onRows(r)}
-                  disabled={busy}
-                  aria-pressed={r === rows}
-                  title={r === 1 ? "Normal height" : `${r} rows tall`}
-                  className={`px-1.5 py-1 ${r === rows ? "bg-primary text-(--primary-fg)" : "hover:bg-border/40"}`}
-                >
-                  {r}↕
-                </button>
-              ))}
-            </div>
             <button type="button" className="btn px-2 py-1 text-xs" onClick={onConfigure} aria-label={`Settings for ${item.title}`}>
               Edit
             </button>
@@ -161,12 +130,62 @@ function Frame({
   );
 }
 
+/** One column: its widgets stack top to bottom, and a widget can be dropped on it, even when it is empty. */
+function Column({
+  index,
+  ids,
+  byId,
+  editing,
+  busy,
+  onConfigure,
+  onRemove,
+}: {
+  index: number;
+  ids: number[];
+  byId: Map<number, GridItem>;
+  editing: boolean;
+  busy: boolean;
+  onConfigure: (id: number) => void;
+  onRemove: (id: number) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: colId(index) });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-w-0 space-y-4 rounded-lg ${editing ? "min-h-24 p-1" : ""} ${editing && isOver ? "bg-primary/5" : ""}`}
+    >
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        {ids.map((id) => {
+          const item = byId.get(id);
+          return item ? (
+            <Frame
+              key={id}
+              item={item}
+              editing={editing}
+              busy={busy}
+              onConfigure={() => onConfigure(id)}
+              onRemove={() => onRemove(id)}
+            />
+          ) : null;
+        })}
+      </SortableContext>
+      {editing && ids.length === 0 && (
+        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted">
+          Drop a widget here
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function DashboardGrid({
   items,
+  layout: savedLayout,
   role,
   lookups,
 }: {
   items: GridItem[];
+  layout: Layout;
   role: Role;
   lookups: Lookups;
 }) {
@@ -176,21 +195,20 @@ export function DashboardGrid({
   const [configuring, setConfiguring] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
 
-  // Local order and sizes make drags and resizes feel instant; the server's list wins whenever it changes.
-  const serverKey = items.map((i) => i.id).join(",");
-  const [order, setOrder] = useState(() => items.map((i) => i.id));
-  const [sizes, setSizes] = useState<Record<number, Size>>({});
-  const [heights, setHeights] = useState<Record<number, Rows>>({});
+  // Local columns make drags feel instant; the server's version wins whenever it changes.
+  const serverKey = `${savedLayout}|${JSON.stringify(toColumns(items, LAYOUTS[savedLayout].count))}`;
+  const [layout, setLayout] = useState<Layout>(savedLayout);
+  const [cols, setCols] = useState(() => toColumns(items, LAYOUTS[savedLayout].count));
   const [seen, setSeen] = useState(serverKey);
+  const [startCols, setStartCols] = useState<number[][] | null>(null);
   if (seen !== serverKey) {
     setSeen(serverKey);
-    setOrder(items.map((i) => i.id));
-    setSizes({});
-    setHeights({});
+    setLayout(savedLayout);
+    setCols(toColumns(items, LAYOUTS[savedLayout].count));
   }
 
   const byId = new Map(items.map((i) => [i.id, i]));
-  const ordered = order.map((id) => byId.get(id)).filter((i): i is GridItem => !!i);
+  const total = cols.reduce((n, c) => n + c.length, 0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -209,34 +227,70 @@ export function DashboardGrid({
     });
   }
 
-  function onDragEnd(e: DragEndEvent) {
-    if (!e.over || e.active.id === e.over.id) return;
-    const from = order.indexOf(Number(e.active.id));
-    const to = order.indexOf(Number(e.over.id));
-    if (from < 0 || to < 0) return;
-    const before = order;
-    const next = arrayMove(order, from, to);
-    setOrder(next);
-    act(() => saveOrder(next), undefined, () => setOrder(before));
+  const findColumn = (id: unknown, from: number[][]) =>
+    isColId(id) ? Number(id.slice(4)) : from.findIndex((c) => c.includes(Number(id)));
+
+  function onDragStart() {
+    setStartCols(cols);
   }
 
-  function resize(id: number, size: Size) {
-    const before = sizes[id];
-    setSizes((s) => ({ ...s, [id]: size }));
-    act(
-      () => resizeWidget(id, size),
-      undefined,
-      () => setSizes((s) => ({ ...s, [id]: before ?? items.find((i) => i.id === id)!.size })),
-    );
+  // Moving over another column puts the widget in it straight away, so it can be placed between that column's widgets.
+  function onDragOver({ active, over }: DragOverEvent) {
+    if (!over) return;
+    const activeId = Number(active.id);
+    setCols((prev) => {
+      const from = findColumn(active.id, prev);
+      const to = findColumn(over.id, prev);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const target = prev[to];
+      let index = target.length;
+      if (!isColId(over.id)) {
+        const overIndex = target.indexOf(Number(over.id));
+        const translated = active.rect.current.translated;
+        const below = translated ? translated.top > over.rect.top + over.rect.height / 2 : false;
+        index = overIndex >= 0 ? overIndex + (below ? 1 : 0) : target.length;
+      }
+      return prev.map((c, i) =>
+        i === from ? c.filter((id) => id !== activeId) : i === to ? [...c.slice(0, index), activeId, ...c.slice(index)] : c,
+      );
+    });
   }
 
-  function setRows(id: number, rows: Rows) {
-    const before = heights[id];
-    setHeights((h) => ({ ...h, [id]: rows }));
+  function onDragEnd({ active, over }: DragEndEvent) {
+    const before = startCols ?? cols;
+    setStartCols(null);
+    const activeId = Number(active.id);
+    let next = cols;
+    if (over) {
+      const col = findColumn(active.id, cols);
+      if (col >= 0 && !isColId(over.id)) {
+        const from = cols[col].indexOf(activeId);
+        const to = cols[col].indexOf(Number(over.id));
+        if (from >= 0 && to >= 0 && from !== to) next = cols.map((c, i) => (i === col ? arrayMove(c, from, to) : c));
+      }
+    }
+    setCols(next);
+    if (JSON.stringify(next) === JSON.stringify(before)) return;
+    act(() => saveLayout(layout, next), undefined, () => setCols(before));
+  }
+
+  function changeLayout(next: Layout) {
+    const count = LAYOUTS[next].count;
+    const before = { layout, cols };
+    // Widgets from columns that no longer exist go to the bottom of the last one.
+    const kept = cols.slice(0, count);
+    const moved = cols.slice(count).flat();
+    const nextCols = Array.from({ length: count }, (_, i) => kept[i] ?? []);
+    nextCols[count - 1] = [...nextCols[count - 1], ...moved];
+    setLayout(next);
+    setCols(nextCols);
     act(
-      () => setWidgetRows(id, rows),
+      () => saveLayout(next, nextCols),
       undefined,
-      () => setHeights((h) => ({ ...h, [id]: before ?? items.find((i) => i.id === id)!.rows })),
+      () => {
+        setLayout(before.layout);
+        setCols(before.cols);
+      },
     );
   }
 
@@ -248,6 +302,21 @@ export function DashboardGrid({
         <h1 className="sr-only">Dashboard</h1>
         {editing && (
           <>
+            <label className="flex items-center gap-2 text-sm text-muted">
+              Layout
+              <select
+                className="input py-1 text-foreground"
+                value={layout}
+                disabled={pending}
+                onChange={(e) => changeLayout(e.target.value as Layout)}
+              >
+                {LAYOUT_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {LAYOUTS[k].label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button className="btn" onClick={() => setAdding(true)}>
               + Add widget
             </button>
@@ -276,7 +345,7 @@ export function DashboardGrid({
         </p>
       )}
 
-      {ordered.length === 0 ? (
+      {total === 0 ? (
         <div className="card space-y-3 p-8 text-center">
           <p className="font-medium">Your dashboard is empty.</p>
           <p className="text-sm text-muted">Add the reports and lists you want to see here.</p>
@@ -291,25 +360,21 @@ export function DashboardGrid({
           </button>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={order} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-12">
-              {ordered.map((item) => (
-                <Frame
-                  key={item.id}
-                  item={item}
-                  size={sizes[item.id] ?? item.size}
-                  rows={heights[item.id] ?? item.rows}
-                  editing={editing}
-                  busy={pending}
-                  onConfigure={() => setConfiguring(item.id)}
-                  onResize={(s) => resize(item.id, s)}
-                  onRows={(r) => setRows(item.id, r)}
-                  onRemove={() => act(() => removeWidget(item.id))}
-                />
-              ))}
-            </div>
-          </SortableContext>
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
+          <div className={`grid grid-cols-1 items-start gap-4 ${LAYOUTS[layout].class}`}>
+            {cols.map((ids, i) => (
+              <Column
+                key={i}
+                index={i}
+                ids={ids}
+                byId={byId}
+                editing={editing}
+                busy={pending}
+                onConfigure={setConfiguring}
+                onRemove={(id) => act(() => removeWidget(id))}
+              />
+            ))}
+          </div>
         </DndContext>
       )}
 
@@ -335,7 +400,7 @@ export function DashboardGrid({
           lookups={lookups}
           pending={pending}
           onClose={() => setAdding(false)}
-          onAdd={(type, config, title, size) => act(() => addWidget({ type, config, title, size }), () => setAdding(false))}
+          onAdd={(type, config, title) => act(() => addWidget({ type, config, title }), () => setAdding(false))}
         />
       )}
     </div>
@@ -353,7 +418,7 @@ function AddWidget({
   lookups: Lookups;
   pending: boolean;
   onClose: () => void;
-  onAdd: (type: WidgetType, config: AnyConfig, title: string | null, size: Size) => void;
+  onAdd: (type: WidgetType, config: AnyConfig, title: string | null) => void;
 }) {
   const [picked, setPicked] = useState<{ type: WidgetType; preset: Preset } | null>(null);
 
@@ -370,7 +435,7 @@ function AddWidget({
           submitLabel="Add to dashboard"
           pending={pending}
           onCancel={() => setPicked(null)}
-          onSubmit={(config, title) => onAdd(picked.type, config, title, WIDGETS[picked.type].defaultSize)}
+          onSubmit={(config, title) => onAdd(picked.type, config, title)}
         />
       </Modal>
     );
