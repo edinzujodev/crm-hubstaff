@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { DateInput } from "@/components/date-input";
 import { config } from "@/lib/config";
 import { fmtDuration, localDay } from "@/lib/format";
 import { KIND_LABEL } from "@/lib/project-kind";
@@ -78,11 +79,11 @@ async function ClientDetail({
       <form className="card flex flex-wrap items-end gap-2 p-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           From
-          <input type="date" name="from" defaultValue={from} className="input text-foreground" />
+          <DateInput name="from" defaultValue={from} />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           To
-          <input type="date" name="to" defaultValue={to} className="input text-foreground" />
+          <DateInput name="to" defaultValue={to} />
         </label>
         <button className="btn">Show</button>
         <Link href={`/reports?client=${id}&from=${from}&to=${to}`} className="btn">

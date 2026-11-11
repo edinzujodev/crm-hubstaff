@@ -289,7 +289,7 @@ async function ClientsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
 
 async function NewTaskWidget({ auth }: { auth: Auth }) {
   const [dir, users] = await Promise.all([getDirectory(), assignableUsers(auth)]);
-  return <NewTaskForm bare clients={dir.clients} users={users} projects={dir.projects} />;
+  return <NewTaskForm clients={dir.clients} users={users} projects={dir.projects} />;
 }
 
 async function openSessions() {

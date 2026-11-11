@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { DateInput } from "@/components/date-input";
 import { BarList } from "@/components/charts/bar-list";
 import { ChartTip } from "@/components/charts/chart-tip";
 import { ColumnChart } from "@/components/charts/column-chart";
@@ -158,11 +159,11 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
       <form className="card flex flex-wrap items-end gap-2 p-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           From
-          <input type="date" name="from" defaultValue={filter.from} className="input text-foreground" />
+          <DateInput name="from" defaultValue={filter.from} />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           To
-          <input type="date" name="to" defaultValue={filter.to} className="input text-foreground" />
+          <DateInput name="to" defaultValue={filter.to} />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Client

@@ -170,8 +170,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
         </div>
       )}
 
-      {!isWorker && <NewTaskForm clients={clients} users={users} projects={projects} />}
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5 text-sm">
           {(
@@ -206,9 +204,12 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
               </Link>
             ))}
         </div>
-        {!isWorker && tab !== "recurring" && (
-          <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {!isWorker && tab !== "recurring" && (
+            <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
+          )}
+          {!isWorker && <NewTaskForm clients={clients} users={users} projects={projects} />}
+        </div>
       </div>
 
       {tab === "recurring" ? (
@@ -325,6 +326,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                               dueDate: task.dueDate,
                               repeat: task.repeat,
                               repeatLeadDays: task.repeatLeadDays,
+                              repeatShow: task.repeatShow,
                             }}
                             clients={clients}
                             users={users}

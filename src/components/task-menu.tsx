@@ -2,7 +2,10 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { deleteTask, updateTask } from "@/app/actions";
+import { DateInput } from "@/components/date-input";
 import { Modal } from "@/components/modal";
+import { RepeatShowFields } from "@/components/repeat-show-fields";
+import { defaultLead, type RepeatShow } from "@/lib/repeat-show";
 import { ProjectField, type ProjectOption } from "@/components/project-field";
 import { truncate } from "@/lib/format";
 
@@ -16,6 +19,7 @@ type TaskFields = {
   dueDate: string | null;
   repeat: "weekly" | "monthly" | null;
   repeatLeadDays: number | null;
+  repeatShow: RepeatShow | null;
 };
 
 /** The ⋯ button at the end of a row, with Edit and Delete. Both open a popup. */
@@ -127,6 +131,10 @@ function EditForm({
   onDone: () => void;
 }) {
   const [clientId, setClientId] = useState(task.clientId ? String(task.clientId) : "");
+  const [due, setDue] = useState(task.dueDate ?? "");
+  const [repeat, setRepeat] = useState<"" | "weekly" | "monthly">(task.repeat ?? "");
+  const [show, setShow] = useState<RepeatShow>(task.repeatShow ?? "days_before");
+  const [lead, setLead] = useState(task.repeatLeadDays !== null ? String(task.repeatLeadDays) : "");
   const [state, action, pending] = useActionState(updateTask.bind(null, task.id), null);
   const hubstaffWarning = state?.ok ? state.data.hubstaffError : undefined;
 
@@ -180,28 +188,30 @@ function EditForm({
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Due
-          <input type="date" name="dueDate" defaultValue={task.dueDate ?? ""} className="input text-foreground" />
+          <DateInput name="dueDate" value={due} onChange={(e) => setDue(e.target.value)} />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Repeats
-          <select name="repeat" defaultValue={task.repeat ?? ""} className="input text-foreground">
+          <select
+            name="repeat"
+            value={repeat}
+            onChange={(e) => {
+              const v = e.target.value as "" | "weekly" | "monthly";
+              setRepeat(v);
+              if (v && !lead) setLead(String(defaultLead(v)));
+            }}
+            className="input text-foreground"
+          >
             <option value="">One-time</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
           </select>
         </label>
-        <label className="col-span-2 flex flex-col gap-1 text-xs text-muted">
-          Show new copies in my list (days before due, for repeating tasks)
-          <input
-            type="number"
-            name="repeatLeadDays"
-            min={0}
-            max={90}
-            defaultValue={task.repeatLeadDays ?? ""}
-            placeholder="Default: 2 weekly, 7 monthly"
-            className="input text-foreground"
-          />
-        </label>
+        {repeat && (
+          <div className="col-span-2">
+            <RepeatShowFields repeat={repeat} show={show} lead={lead} onShow={setShow} onLead={setLead} />
+          </div>
+        )}
       </div>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       {hubstaffWarning && (
