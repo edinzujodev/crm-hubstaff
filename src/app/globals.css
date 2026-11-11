@@ -70,7 +70,7 @@ body {
 
 @layer components {
   .btn {
-    @apply inline-flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
     @apply border-transparent bg-primary text-(--primary-fg);

@@ -40,7 +40,7 @@ export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] 
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={!!menu}
-        className="btn px-2"
+        className="btn cursor-pointer px-2"
         // The window's pointerdown closes the menu; stop it so this click can toggle it.
         onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
         onClick={toggle}
@@ -58,7 +58,7 @@ export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] 
             <button
               key={item.label}
               role="menuitem"
-              className={`block w-full px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10 ${item.danger ? "text-red-600" : ""}`}
+              className={`block w-full cursor-pointer px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10 ${item.danger ? "text-red-600" : ""}`}
               onClick={() => {
                 setMenu(null);
                 item.onSelect();

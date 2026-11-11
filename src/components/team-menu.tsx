@@ -42,7 +42,7 @@ export function TeamMenu({ teamId, name }: { teamId: number; name: string }) {
         aria-label={`Actions for ${name}`}
         aria-haspopup="menu"
         aria-expanded={!!menu}
-        className="btn px-2"
+        className="btn cursor-pointer px-2"
         // The window's pointerdown closes the menu; stop it so this click can toggle it.
         onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
         onClick={toggle}
@@ -58,7 +58,7 @@ export function TeamMenu({ teamId, name }: { teamId: number; name: string }) {
         >
           <button
             role="menuitem"
-            className="block w-full px-3 py-1.5 text-left text-red-600 hover:bg-black/5 dark:hover:bg-white/10"
+            className="block w-full cursor-pointer px-3 py-1.5 text-left text-red-600 hover:bg-black/5 dark:hover:bg-white/10"
             onClick={() => {
               setMenu(null);
               setConfirm(true);
