@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
+import { defaultLead, showFrom } from "@/lib/repeat-show";
 
 export type Repeat = "weekly" | "monthly";
 
@@ -36,7 +37,7 @@ export function subtractDays(day: string, days: number): string {
 }
 
 /** How many days before the due date a copy appears in the lists, when the user didn't choose. */
-export const defaultLeadDays = (repeat: Repeat) => (repeat === "weekly" ? 2 : 7);
+export const defaultLeadDays = defaultLead;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -74,7 +75,7 @@ export async function spawnNextRepeat(taskId: number) {
   if (!task.seriesId) await db.update(schema.tasks).set({ seriesId }).where(eq(schema.tasks.id, task.id));
   const dueDate = nextDueDate(task.dueDate, task.repeat, task.repeatDay, today);
   // The copy stays out of the open-task lists until `repeatLeadDays` before it is due.
-  const startDate = subtractDays(dueDate, task.repeatLeadDays ?? defaultLeadDays(task.repeat));
+  const startDate = showFrom(dueDate, task.repeatShow ?? "days_before", task.repeatLeadDays, task.repeat);
   const [next] = await db
     .insert(schema.tasks)
     .values({
@@ -88,6 +89,7 @@ export async function spawnNextRepeat(taskId: number) {
       repeat: task.repeat,
       repeatDay: task.repeatDay,
       repeatLeadDays: task.repeatLeadDays,
+      repeatShow: task.repeatShow,
       teamId: task.teamId,
       seriesId,
       repeatedFromId: task.id,

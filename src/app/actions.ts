@@ -9,7 +9,8 @@ import { requireCurrentUser } from "@/lib/current-user";
 import { authMode, createSession, destroySession, findApprovedUser } from "@/lib/session";
 import { canManageTeam, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
-import { defaultLeadDays, hubstaffSummary, spawnNextRepeat, subtractDays } from "@/lib/recurring";
+import { defaultLeadDays, hubstaffSummary, spawnNextRepeat } from "@/lib/recurring";
+import { showFrom } from "@/lib/repeat-show";
 import { localDay } from "@/lib/format";
 import { config } from "@/lib/config";
 import { resolveProject } from "@/lib/projects";
@@ -65,6 +66,8 @@ const newTask = z.object({
   repeat: z.enum(["weekly", "monthly"]).optional().or(z.literal("").transform(() => undefined)),
   // Days before the due date that each new copy appears in the open lists.
   repeatLeadDays: z.coerce.number().int().min(0).max(90).optional().or(z.literal("").transform(() => undefined)),
+  // When each new copy appears in the open lists: some days before due (repeatLeadDays), at the start of the week or month, or on the due day.
+  repeatShow: z.enum(["days_before", "week_start", "month_start", "due_day"]).optional().or(z.literal("").transform(() => undefined)),
   // The project the task belongs to: an existing one of the client by name, or a new one. Blank = the task title.
   projectName: z.string().trim().max(120).optional(),
   projectKind: z.enum(["one_off", "ongoing"]).optional().or(z.literal("").transform(() => undefined)),
@@ -78,7 +81,8 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
     // The next due date is calculated from this one, so a repeating task needs it.
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : undefined;
-    const repeatLeadDays = input.repeat ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : undefined;
+    const repeatShow = input.repeat ? (input.repeatShow ?? "days_before") : undefined;
+    const repeatLeadDays = input.repeat && repeatShow === "days_before" ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : undefined;
     const picked = input.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })
       : null;
@@ -89,7 +93,7 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
     const project = await resolveProject(input.clientId, projectName, projectKind, input.title);
     const [created] = await db
       .insert(schema.tasks)
-      .values({ ...input, projectId: project.id, repeatDay, repeatLeadDays, teamId })
+      .values({ ...input, projectId: project.id, repeatDay, repeatLeadDays, repeatShow, teamId })
       .returning();
     // The first task of a repeating series is the series' id; every copy keeps it.
     const [task] = input.repeat
@@ -346,10 +350,11 @@ export async function updateTask(
     const teamId = picked ? (picked.teamId ?? task.teamId) : task.teamId;
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : null;
-    const repeatLeadDays = input.repeat ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : null;
+    const repeatShow = input.repeat ? (input.repeatShow ?? "days_before") : null;
+    const repeatLeadDays = input.repeat && repeatShow === "days_before" ? (input.repeatLeadDays ?? defaultLeadDays(input.repeat)) : null;
     // A copy that is still waiting for its start date follows its due date when that changes.
     const today = localDay(new Date(), config.timeZone);
-    const movedStart = task.startDate && input.dueDate && repeatLeadDays !== null ? subtractDays(input.dueDate, repeatLeadDays) : null;
+    const movedStart = task.startDate && input.dueDate && input.repeat && repeatShow ? showFrom(input.dueDate, repeatShow, repeatLeadDays, input.repeat) : null;
     await db
       .update(schema.tasks)
       .set({
@@ -361,6 +366,7 @@ export async function updateTask(
         repeat: input.repeat ?? null,
         repeatDay,
         repeatLeadDays,
+        repeatShow,
         teamId,
         ...(input.repeat && !task.seriesId ? { seriesId: task.id } : {}),
         ...(task.startDate ? { startDate: movedStart && movedStart > today ? movedStart : null } : {}),

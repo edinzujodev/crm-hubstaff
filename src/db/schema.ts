@@ -136,6 +136,8 @@ export const projects = pgTable(
 
 export const taskStatus = pgEnum("task_status", ["todo", "in_progress", "done"]);
 export const taskRepeat = pgEnum("task_repeat", ["weekly", "monthly"]);
+// When a copy made by a repeat appears in the open lists (see src/lib/repeat-show.ts).
+export const repeatShow = pgEnum("repeat_show", ["days_before", "week_start", "month_start", "due_day"]);
 
 export const tasks = pgTable(
   "tasks",
@@ -166,6 +168,8 @@ export const tasks = pgTable(
     doneAt: timestamp("done_at", { withTimezone: true }),
     // Days before the due date that a copy shows up in the open-task lists.
     repeatLeadDays: integer("repeat_lead_days"),
+    // How the copy decides when to show: some days before due (repeatLeadDays), at the start of the week or month, or on the due day.
+    repeatShow: repeatShow("repeat_show"),
     // Hidden from the open-task lists until this day (set on copies made by a repeat).
     startDate: date("start_date"),
     // Id of the first task of a repeating series. Every copy keeps it, so the series can be shown as one.

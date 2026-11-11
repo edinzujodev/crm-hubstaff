@@ -3,7 +3,17 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 /** A popup. Render it only while it should be open; it closes on Escape or a click outside. */
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Modal({
+  title,
+  onClose,
+  wide = false,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  wide?: boolean;
+  children: ReactNode;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -17,7 +27,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      className="card m-auto w-[28rem] max-w-[calc(100vw-2rem)] p-0 text-foreground backdrop:bg-black/40"
+      className={`card m-auto ${wide ? "w-[40rem]" : "w-[28rem]"} max-w-[calc(100vw-2rem)] p-0 text-foreground backdrop:bg-black/40`}
     >
       <div className="space-y-4 p-5">
         <h2 className="text-base font-semibold">{title}</h2>
