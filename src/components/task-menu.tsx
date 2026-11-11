@@ -14,7 +14,7 @@ type TaskFields = {
   id: number;
   title: string;
   clientId: number | null;
-  projectName: string | null;
+  projectId: number | null;
   assigneeId: number | null;
   dueDate: string | null;
   repeat: "weekly" | "monthly" | null;
@@ -173,7 +173,7 @@ function EditForm({
           clientId={clientId}
           title=""
           projects={projects}
-          initialName={clientId === String(task.clientId) ? (task.projectName ?? "") : ""}
+          initialProjectId={clientId === String(task.clientId) && task.projectId ? String(task.projectId) : ""}
         />
         <label className="flex flex-col gap-1 text-xs text-muted">
           Assignee

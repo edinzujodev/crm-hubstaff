@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ConvertLeadButton } from "@/components/convert-lead-button";
-import { DeleteLeadButton } from "@/components/delete-lead-button";
+import { LeadMenu } from "@/components/lead-menu";
 import { LeadStatusSelect } from "@/components/lead-status-select";
 import { NewLeadForm } from "@/components/new-lead-form";
 import { pageGuard } from "@/lib/auth";
@@ -119,7 +119,7 @@ async function LeadList({ filter }: { filter: Promise<string | undefined> }) {
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-end gap-2">
                     {lead.status !== "won" && <ConvertLeadButton compact leadId={lead.id} name={lead.name} />}
-                    {lead.status !== "won" && <DeleteLeadButton leadId={lead.id} title={lead.name} />}
+                    <LeadMenu leadId={lead.id} name={lead.name} converted={lead.status === "won"} />
                   </div>
                 </td>
               </tr>

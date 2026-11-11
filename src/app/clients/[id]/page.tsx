@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { ClientActions } from "@/components/client-actions";
 import { DateInput } from "@/components/date-input";
+import { ProjectActions } from "@/components/project-actions";
 import { config } from "@/lib/config";
 import { fmtDuration, localDay } from "@/lib/format";
 import { KIND_LABEL } from "@/lib/project-kind";
@@ -39,16 +41,23 @@ async function ClientDetail({
   let to = pick(sp.to, lastDayOfMonth(month));
   if (from > to) [from, to] = [to, from];
 
-  const [report, projects] = await Promise.all([
+  const [report, projects, taskTotals] = await Promise.all([
     getClientReport(id, from, to, tz, taskScope(auth)),
     db.select().from(schema.projects).where(eq(schema.projects.clientId, id)).orderBy(asc(schema.projects.name)),
+    // Every task per project, deleted ones too: they still block deleting the project.
+    db
+      .select({ projectId: schema.tasks.projectId, n: count() })
+      .from(schema.tasks)
+      .where(eq(schema.tasks.clientId, id))
+      .groupBy(schema.tasks.projectId),
   ]);
+  const totalByProject = new Map(taskTotals.map((r) => [r.projectId, r.n]));
   // Per project: its tasks and the time tracked on them in the period.
   const projectRows = projects.map((p) => {
     const mine = report.tasks.filter((t) => t.task.projectId === p.id);
     return {
       project: p,
-      tasks: mine.length,
+      tasks: totalByProject.get(p.id) ?? 0,
       open: mine.filter((t) => t.task.status !== "done" && !t.task.deletedAt).length,
       tracked: mine.reduce((sum, t) => sum + t.tracked, 0),
     };
@@ -60,7 +69,22 @@ async function ClientDetail({
         <Link href="/clients" className="text-sm text-muted hover:underline">
           ← Clients
         </Link>
-        <h1 className="mt-1 text-xl font-semibold">{client.name}</h1>
+        <div className="mt-1 flex items-center gap-3">
+          <h1 className="text-xl font-semibold">{client.name}</h1>
+          <ClientActions
+            client={{
+              id: client.id,
+              name: client.name,
+              contactName: client.contactName,
+              email: client.email,
+              phone: client.phone,
+              notes: client.notes,
+              hubstaffProjectId: client.hubstaffProjectId,
+            }}
+            canDelete={auth.role === "super_admin"}
+            redirectTo="/clients"
+          />
+        </div>
         <p className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted">
           {client.contactName && <span>Contact: {client.contactName}</span>}
           {client.email && <span>{client.email}</span>}
@@ -120,6 +144,7 @@ async function ClientDetail({
                 <th className="px-3 py-2 font-medium">Type</th>
                 <th className="px-3 py-2 text-right font-medium">Open tasks</th>
                 <th className="px-3 py-2 text-right font-medium">Tracked in period</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -140,11 +165,16 @@ async function ClientDetail({
                     {open} <span className="text-xs text-muted">of {tasks}</span>
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">{tracked ? fmtDuration(tracked) : "—"}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end">
+                      <ProjectActions id={project.id} name={project.name} kind={project.kind} tasks={tasks} />
+                    </div>
+                  </td>
                 </tr>
               ))}
               {projectRows.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-muted">
+                  <td colSpan={5} className="px-3 py-6 text-center text-muted">
                     No projects yet. They are created when you add a task.
                   </td>
                 </tr>

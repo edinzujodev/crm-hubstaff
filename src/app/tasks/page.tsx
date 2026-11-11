@@ -321,7 +321,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                               id: task.id,
                               title: task.title,
                               clientId: task.clientId,
-                              projectName: projectName,
+                              projectId: task.projectId,
                               assigneeId: task.assigneeId,
                               dueDate: task.dueDate,
                               repeat: task.repeat,
