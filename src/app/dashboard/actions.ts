@@ -5,7 +5,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireAuth } from "@/lib/auth";
-import { LAYOUTS, LAYOUT_KEYS, isWidgetType, validateConfig, type AnyConfig, type Layout, type WidgetType } from "@/lib/dashboard/config";
+import { LAYOUTS, LAYOUT_KEYS, MAX_SECTIONS, isWidgetType, validateConfig, type AnyConfig, type Layout, type WidgetType } from "@/lib/dashboard/config";
 import { insertStarter } from "@/lib/dashboard/data";
 import { assertAllowed } from "@/lib/dashboard/scope";
 
@@ -65,7 +65,7 @@ export async function addWidget(input: {
       .where(eq(schema.dashboardWidgets.userId, auth.user.id));
     const [row] = await db
       .insert(schema.dashboardWidgets)
-      .values({ userId: auth.user.id, type: input.type, config, title, columnIndex: 0, position: (first ?? 1) - 1 })
+      .values({ userId: auth.user.id, type: input.type, config, title, sectionIndex: 0, columnIndex: 0, position: (first ?? 1) - 1 })
       .returning({ id: schema.dashboardWidgets.id });
     return { id: row.id };
   });
@@ -88,20 +88,31 @@ export async function removeWidget(widgetId: number) {
   });
 }
 
-/** The dashboard's column layout and, per column, the widget ids from top to bottom. */
-export async function saveLayout(layout: Layout, columns: number[][]) {
+/** The dashboard's rows: each has a column layout and, per column, the widget ids from top to bottom. */
+export async function saveLayout(sections: { layout: Layout; columns: number[][] }[]) {
   return run(async () => {
     const auth = await requireAuth();
-    if (!LAYOUT_KEYS.includes(layout)) throw new Error("Unknown layout");
-    const cols = z.array(z.array(z.number().int().positive()).max(MAX_WIDGETS)).max(LAYOUTS[layout].count).parse(columns);
+    const rows = z
+      .array(z.object({ layout: z.enum(LAYOUT_KEYS as [Layout, ...Layout[]]), columns: z.array(z.array(z.number().int().positive()).max(MAX_WIDGETS)).max(3) }))
+      .min(1)
+      .max(MAX_SECTIONS)
+      .parse(sections);
+    for (const row of rows) {
+      if (row.columns.length > LAYOUTS[row.layout].count) throw new Error("Too many columns for that layout");
+    }
     await db.transaction(async (tx) => {
-      await tx.update(schema.users).set({ dashboardLayout: layout }).where(eq(schema.users.id, auth.user.id));
-      for (const [columnIndex, ids] of cols.entries()) {
-        for (const [position, id] of ids.entries()) {
-          await tx
-            .update(schema.dashboardWidgets)
-            .set({ columnIndex, position })
-            .where(and(eq(schema.dashboardWidgets.id, id), eq(schema.dashboardWidgets.userId, auth.user.id)));
+      await tx
+        .update(schema.users)
+        .set({ dashboardLayout: JSON.stringify(rows.map((r) => r.layout)) })
+        .where(eq(schema.users.id, auth.user.id));
+      for (const [sectionIndex, row] of rows.entries()) {
+        for (const [columnIndex, ids] of row.columns.entries()) {
+          for (const [position, id] of ids.entries()) {
+            await tx
+              .update(schema.dashboardWidgets)
+              .set({ sectionIndex, columnIndex, position })
+              .where(and(eq(schema.dashboardWidgets.id, id), eq(schema.dashboardWidgets.userId, auth.user.id)));
+          }
         }
       }
     });
@@ -114,7 +125,7 @@ export async function resetDashboard() {
     const auth = await requireAuth();
     await db.transaction(async (tx) => {
       await tx.delete(schema.dashboardWidgets).where(eq(schema.dashboardWidgets.userId, auth.user.id));
-      await tx.update(schema.users).set({ dashboardLayout: "2" }).where(eq(schema.users.id, auth.user.id));
+      await tx.update(schema.users).set({ dashboardLayout: JSON.stringify(["2"]) }).where(eq(schema.users.id, auth.user.id));
     });
     await insertStarter(auth);
   });

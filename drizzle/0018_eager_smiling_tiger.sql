@@ -1,0 +1,1 @@
+ALTER TABLE "dashboard_widgets" ADD COLUMN "section_index" integer DEFAULT 0 NOT NULL;

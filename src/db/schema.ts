@@ -26,7 +26,7 @@ export const users = pgTable("users", {
   // A person is in at most one team, so team totals never double count.
   teamId: integer("team_id").references((): AnyPgColumn => teams.id),
   role: userRole("role").notNull().default("member"),
-  // How the person's dashboard columns are laid out (see src/lib/dashboard/config.ts).
+  // The column layout of each row of the person's dashboard: a JSON list such as ["3","1"] (see src/lib/dashboard/config.ts).
   dashboardLayout: text("dashboard_layout").notNull().default("2"),
   // Set once the person's dashboard has been given its starter widgets, so removing them all stays removed.
   dashboardSeededAt: timestamp("dashboard_seeded_at", { withTimezone: true }),
@@ -48,6 +48,8 @@ export const dashboardWidgets = pgTable(
     position: integer("position").notNull(),
     size: text("size").notNull().default("m"),
     // Which column of the dashboard the widget is in (0 is the left one); `position` orders it within the column.
+    // Which row (section) of the dashboard the widget is in, then which column of that row.
+    sectionIndex: integer("section_index").notNull().default(0),
     columnIndex: integer("column_index").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -29,6 +29,23 @@ export const LAYOUTS = {
 export type Layout = keyof typeof LAYOUTS;
 export const LAYOUT_KEYS = Object.keys(LAYOUTS) as Layout[];
 export const isLayout = (v: unknown): v is Layout => typeof v === "string" && v in LAYOUTS;
+export const MAX_SECTIONS = 12;
+
+/** The saved layouts of a dashboard's rows. Older values were a single layout key, such as "2". */
+export function parseLayouts(value: string | null | undefined): Layout[] {
+  if (!value) return ["2"];
+  if (isLayout(value)) return [value];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      const layouts = parsed.filter(isLayout).slice(0, MAX_SECTIONS);
+      if (layouts.length) return layouts;
+    }
+  } catch {
+    // fall through to the default
+  }
+  return ["2"];
+}
 
 export const RANGE_KEYS = ["today", "this_week", "last_7", "this_month", "last_month", "last_30"] as const;
 export type RangeKey = (typeof RANGE_KEYS)[number];

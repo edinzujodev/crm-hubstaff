@@ -127,6 +127,13 @@
       "when": 1794408745715,
       "tag": "0017_crazy_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794410190384,
+      "tag": "0018_eager_smiling_tiger",
+      "breakpoints": true
     }
   ]
 }
