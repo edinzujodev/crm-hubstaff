@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, count, eq, isNull, ne, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { z } from "zod";
@@ -68,16 +68,31 @@ const newTask = z.object({
   repeatLeadDays: z.coerce.number().int().min(0).max(90).optional().or(z.literal("").transform(() => undefined)),
   // When each new copy appears in the open lists: some days before due (repeatLeadDays), at the start of the week or month, or on the due day.
   repeatShow: z.enum(["days_before", "week_start", "month_start", "due_day"]).optional().or(z.literal("").transform(() => undefined)),
-  // The project the task belongs to: an existing one of the client by name, or a new one. Blank = the task title.
+  // The project the task belongs to: one of the client's existing projects (projectId), or a new one by name.
+  projectId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
   projectName: z.string().trim().max(120).optional(),
   projectKind: z.enum(["one_off", "ongoing"]).optional().or(z.literal("").transform(() => undefined)),
 });
+
+/** The chosen project of the client, or a new one when only a name was given. */
+async function pickProject(
+  clientId: number,
+  projectId: number | undefined,
+  name: string | undefined,
+  kind: "one_off" | "ongoing" | undefined,
+  fallback: string,
+) {
+  if (!projectId) return resolveProject(clientId, name, kind, fallback);
+  const project = await db.query.projects.findFirst({ where: eq(schema.projects.id, projectId) });
+  if (!project || project.clientId !== clientId) throw new Error("That project belongs to another client. Pick one of this client's projects.");
+  return project;
+}
 
 /** Saves the task, then creates it in Hubstaff. If Hubstaff fails the task is kept and Start retries. */
 export async function createTask(_prev: unknown, formData: FormData): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
     const auth = await requireRole("super_admin", "leader");
-    const { projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
+    const { projectId, projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
     // The next due date is calculated from this one, so a repeating task needs it.
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : undefined;
@@ -90,7 +105,7 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
       throw new Error("You can only assign tasks to people in your team.");
     }
     const teamId = picked?.teamId ?? auth.ledTeam?.id ?? null;
-    const project = await resolveProject(input.clientId, projectName, projectKind, input.title);
+    const project = await pickProject(input.clientId, projectId, projectName, projectKind, input.title);
     const [created] = await db
       .insert(schema.tasks)
       .values({ ...input, projectId: project.id, repeatDay, repeatLeadDays, repeatShow, teamId })
@@ -172,6 +187,88 @@ export async function createClient(_prev: unknown, formData: FormData): Promise<
     const input = newClient.parse(Object.fromEntries(formData));
     const [client] = await db.insert(schema.clients).values(input).returning({ id: schema.clients.id });
     return client;
+  });
+}
+
+/** Renames a project or changes whether it is one-off or ongoing. */
+export async function updateProject(projectId: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    const input = z
+      .object({ name: z.string().trim().min(1, "Name is required").max(120), kind: z.enum(["one_off", "ongoing"]) })
+      .parse(Object.fromEntries(formData));
+    const project = await db.query.projects.findFirst({ where: eq(schema.projects.id, projectId) });
+    if (!project) throw new Error("Project not found");
+    const clash = await db.query.projects.findFirst({
+      where: and(eq(schema.projects.clientId, project.clientId), sql`lower(${schema.projects.name}) = lower(${input.name})`, ne(schema.projects.id, projectId)),
+    });
+    if (clash) throw new Error("This client already has a project with that name.");
+    await db.update(schema.projects).set(input).where(eq(schema.projects.id, projectId));
+    return undefined;
+  });
+}
+
+/** Deletes a project that has no tasks. With tasks it asks to move them first. */
+export async function deleteProject(projectId: number): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    const [{ n }] = await db.select({ n: count() }).from(schema.tasks).where(eq(schema.tasks.projectId, projectId));
+    if (n > 0) {
+      throw new Error(
+        `${n} ${n === 1 ? "task is" : "tasks are"} in this project (deleted ones count). Move them to another project first by editing each task.`,
+      );
+    }
+    await db.delete(schema.projects).where(eq(schema.projects.id, projectId));
+    return undefined;
+  });
+}
+
+export async function updateClient(clientId: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    const input = newClient.parse(Object.fromEntries(formData));
+    await db
+      .update(schema.clients)
+      .set({
+        name: input.name,
+        contactName: input.contactName ?? null,
+        email: input.email ?? null,
+        phone: input.phone ?? null,
+        notes: input.notes ?? null,
+        hubstaffProjectId: input.hubstaffProjectId ?? null,
+      })
+      .where(eq(schema.clients.id, clientId));
+    return undefined;
+  });
+}
+
+/** Deletes a client that has no tasks, with its (empty) projects. A lead that became it returns to the pipeline. */
+export async function deleteClient(clientId: number): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin");
+    const rows = await db
+      .select({ deletedAt: schema.tasks.deletedAt })
+      .from(schema.tasks)
+      .where(eq(schema.tasks.clientId, clientId));
+    const live = rows.filter((r) => !r.deletedAt).length;
+    if (live > 0) {
+      throw new Error(`This client still has ${live} ${live === 1 ? "task" : "tasks"}. Delete or move them first.`);
+    }
+    if (rows.length > 0) {
+      throw new Error(
+        `This client has ${rows.length} deleted ${rows.length === 1 ? "task" : "tasks"}, which are kept so their tracked hours stay in reports. The client can't be removed while they exist.`,
+      );
+    }
+    await db.transaction(async (tx) => {
+      // A lead that became this client goes back to the pipeline.
+      await tx
+        .update(schema.leads)
+        .set({ clientId: null, convertedAt: null, status: "proposal" })
+        .where(eq(schema.leads.clientId, clientId));
+      await tx.delete(schema.projects).where(eq(schema.projects.clientId, clientId));
+      await tx.delete(schema.clients).where(eq(schema.clients.id, clientId));
+    });
+    return undefined;
   });
 }
 
@@ -337,10 +434,10 @@ export async function updateTask(
   return run(async () => {
     const { auth, task } = await requireTask(taskId, "manage");
     if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
-    const { projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
+    const { projectId, projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
     // Leaving the project blank keeps the current one while the client is the same.
-    const keep = !projectName && task.projectId && task.clientId === input.clientId;
-    const project = keep ? { id: task.projectId! } : await resolveProject(input.clientId, projectName, projectKind, input.title);
+    const keep = !projectId && !projectName && task.projectId && task.clientId === input.clientId;
+    const project = keep ? { id: task.projectId! } : await pickProject(input.clientId, projectId, projectName, projectKind, input.title);
     const picked = input.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })
       : null;
