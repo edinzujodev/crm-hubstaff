@@ -85,6 +85,13 @@
       "when": 1794224630526,
       "tag": "0011_dashboard_add_task_widget",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794315633189,
+      "tag": "0012_swift_pride",
+      "breakpoints": true
     }
   ]
 }

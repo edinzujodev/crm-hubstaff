@@ -27,18 +27,15 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <header className="card flex flex-wrap items-start justify-between gap-3 p-4">
         <div>
-          <Link href="/team" className="text-sm text-muted hover:underline">
-            ← Team setup
-          </Link>
-          <h1 className="mt-1 text-xl font-semibold">{team.name}</h1>
+          <h1 className="text-xl font-semibold">{team.name}</h1>
           <p className="text-sm text-muted">Leader: {leader?.name ?? "none yet"}</p>
         </div>
         <Link href={`/reports?team=${team.id}`} className="btn">
           Hours report →
         </Link>
-      </div>
+      </header>
 
       <details className="card group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm">

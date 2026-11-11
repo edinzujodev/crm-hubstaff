@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { deleteTask, updateTask } from "@/app/actions";
 import { Modal } from "@/components/modal";
+import { ProjectField, type ProjectOption } from "@/components/project-field";
 import { truncate } from "@/lib/format";
 
 type Option = { id: number; name: string };
@@ -10,6 +11,7 @@ type TaskFields = {
   id: number;
   title: string;
   clientId: number | null;
+  projectName: string | null;
   assigneeId: number | null;
   dueDate: string | null;
   repeat: "weekly" | "monthly" | null;
@@ -17,7 +19,17 @@ type TaskFields = {
 };
 
 /** The ⋯ button at the end of a row, with Edit and Delete. Both open a popup. */
-export function TaskMenu({ task, clients, users }: { task: TaskFields; clients: Option[]; users: Option[] }) {
+export function TaskMenu({
+  task,
+  clients,
+  users,
+  projects,
+}: {
+  task: TaskFields;
+  clients: Option[];
+  users: Option[];
+  projects: ProjectOption[];
+}) {
   const [menu, setMenu] = useState<{ top: number; right: number } | null>(null);
   const [modal, setModal] = useState<"edit" | "delete" | null>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -89,7 +101,7 @@ export function TaskMenu({ task, clients, users }: { task: TaskFields; clients: 
       )}
       {modal === "edit" && (
         <Modal title="Edit task" onClose={() => setModal(null)}>
-          <EditForm task={task} clients={clients} users={users} onDone={() => setModal(null)} />
+          <EditForm task={task} clients={clients} users={users} projects={projects} onDone={() => setModal(null)} />
         </Modal>
       )}
       {modal === "delete" && (
@@ -105,13 +117,16 @@ function EditForm({
   task,
   clients,
   users,
+  projects,
   onDone,
 }: {
   task: TaskFields;
   clients: Option[];
   users: Option[];
+  projects: ProjectOption[];
   onDone: () => void;
 }) {
+  const [clientId, setClientId] = useState(task.clientId ? String(task.clientId) : "");
   const [state, action, pending] = useActionState(updateTask.bind(null, task.id), null);
   const hubstaffWarning = state?.ok ? state.data.hubstaffError : undefined;
 
@@ -128,7 +143,13 @@ function EditForm({
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           Client
-          <select name="clientId" required defaultValue={task.clientId ?? ""} className="input text-foreground">
+          <select
+            name="clientId"
+            required
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            className="input text-foreground"
+          >
             <option value="" disabled>
               Select…
             </option>
@@ -139,6 +160,13 @@ function EditForm({
             ))}
           </select>
         </label>
+        <ProjectField
+          key={clientId}
+          clientId={clientId}
+          title=""
+          projects={projects}
+          initialName={clientId === String(task.clientId) ? (task.projectName ?? "") : ""}
+        />
         <label className="flex flex-col gap-1 text-xs text-muted">
           Assignee
           <select name="assigneeId" defaultValue={task.assigneeId ?? ""} className="input text-foreground">

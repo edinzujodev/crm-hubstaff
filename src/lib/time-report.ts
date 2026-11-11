@@ -5,12 +5,14 @@ import { localDay } from "@/lib/format";
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const NO_CLIENT = "Not on a CRM client";
 export const NO_TEAM = "No team";
+export const NO_PROJECT = "No project";
 
 export type TimeReportFilter = {
   from: string; // YYYY-MM-DD, inclusive, in `timeZone`
   to: string;
   timeZone: string;
   clientId?: number | null;
+  projectId?: number | null;
   /** CRM user id. */
   userId?: number | null;
   /** CRM team id: only people in this team. */
@@ -32,6 +34,10 @@ export type Line = Totals & {
   clientKey: string;
   clientName: string;
   clientHref?: string;
+  projectKey: string;
+  /** "Client / Project", so the same project name under two clients stays apart. */
+  projectName: string;
+  projectHref?: string;
   taskKey: string;
   taskTitle: string;
   taskHref?: string;
@@ -65,9 +71,10 @@ export async function getTimeReport(f: TimeReportFilter) {
       .orderBy(asc(schema.hubstaffActivities.startsAt)),
     db.select().from(schema.users),
     db
-      .select({ task: schema.tasks, clientName: schema.clients.name })
+      .select({ task: schema.tasks, clientName: schema.clients.name, projectName: schema.projects.name })
       .from(schema.tasks)
-      .leftJoin(schema.clients, eq(schema.tasks.clientId, schema.clients.id)),
+      .leftJoin(schema.clients, eq(schema.tasks.clientId, schema.clients.id))
+      .leftJoin(schema.projects, eq(schema.tasks.projectId, schema.projects.id)),
     db.select().from(schema.teams),
   ]);
   const teamById = new Map(teams.map((t) => [t.id, t]));
@@ -89,6 +96,8 @@ export async function getTimeReport(f: TimeReportFilter) {
     const taskRow = a.taskId ? taskById.get(a.taskId) : undefined;
     const clientId = taskRow?.task.clientId ?? null;
     if (f.clientId && clientId !== f.clientId) continue;
+    const projectId = taskRow?.task.projectId ?? null;
+    if (f.projectId && projectId !== f.projectId) continue;
 
     const line = {
       userKey: user ? `u${user.id}` : `h${a.hubstaffUserId}`,
@@ -100,6 +109,9 @@ export async function getTimeReport(f: TimeReportFilter) {
       clientKey: clientId ? `c${clientId}` : "none",
       clientName: clientId ? (taskRow?.clientName ?? `Client ${clientId}`) : NO_CLIENT,
       clientHref: clientId ? `/clients/${clientId}` : undefined,
+      projectKey: projectId ? `p${projectId}` : "noproject",
+      projectName: projectId ? `${taskRow?.clientName ?? "Client"} / ${taskRow?.projectName ?? `Project ${projectId}`}` : NO_PROJECT,
+      projectHref: projectId ? `/reports?${new URLSearchParams({ from: f.from, to: f.to, project: String(projectId) })}` : undefined,
       taskKey: taskRow ? `t${taskRow.task.id}` : a.hubstaffTaskId ? `h${a.hubstaffTaskId}` : "none",
       taskTitle: taskRow
         ? taskRow.task.title
@@ -132,6 +144,7 @@ export async function getTimeReport(f: TimeReportFilter) {
   const byTracked = (a: Row, b: Row) => b.tracked - a.tracked;
 
   const byClient = group((l) => ({ key: l.clientKey, label: l.clientName, href: l.clientHref })).sort(byTracked);
+  const byProject = group((l) => ({ key: l.projectKey, label: l.projectName, href: l.projectHref })).sort(byTracked);
   const byTeam = group((l) => ({ key: l.teamKey, label: l.teamName, href: l.teamHref })).sort(byTracked);
   const byUser = group((l) => ({ key: l.userKey, label: l.userName, href: l.userHref })).sort(byTracked);
   const byTask = group((l) => ({ key: l.taskKey, label: l.taskTitle, href: l.taskHref })).sort(byTracked);
@@ -157,6 +170,7 @@ export async function getTimeReport(f: TimeReportFilter) {
     activityPercent: total.tracked ? Math.round((total.active / total.tracked) * 100) : null,
     daysWorked: byDay.length,
     byClient,
+    byProject,
     byTeam,
     byUser,
     byTask,

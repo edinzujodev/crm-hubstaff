@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { config } from "@/lib/config";
 import { fmtDuration, localDay } from "@/lib/format";
+import { KIND_LABEL } from "@/lib/project-kind";
 import { getClientReport } from "@/lib/report";
 import { pageGuard, taskScope } from "@/lib/auth";
 
@@ -37,7 +38,20 @@ async function ClientDetail({
   let to = pick(sp.to, lastDayOfMonth(month));
   if (from > to) [from, to] = [to, from];
 
-  const report = await getClientReport(id, from, to, tz, taskScope(auth));
+  const [report, projects] = await Promise.all([
+    getClientReport(id, from, to, tz, taskScope(auth)),
+    db.select().from(schema.projects).where(eq(schema.projects.clientId, id)).orderBy(asc(schema.projects.name)),
+  ]);
+  // Per project: its tasks and the time tracked on them in the period.
+  const projectRows = projects.map((p) => {
+    const mine = report.tasks.filter((t) => t.task.projectId === p.id);
+    return {
+      project: p,
+      tasks: mine.length,
+      open: mine.filter((t) => t.task.status !== "done" && !t.task.deletedAt).length,
+      tracked: mine.reduce((sum, t) => sum + t.tracked, 0),
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -92,6 +106,50 @@ async function ClientDetail({
           <p className="mt-1 font-mono text-2xl tabular-nums">
             {report.openTaskCount} <span className="text-sm text-muted">open of {report.taskCount}</span>
           </p>
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold">Projects</h2>
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border text-left text-xs text-muted">
+              <tr>
+                <th className="px-3 py-2 font-medium">Project</th>
+                <th className="px-3 py-2 font-medium">Type</th>
+                <th className="px-3 py-2 text-right font-medium">Open tasks</th>
+                <th className="px-3 py-2 text-right font-medium">Tracked in period</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projectRows.map(({ project, tasks, open, tracked }) => (
+                <tr key={project.id} className="border-b border-border last:border-0">
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/reports?project=${project.id}&from=${from}&to=${to}`}
+                      className="font-medium hover:underline"
+                    >
+                      {project.name}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="badge">{KIND_LABEL[project.kind]}</span>
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">
+                    {open} <span className="text-xs text-muted">of {tasks}</span>
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">{tracked ? fmtDuration(tracked) : "—"}</td>
+                </tr>
+              ))}
+              {projectRows.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-3 py-6 text-center text-muted">
+                    No projects yet. They are created when you add a task.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 

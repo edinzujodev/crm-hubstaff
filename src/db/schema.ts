@@ -11,6 +11,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // A team leader is whoever a team names as its leader (teams.leader_id), so only super admin is stored.
@@ -115,6 +116,24 @@ export const leads = pgTable(
   (t) => [index("leads_status_idx").on(t.status)],
 );
 
+export const projectKind = pgEnum("project_kind", ["one_off", "ongoing"]);
+
+// A client's piece of work. Every task belongs to one. "One-off" work ends; "ongoing" work (a retainer,
+// monthly bookkeeping) keeps collecting tasks.
+export const projects = pgTable(
+  "projects",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => clients.id),
+    kind: projectKind("kind").notNull().default("one_off"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("projects_client_name_idx").on(t.clientId, t.name)],
+);
+
 export const taskStatus = pgEnum("task_status", ["todo", "in_progress", "done"]);
 export const taskRepeat = pgEnum("task_repeat", ["weekly", "monthly"]);
 
@@ -125,6 +144,8 @@ export const tasks = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     clientId: integer("client_id").references(() => clients.id),
+    // The project (of that client) this task is part of.
+    projectId: integer("project_id").references((): AnyPgColumn => projects.id),
     assigneeId: integer("assignee_id").references(() => users.id),
     // The team that owns the task: its leader sees it and sets its urgency levels.
     teamId: integer("team_id").references((): AnyPgColumn => teams.id),
@@ -157,6 +178,7 @@ export const tasks = pgTable(
     index("tasks_assignee_idx").on(t.assigneeId),
     index("tasks_series_idx").on(t.seriesId),
     index("tasks_team_idx").on(t.teamId),
+    index("tasks_project_idx").on(t.projectId),
   ],
 );
 
@@ -219,6 +241,7 @@ export const appState = pgTable("app_state", {
 export type User = typeof users.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Client = typeof clients.$inferSelect;
+export type Project = typeof projects.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type WorkSession = typeof workSessions.$inferSelect;

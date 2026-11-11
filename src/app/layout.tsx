@@ -75,8 +75,6 @@ async function NavLinks() {
   const links: [string, string, boolean][] = [
     ["/dashboard", "Dashboard", true],
     ["/tasks", "Tasks", true],
-    ["/critical", "Critical", role === "super_admin" || role === "leader"],
-    ["/recurring", "Recurring", role === "super_admin" || role === "leader"],
     ["/leads", "Leads", role === "super_admin"],
     ["/clients", "Clients", role === "super_admin" || role === "leader"],
     ["/reports", "Reports", role === "super_admin" || role === "leader"],

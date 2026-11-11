@@ -12,6 +12,7 @@ import { hubstaff } from "@/lib/hubstaff";
 import { defaultLeadDays, hubstaffSummary, spawnNextRepeat, subtractDays } from "@/lib/recurring";
 import { localDay } from "@/lib/format";
 import { config } from "@/lib/config";
+import { resolveProject } from "@/lib/projects";
 import { markDeleted, unmarkDeleted } from "@/lib/soft-delete";
 import { ensureHubstaffTask, finishSession, startSession } from "@/lib/sessions";
 import { backfillHubstaff, lastSyncAt, syncHubstaff, type SyncResult } from "@/lib/sync";
@@ -64,13 +65,16 @@ const newTask = z.object({
   repeat: z.enum(["weekly", "monthly"]).optional().or(z.literal("").transform(() => undefined)),
   // Days before the due date that each new copy appears in the open lists.
   repeatLeadDays: z.coerce.number().int().min(0).max(90).optional().or(z.literal("").transform(() => undefined)),
+  // The project the task belongs to: an existing one of the client by name, or a new one. Blank = the task title.
+  projectName: z.string().trim().max(120).optional(),
+  projectKind: z.enum(["one_off", "ongoing"]).optional().or(z.literal("").transform(() => undefined)),
 });
 
 /** Saves the task, then creates it in Hubstaff. If Hubstaff fails the task is kept and Start retries. */
 export async function createTask(_prev: unknown, formData: FormData): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
     const auth = await requireRole("super_admin", "leader");
-    const input = newTask.parse(Object.fromEntries(formData));
+    const { projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
     // The next due date is calculated from this one, so a repeating task needs it.
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : undefined;
@@ -82,9 +86,10 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
       throw new Error("You can only assign tasks to people in your team.");
     }
     const teamId = picked?.teamId ?? auth.ledTeam?.id ?? null;
+    const project = await resolveProject(input.clientId, projectName, projectKind, input.title);
     const [created] = await db
       .insert(schema.tasks)
-      .values({ ...input, repeatDay, repeatLeadDays, teamId })
+      .values({ ...input, projectId: project.id, repeatDay, repeatLeadDays, teamId })
       .returning();
     // The first task of a repeating series is the series' id; every copy keeps it.
     const [task] = input.repeat
@@ -328,7 +333,10 @@ export async function updateTask(
   return run(async () => {
     const { auth, task } = await requireTask(taskId, "manage");
     if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
-    const input = newTask.parse(Object.fromEntries(formData));
+    const { projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
+    // Leaving the project blank keeps the current one while the client is the same.
+    const keep = !projectName && task.projectId && task.clientId === input.clientId;
+    const project = keep ? { id: task.projectId! } : await resolveProject(input.clientId, projectName, projectKind, input.title);
     const picked = input.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })
       : null;
@@ -347,6 +355,7 @@ export async function updateTask(
       .set({
         title: input.title,
         clientId: input.clientId,
+        projectId: project.id,
         assigneeId: input.assigneeId ?? null,
         dueDate: input.dueDate ?? null,
         repeat: input.repeat ?? null,

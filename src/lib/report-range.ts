@@ -41,12 +41,13 @@ export function parseReportParams(sp: Params, timeZone: string): TimeReportFilte
   let from = one(sp.from) && DATE.test(one(sp.from)!) ? one(sp.from)! : month.from;
   let to = one(sp.to) && DATE.test(one(sp.to)!) ? one(sp.to)! : month.to;
   if (from > to) [from, to] = [to, from];
-  return { from, to, timeZone, clientId: id(sp.client), userId: id(sp.user), teamId: id(sp.team) };
+  return { from, to, timeZone, clientId: id(sp.client), projectId: id(sp.project), userId: id(sp.user), teamId: id(sp.team) };
 }
 
-export function reportQuery(f: Pick<TimeReportFilter, "from" | "to" | "clientId" | "userId" | "teamId">) {
+export function reportQuery(f: Pick<TimeReportFilter, "from" | "to" | "clientId" | "projectId" | "userId" | "teamId">) {
   const q = new URLSearchParams({ from: f.from, to: f.to });
   if (f.clientId) q.set("client", String(f.clientId));
+  if (f.projectId) q.set("project", String(f.projectId));
   if (f.userId) q.set("user", String(f.userId));
   if (f.teamId) q.set("team", String(f.teamId));
   return q.toString();

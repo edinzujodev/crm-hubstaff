@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createTask } from "@/app/actions";
+import { ProjectField, type ProjectOption } from "@/components/project-field";
 
 type Option = { id: number; name: string };
 type Repeat = "" | "weekly" | "monthly";
@@ -10,7 +11,17 @@ type Repeat = "" | "weekly" | "monthly";
 const DEFAULT_LEAD = { weekly: 2, monthly: 7 } as const;
 
 /** `bare` drops the card styling, for use inside something that already is one (a dashboard widget). */
-export function NewTaskForm({ clients, users, bare = false }: { clients: Option[]; users: Option[]; bare?: boolean }) {
+export function NewTaskForm({
+  clients,
+  users,
+  projects,
+  bare = false,
+}: {
+  clients: Option[];
+  users: Option[];
+  projects: ProjectOption[];
+  bare?: boolean;
+}) {
   const [state, action, pending] = useActionState(createTask, null);
   const form = useRef<HTMLFormElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -18,6 +29,20 @@ export function NewTaskForm({ clients, users, bare = false }: { clients: Option[
   const [lead, setLead] = useState("");
   const [asked, setAsked] = useState(false);
   const [hasDue, setHasDue] = useState(false);
+  const [title, setTitle] = useState("");
+  const [clientId, setClientId] = useState("");
+  // Bumped after a task is added so the project field starts over too.
+  const [round, setRound] = useState(0);
+  // After a task is added (a new action result), clear the form.
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state?.ok) {
+      setTitle("");
+      setClientId("");
+      setRound((n) => n + 1);
+    }
+  }
   useEffect(() => {
     if (state?.ok) form.current?.reset();
   }, [state]);
@@ -45,11 +70,24 @@ export function NewTaskForm({ clients, users, bare = false }: { clients: Option[
     <form ref={form} action={action} onSubmit={ask} className={`flex flex-wrap items-end gap-2 ${bare ? "" : "card p-3"}`}>
       <label className="flex min-w-60 flex-1 flex-col gap-1 text-xs text-muted">
         New task
-        <input name="title" required placeholder="e.g. Monthly bank reconciliation" className="input text-foreground" />
+        <input
+          name="title"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Monthly bank reconciliation"
+          className="input text-foreground"
+        />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Client
-        <select name="clientId" required className="input text-foreground" defaultValue="">
+        <select
+          name="clientId"
+          required
+          className="input text-foreground"
+          value={clientId}
+          onChange={(e) => setClientId(e.target.value)}
+        >
           <option value="" disabled>
             Select…
           </option>
@@ -60,6 +98,7 @@ export function NewTaskForm({ clients, users, bare = false }: { clients: Option[
           ))}
         </select>
       </label>
+      <ProjectField key={round} clientId={clientId} title={title} projects={projects} />
       <label className="flex flex-col gap-1 text-xs text-muted">
         Assignee
         <select name="assigneeId" className="input text-foreground" defaultValue="">
@@ -127,7 +166,7 @@ export function NewTaskForm({ clients, users, bare = false }: { clients: Option[
               days before it is due
             </span>
             <span className="text-xs text-muted">
-              Until then it stays out of your open tasks (you can find it under Upcoming), so finishing one
+              Until then it stays out of your open tasks (it shows in the open list with a “Starts …” badge), so finishing one
               doesn&apos;t put the next one straight back in your list.
             </span>
           </label>

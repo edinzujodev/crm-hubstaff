@@ -81,6 +81,7 @@ export async function spawnNextRepeat(taskId: number) {
       title: task.title,
       description: task.description,
       clientId: task.clientId,
+      projectId: task.projectId,
       assigneeId: task.assigneeId,
       dueDate,
       startDate: startDate > today ? startDate : null,

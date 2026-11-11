@@ -7,18 +7,23 @@ import { RANGE_LABEL, WIDGETS, type RangeKey } from "@/lib/dashboard/config";
 
 /** People, teams and clients, loaded once per request and shared by every widget. */
 export const getDirectory = cache(async () => {
-  const [users, teams, clients] = await Promise.all([
+  const [users, teams, clients, projects] = await Promise.all([
     db
       .select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId })
       .from(schema.users)
       .orderBy(asc(schema.users.name)),
     db.select().from(schema.teams).orderBy(asc(schema.teams.name)),
     db.select({ id: schema.clients.id, name: schema.clients.name }).from(schema.clients).orderBy(asc(schema.clients.name)),
+    db
+      .select({ id: schema.projects.id, name: schema.projects.name, clientId: schema.projects.clientId, kind: schema.projects.kind })
+      .from(schema.projects)
+      .orderBy(asc(schema.projects.name)),
   ]);
   return {
     users,
     teams,
     clients,
+    projects,
     userById: new Map(users.map((u) => [u.id, u])),
     teamById: new Map(teams.map((t) => [t.id, t])),
     clientById: new Map(clients.map((c) => [c.id, c])),

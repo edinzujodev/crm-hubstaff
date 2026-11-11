@@ -47,7 +47,7 @@ export async function TopbarStatus() {
         </Link>
       )}
       <Link
-        href={auth.role === "worker" ? "/tasks" : "/critical"}
+        href={auth.role === "worker" ? "/tasks" : "/tasks?show=critical"}
         className={`${pill} ${late ? "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-400" : "text-muted"}`}
         title="Open tasks past their due date"
       >

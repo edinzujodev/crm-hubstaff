@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { BarList } from "@/components/charts/bar-list";
 import { ChartTip } from "@/components/charts/chart-tip";
@@ -100,6 +100,11 @@ ${longDay(d.day)}`,
             <p className="mb-3 text-xs text-muted">Share of tracked time, largest first.</p>
             <BarList data={toBars(report.byClient, report.total.tracked)} />
           </section>
+          <section className="card p-4">
+            <h2 className="font-semibold">Time by project</h2>
+            <p className="mb-3 text-xs text-muted">Share of tracked time, largest first.</p>
+            <BarList data={toBars(report.byProject, report.total.tracked)} />
+          </section>
           {showTeams && (
             <section className="card p-4">
               <h2 className="font-semibold">Time by team</h2>
@@ -133,9 +138,14 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
   const parsed = parseReportParams(await searchParams, tz);
   // A team leader's reports are always limited to their own team.
   const filter = auth.role === "leader" ? { ...parsed, teamId: auth.ledTeam!.id } : parsed;
-  const [report, clients, allUsers, allTeams] = await Promise.all([
+  const [report, clients, allProjects, allUsers, allTeams] = await Promise.all([
     getTimeReport(filter),
     db.select({ id: schema.clients.id, name: schema.clients.name }).from(schema.clients).orderBy(asc(schema.clients.name)),
+    db
+      .select({ id: schema.projects.id, name: schema.projects.name, clientName: schema.clients.name })
+      .from(schema.projects)
+      .innerJoin(schema.clients, eq(schema.projects.clientId, schema.clients.id))
+      .orderBy(asc(schema.clients.name), asc(schema.projects.name)),
     db.select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId }).from(schema.users).orderBy(asc(schema.users.name)),
     db.select({ id: schema.teams.id, name: schema.teams.name }).from(schema.teams).orderBy(asc(schema.teams.name)),
   ]);
@@ -161,6 +171,17 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          Project
+          <select name="project" defaultValue={filter.projectId ?? ""} className="input text-foreground">
+            <option value="">All projects</option>
+            {allProjects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.clientName} / {p.name}
               </option>
             ))}
           </select>
@@ -229,6 +250,7 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
       <h2 className="pt-2 text-lg font-semibold">Tables</h2>
       <section className="grid gap-6 md:grid-cols-2">
         <Table title="By client" rows={report.byClient} firstColumn="Client" />
+        <Table title="By project" rows={report.byProject} firstColumn="Client / Project" />
         <Table title="By person" rows={report.byUser} firstColumn="Person" />
       </section>
       {report.byTeam.some((r) => r.href) && (

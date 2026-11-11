@@ -32,7 +32,7 @@ async function SeriesDetail({ params }: { params: Promise<{ seriesId: string }> 
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/recurring" className="text-sm text-muted hover:underline">
+        <Link href="/tasks?show=recurring" className="text-sm text-muted hover:underline">
           ← Recurring tasks
         </Link>
         <h1 className="mt-1 text-xl font-semibold">{summary.title}</h1>
