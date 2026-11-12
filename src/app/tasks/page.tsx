@@ -8,6 +8,7 @@ import { asc, desc, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
+import { SeriesMenu } from "@/components/series-menu";
 import { TaskMenu } from "@/components/task-menu";
 import { TaskRow } from "@/components/task-row";
 import { TimerControls } from "@/components/timer-controls";
@@ -22,7 +23,14 @@ import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLa
 const TITLE_MAX = 50;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 
-function SeriesTable({ series }: { series: Awaited<ReturnType<typeof listSeries>> }) {
+type SeriesEdit = {
+  clients: { id: number; name: string }[];
+  users: { id: number; name: string }[];
+  projects: React.ComponentProps<typeof NewTaskForm>["projects"];
+  taskOf: (id: number) => React.ComponentProps<typeof SeriesMenu>["task"] | null;
+};
+
+function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listSeries>>; edit: SeriesEdit }) {
   return (
     <div className="card overflow-x-auto">
       <table className="w-full text-sm">
@@ -34,6 +42,7 @@ function SeriesTable({ series }: { series: Awaited<ReturnType<typeof listSeries>
             <th className="px-3 py-2 text-right font-medium">Done</th>
             <th className="px-3 py-2 text-right font-medium">Total time</th>
             <th className="px-3 py-2 font-medium">Next due</th>
+            <th className="px-3 py-2" />
           </tr>
         </thead>
         <tbody>
@@ -63,11 +72,21 @@ function SeriesTable({ series }: { series: Awaited<ReturnType<typeof listSeries>
                 {s.trackedSeconds ? fmtDuration(s.trackedSeconds) : "—"}
               </td>
               <td className="px-3 py-2 text-muted">{s.nextDue ? fmtDay(s.nextDue) : "—"}</td>
+              <td className="px-3 py-2">
+                {(() => {
+                  const task = edit.taskOf(s.latestTaskId);
+                  return task ? (
+                    <div className="flex justify-end">
+                      <SeriesMenu task={task} clients={edit.clients} users={edit.users} projects={edit.projects} />
+                    </div>
+                  ) : null;
+                })()}
+              </td>
             </tr>
           ))}
           {series.length === 0 && (
             <tr>
-              <td colSpan={6} className="px-3 py-6 text-center text-muted">
+              <td colSpan={7} className="px-3 py-6 text-center text-muted">
                 No recurring tasks yet. Add a task and answer Yes to &quot;Is this task recurring?&quot;
               </td>
             </tr>
@@ -213,7 +232,30 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
       </div>
 
       {tab === "recurring" ? (
-        <SeriesTable series={series} />
+        <SeriesTable
+          series={series}
+          edit={{
+            clients,
+            users,
+            projects,
+            taskOf: (id) => {
+              const t = tasks.find((r) => r.task.id === id)?.task;
+              return t
+                ? {
+                    id: t.id,
+                    title: t.title,
+                    clientId: t.clientId,
+                    projectId: t.projectId,
+                    assigneeId: t.assigneeId,
+                    dueDate: t.dueDate,
+                    repeat: t.repeat,
+                    repeatLeadDays: t.repeatLeadDays,
+                    repeatShow: t.repeatShow,
+                  }
+                : null;
+            },
+          }}
+        />
       ) : (
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">

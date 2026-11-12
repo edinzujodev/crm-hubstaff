@@ -9,8 +9,8 @@ import { defaultLead, type RepeatShow } from "@/lib/repeat-show";
 import { ProjectField, type ProjectOption } from "@/components/project-field";
 import { truncate } from "@/lib/format";
 
-type Option = { id: number; name: string };
-type TaskFields = {
+export type Option = { id: number; name: string };
+export type TaskFields = {
   id: number;
   title: string;
   clientId: number | null;
@@ -117,7 +117,7 @@ export function TaskMenu({
   );
 }
 
-function EditForm({
+export function EditForm({
   task,
   clients,
   users,
