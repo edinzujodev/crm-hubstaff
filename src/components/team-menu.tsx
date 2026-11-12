@@ -1,14 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { deleteTeam } from "@/app/actions";
+import { EditTeamForm, type TeamEditData } from "@/components/edit-team-form";
+import type { PickerUser } from "@/components/member-picker";
 import { HoldToDelete } from "@/components/hold-to-delete";
 import { Modal } from "@/components/modal";
 
 /** The ⋯ button at the end of a team row. Its menu has Delete, which asks for a press-and-hold. */
-export function TeamMenu({ teamId, name }: { teamId: number; name: string }) {
+export function TeamMenu({
+  teamId,
+  name,
+  team,
+  users,
+}: {
+  teamId: number;
+  name: string;
+  team: TeamEditData;
+  users: PickerUser[];
+}) {
   const [menu, setMenu] = useState<{ top: number; right: number } | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const closeEdit = useCallback(() => setEditing(false), []);
   const button = useRef<HTMLButtonElement>(null);
 
   // Close the menu on any outside click, scroll, resize or Escape.
@@ -53,9 +67,19 @@ export function TeamMenu({ teamId, name }: { teamId: number; name: string }) {
         <div
           role="menu"
           style={{ top: menu.top, right: menu.right }}
-          className="card fixed z-40 w-36 py-1 text-sm shadow-lg"
+          className="card fixed z-40 w-48 py-1 text-sm shadow-lg"
           onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
         >
+          <button
+            role="menuitem"
+            className="block w-full cursor-pointer px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10"
+            onClick={() => {
+              setMenu(null);
+              setEditing(true);
+            }}
+          >
+            Edit team &amp; members
+          </button>
           <button
             role="menuitem"
             className="block w-full cursor-pointer px-3 py-1.5 text-left text-red-600 hover:bg-black/5 dark:hover:bg-white/10"
@@ -67,6 +91,11 @@ export function TeamMenu({ teamId, name }: { teamId: number; name: string }) {
             Delete
           </button>
         </div>
+      )}
+      {editing && (
+        <Modal title="Edit team" onClose={closeEdit}>
+          <EditTeamForm team={team} users={users} onDone={closeEdit} />
+        </Modal>
       )}
       {confirm && (
         <Modal title="Delete team?" onClose={() => setConfirm(false)}>

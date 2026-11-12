@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { createTeam } from "@/app/actions";
+import { MemberPicker, type PickerUser } from "@/components/member-picker";
 
 /** The new-team form, shown inside a popup. Closes itself once the team is created. */
 export function NewTeamForm({
@@ -9,7 +10,7 @@ export function NewTeamForm({
   onDone,
   onCancel,
 }: {
-  users: { id: number; name: string }[];
+  users: PickerUser[];
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -36,6 +37,7 @@ export function NewTeamForm({
         </select>
         <span>The leader is added to the team and sees its tasks and reports.</span>
       </label>
+      <MemberPicker users={users} />
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">
         <button type="button" className="btn" onClick={onCancel}>

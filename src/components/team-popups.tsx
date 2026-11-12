@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { AddMemberForm } from "@/components/add-member-form";
+import { EditTeamForm, type TeamEditData } from "@/components/edit-team-form";
+import type { PickerUser } from "@/components/member-picker";
 import { Modal } from "@/components/modal";
 import { NewTeamForm } from "@/components/new-team-form";
 
@@ -22,7 +24,25 @@ export function AddMemberButton() {
   );
 }
 
-export function NewTeamButton({ users }: { users: { id: number; name: string }[] }) {
+/** Edit button for a team's own page. */
+export function EditTeamButton({ team, users }: { team: TeamEditData; users: PickerUser[] }) {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <>
+      <button className="btn cursor-pointer" onClick={() => setOpen(true)}>
+        Edit team
+      </button>
+      {open && (
+        <Modal title="Edit team" onClose={close}>
+          <EditTeamForm team={team} users={users} onDone={close} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+export function NewTeamButton({ users }: { users: PickerUser[] }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   return (

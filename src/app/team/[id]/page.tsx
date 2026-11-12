@@ -5,6 +5,8 @@ import { connection } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { TeamLevelsForm } from "@/components/team-levels-form";
+import { TeamMembers } from "@/components/team-members";
+import { EditTeamButton } from "@/components/team-popups";
 import { WidgetBody } from "@/components/dashboard/widgets";
 import { canManageTeam, pageGuard } from "@/lib/auth";
 
@@ -22,6 +24,14 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   if (!canManageTeam(auth, id)) redirect("/team");
   const allUsers = await db.select().from(schema.users).orderBy(asc(schema.users.name));
   const leader = allUsers.find((u) => u.id === team.leaderId) ?? null;
+  const admin = auth.role === "super_admin";
+  const members = allUsers.filter((u) => u.teamId === id);
+  const teamNames = new Map((await db.select().from(schema.teams)).map((t) => [t.id, t.name]));
+  const pickerUsers = allUsers.map((u) => ({
+    id: u.id,
+    name: u.name,
+    teamName: u.teamId && u.teamId !== id ? (teamNames.get(u.teamId) ?? null) : null,
+  }));
 
   return (
     <div className="space-y-6">
@@ -30,10 +40,26 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
           <h1 className="text-xl font-semibold">{team.name}</h1>
           <p className="text-sm text-muted">Leader: {leader?.name ?? "none yet"}</p>
         </div>
-        <Link href={`/reports?team=${team.id}`} className="btn">
-          Hours report →
-        </Link>
+        <div className="flex gap-2">
+          {admin && (
+            <EditTeamButton
+              team={{ id: team.id, name: team.name, leaderId: team.leaderId, memberIds: members.map((m) => m.id) }}
+              users={pickerUsers}
+            />
+          )}
+          <Link href={`/reports?team=${team.id}`} className="btn">
+            Hours report →
+          </Link>
+        </div>
       </header>
+
+      <section className="card p-4">
+        <h2 className="mb-2 font-semibold">Members ({members.length})</h2>
+        <TeamMembers
+          canEdit={admin}
+          members={members.map((m) => ({ id: m.id, name: m.name, email: m.email, isLeader: m.id === team.leaderId }))}
+        />
+      </section>
 
       <section className="card overflow-hidden">
         <header className="border-b border-border px-4 py-3">

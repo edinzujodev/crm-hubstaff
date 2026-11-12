@@ -1,6 +1,6 @@
 "use server";
 
-import { and, count, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { z } from "zod";
@@ -611,20 +611,67 @@ async function assignLeader(tx: Pick<typeof db, "update">, teamId: number, leade
   }
 }
 
+function memberIdsOf(formData: FormData): number[] {
+  return [...new Set(formData.getAll("memberIds").map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+}
+
+/** Makes exactly these people the team's members (pulling them out of other teams); everyone else leaves it. */
+async function setMembers(tx: Pick<typeof db, "update">, teamId: number, memberIds: number[], leaderId: number | null) {
+  await tx.update(schema.users).set({ teamId: null }).where(
+    memberIds.length ? and(eq(schema.users.teamId, teamId), notInArray(schema.users.id, memberIds)) : eq(schema.users.teamId, teamId),
+  );
+  if (memberIds.length) {
+    await tx.update(schema.users).set({ teamId }).where(inArray(schema.users.id, memberIds));
+    // Someone who led another team stops leading it once they move.
+    await tx
+      .update(schema.teams)
+      .set({ leaderId: null })
+      .where(and(inArray(schema.teams.leaderId, memberIds), ne(schema.teams.id, teamId)));
+  }
+  // The leader is always a member; a leader who was removed stops leading.
+  const leaderStays = leaderId !== null && memberIds.includes(leaderId);
+  await tx.update(schema.teams).set({ leaderId: leaderStays ? leaderId : null }).where(eq(schema.teams.id, teamId));
+}
+
+function teamNameError(e: unknown, name: string): never {
+  if (String(e instanceof Error ? (e.cause ?? e) : e).includes("teams_name_unique")) {
+    throw new Error(`A team called "${name}" already exists.`);
+  }
+  throw e;
+}
+
 export async function createTeam(_prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
     await requireRole("super_admin");
     const input = newTeam.parse(Object.fromEntries(formData));
+    const leaderId = input.leaderId ?? null;
+    const memberIds = [...new Set([...memberIdsOf(formData), ...(leaderId ? [leaderId] : [])])];
     try {
       await db.transaction(async (tx) => {
         const [team] = await tx.insert(schema.teams).values({ name: input.name }).returning({ id: schema.teams.id });
-        if (input.leaderId) await assignLeader(tx, team.id, input.leaderId);
+        await setMembers(tx, team.id, memberIds, leaderId);
       });
     } catch (e) {
-      if (String(e instanceof Error ? (e.cause ?? e) : e).includes("teams_name_unique")) {
-        throw new Error(`A team called "${input.name}" already exists.`);
-      }
-      throw e;
+      teamNameError(e, input.name);
+    }
+    return undefined;
+  });
+}
+
+/** Renames a team and sets its leader and its members in one go. */
+export async function updateTeam(teamId: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin");
+    const input = newTeam.parse(Object.fromEntries(formData));
+    const leaderId = input.leaderId ?? null;
+    const memberIds = [...new Set([...memberIdsOf(formData), ...(leaderId ? [leaderId] : [])])];
+    try {
+      await db.transaction(async (tx) => {
+        await tx.update(schema.teams).set({ name: input.name }).where(eq(schema.teams.id, teamId));
+        await setMembers(tx, teamId, memberIds, leaderId);
+      });
+    } catch (e) {
+      teamNameError(e, input.name);
     }
     return undefined;
   });

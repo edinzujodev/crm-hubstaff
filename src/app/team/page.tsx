@@ -43,7 +43,8 @@ async function TeamContent() {
   const teams = admin ? allTeams : allTeams.filter((t) => t.id === auth.ledTeam?.id);
   const users = admin ? allUsers : allUsers.filter((u) => u.teamId === auth.ledTeam?.id);
   const leaderIds = new Set(allTeams.map((t) => t.leaderId).filter((id) => id !== null));
-  const options = allUsers.map((u) => ({ id: u.id, name: u.name }));
+  const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
+  const options = allUsers.map((u) => ({ id: u.id, name: u.name, teamName: u.teamId ? (teamName.get(u.teamId) ?? null) : null }));
   const teamOptions = allTeams.map((t) => ({ id: t.id, name: t.name }));
 
   const people: Person[] = users.map((u) => ({
@@ -139,7 +140,14 @@ async function TeamContent() {
                             <path d="M8 7h9v9" />
                           </svg>
                         </Link>
-                        {admin && <TeamMenu teamId={t.id} name={t.name} />}
+                        {admin && (
+                          <TeamMenu
+                            teamId={t.id}
+                            name={t.name}
+                            team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id) }}
+                            users={options}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>
