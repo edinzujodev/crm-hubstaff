@@ -244,11 +244,11 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <nav aria-label="Task lists" className="flex flex-wrap items-center gap-1 text-sm">
           {(
             [
-              ["open", "Open Tasks"],
+              ["open", "Open"],
               ["critical", "Critical"],
               ["recurring", "Recurring"],
               ["finished", "Finished"],
@@ -256,34 +256,36 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
             ] as const
           )
             .filter(([key]) => !isWorker || !managerOnly.includes(key))
-            .map(([key, label]) => (
-              <Link
-                key={key}
-                href={key === "open" ? "/tasks" : `/tasks?show=${key}`}
-                aria-current={tab === key ? "page" : undefined}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 transition-colors ${
-                  tab === key
-                    ? "border-transparent bg-primary font-medium text-(--primary-fg)"
-                    : "border-border text-muted hover:border-primary/50 hover:bg-primary/10 hover:text-foreground"
-                }`}
-              >
-                {label}
-                <span
-                  className={`rounded-full px-1.5 font-mono text-xs tabular-nums ${
-                    tab === key ? "bg-white/20" : "bg-black/5 dark:bg-white/10"
+            .map(([key, label]) => {
+              const active = tab === key;
+              const alarm = key === "critical" && counts.critical > 0;
+              return (
+                <Link
+                  key={key}
+                  href={key === "open" ? "/tasks" : `/tasks?show=${key}`}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 transition-colors ${
+                    active ? "bg-primary/10 font-semibold text-foreground" : "text-muted hover:bg-primary/5 hover:text-foreground"
                   }`}
                 >
-                  {counts[key]}
-                </span>
-              </Link>
-            ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {!isWorker && tab !== "recurring" && (
-            <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
-          )}
-          {!isWorker && <NewTaskForm clients={clients} users={users} projects={projects} />}
-        </div>
+                  {label}
+                  <span
+                    className={`font-mono text-xs tabular-nums ${alarm ? "font-semibold text-red-600 dark:text-red-400" : "opacity-70"}`}
+                  >
+                    {counts[key]}
+                  </span>
+                </Link>
+              );
+            })}
+        </nav>
+        {!isWorker && (
+          <div className="flex flex-wrap items-center gap-2">
+            {tab !== "recurring" && (
+              <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
+            )}
+            <NewTaskForm clients={clients} users={users} projects={projects} />
+          </div>
+        )}
       </div>
 
       {tab === "recurring" ? (

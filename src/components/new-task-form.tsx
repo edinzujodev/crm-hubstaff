@@ -24,7 +24,7 @@ export function NewTaskForm({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+      <button type="button" className="btn btn-primary h-8 py-0" onClick={() => setOpen(true)}>
         + New task
       </button>
       {open && (

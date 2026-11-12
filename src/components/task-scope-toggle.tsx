@@ -3,14 +3,15 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { saveTaskScope } from "@/app/tasks/scope-action";
-import type { TaskScope } from "@/lib/task-scope";
+import { TASK_SCOPES, type TaskScope } from "@/lib/task-scope";
 
-/** My tasks / team tasks switch. The choice is saved in a cookie, so it survives a refresh. */
+/** Whose tasks to list: mine, the team's or unassigned. The choice is saved in a cookie, so it survives a refresh. */
 export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLabel: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
+  const labels: Record<TaskScope, string> = { mine: "My tasks", team: teamLabel, unassigned: "Unassigned" };
 
   function choose(next: TaskScope) {
     if (next === scope) return;
@@ -25,24 +26,18 @@ export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLa
   }
 
   return (
-    <div role="group" aria-label="Whose tasks" className={`inline-flex overflow-hidden rounded-md border border-border text-sm ${pending ? "opacity-60" : ""}`}>
-      {(
-        [
-          ["mine", "My tasks"],
-          ["team", teamLabel],
-          ["unassigned", "Unassigned"],
-        ] as const
-      ).map(([key, label]) => (
-        <button
-          key={key}
-          type="button"
-          aria-pressed={scope === key}
-          onClick={() => choose(key)}
-          className={`px-3 py-1 ${scope === key ? "bg-primary/10 font-semibold" : "text-muted hover:bg-primary/5"}`}
-        >
-          {label}
-        </button>
+    <select
+      aria-label="Whose tasks"
+      value={scope}
+      disabled={pending}
+      onChange={(e) => choose(e.target.value as TaskScope)}
+      className="input h-8 w-auto cursor-pointer py-0 text-sm font-medium"
+    >
+      {TASK_SCOPES.map((key) => (
+        <option key={key} value={key}>
+          {labels[key]}
+        </option>
       ))}
-    </div>
+    </select>
   );
 }
