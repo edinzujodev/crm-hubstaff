@@ -18,6 +18,8 @@ import { fmtDateTime, fmtDay, fmtDuration, localDay, truncate } from "@/lib/form
 import { isSessionStale, trackedByTask } from "@/lib/report";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { listSeries } from "@/lib/series";
+import { periodLabel } from "@/lib/recurring";
+import { SeriesRow } from "@/components/series-row";
 import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
 const TITLE_MAX = 50;
@@ -36,6 +38,7 @@ function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listS
       <table className="w-full text-sm">
         <thead className="border-b border-border text-left text-xs text-muted">
           <tr>
+            <th className="w-8" />
             <th className="px-3 py-2 font-medium">Task</th>
             <th className="px-3 py-2 font-medium">Client</th>
             <th className="px-3 py-2 font-medium">Repeats</th>
@@ -46,47 +49,99 @@ function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listS
           </tr>
         </thead>
         <tbody>
-          {series.map((s) => (
-            <tr key={s.id} className="border-b border-border last:border-0">
-              <td className="px-3 py-2">
-                <Link href={`/recurring/${s.id}`} className="font-medium hover:underline">
-                  {s.title}
-                </Link>
-              </td>
-              <td className="px-3 py-2 text-muted">
-                {s.clientId ? (
-                  <Link href={`/clients/${s.clientId}`} className="hover:underline">
-                    {s.clientName}
-                  </Link>
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td className="px-3 py-2">
-                {s.repeat ? <span className="badge">{repeatLabel[s.repeat]}</span> : <span className="badge text-muted">Stopped</span>}
-              </td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                {s.done} / {s.occurrences}
-              </td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                {s.trackedSeconds ? fmtDuration(s.trackedSeconds) : "—"}
-              </td>
-              <td className="px-3 py-2 text-muted">{s.nextDue ? fmtDay(s.nextDue) : "—"}</td>
-              <td className="px-3 py-2">
-                {(() => {
-                  const task = edit.taskOf(s.latestTaskId);
-                  return task ? (
-                    <div className="flex justify-end">
-                      <SeriesMenu task={task} clients={edit.clients} users={edit.users} projects={edit.projects} />
+          {series.map((s) => {
+            const task = edit.taskOf(s.latestTaskId);
+            const rows = [...s.history].reverse();
+            const today = localDay(new Date(), config.timeZone);
+            return (
+              <SeriesRow
+                key={s.id}
+                title={s.title}
+                colSpan={8}
+                cells={
+                  <>
+                    <td className="px-3 py-2 font-medium">{s.title}</td>
+                    <td className="px-3 py-2 text-muted">
+                      {s.clientId ? (
+                        <Link href={`/clients/${s.clientId}`} className="hover:underline">
+                          {s.clientName}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {s.repeat ? <span className="badge">{repeatLabel[s.repeat]}</span> : <span className="badge text-muted">Stopped</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
+                      {s.done} / {s.occurrences}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
+                      {s.trackedSeconds ? fmtDuration(s.trackedSeconds) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-muted">{s.nextDue ? fmtDay(s.nextDue) : "—"}</td>
+                    <td className="px-3 py-2">
+                      {task && (
+                        <div className="flex justify-end">
+                          <SeriesMenu task={task} clients={edit.clients} users={edit.users} projects={edit.projects} />
+                        </div>
+                      )}
+                    </td>
+                  </>
+                }
+                details={
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <p className="text-muted">
+                        {s.occurrences} {s.occurrences === 1 ? "copy" : "copies"} · {s.done} finished · newest first
+                      </p>
+                      <Link href={`/recurring/${s.id}`} className="text-sm underline">
+                        Open full history →
+                      </Link>
                     </div>
-                  ) : null;
-                })()}
-              </td>
-            </tr>
-          ))}
+                    <table className="w-full text-sm">
+                      <thead className="text-left text-xs text-muted">
+                        <tr>
+                          <th className="py-1 pr-3 font-medium">Period</th>
+                          <th className="py-1 pr-3 font-medium">Due</th>
+                          <th className="py-1 pr-3 font-medium">Status</th>
+                          <th className="py-1 pr-3 font-medium">Assignee</th>
+                          <th className="py-1 pr-3 font-medium">Finished</th>
+                          <th className="py-1 text-right font-medium">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((o) => (
+                          <tr key={o.id} className="border-t border-border">
+                            <td className="py-1.5 pr-3">
+                              <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
+                                {s.repeat && o.dueDate ? periodLabel(s.repeat, o.dueDate) : o.title}
+                              </Link>
+                              {o.startDate && o.startDate > today && o.status !== "done" && (
+                                <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
+                              )}
+                            </td>
+                            <td className="py-1.5 pr-3 text-muted">{o.dueDate ? fmtDay(o.dueDate) : "—"}</td>
+                            <td className="py-1.5 pr-3">
+                              <span className="badge">{o.status === "done" ? "Done" : "Open"}</span>
+                            </td>
+                            <td className="py-1.5 pr-3 text-muted">{o.assigneeName ?? "—"}</td>
+                            <td className="py-1.5 pr-3 text-muted">{o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}</td>
+                            <td className="py-1.5 text-right font-mono tabular-nums">
+                              {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              />
+            );
+          })}
           {series.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-3 py-6 text-center text-muted">
+              <td colSpan={8} className="px-3 py-6 text-center text-muted">
                 No recurring tasks yet. Add a task and answer Yes to &quot;Is this task recurring?&quot;
               </td>
             </tr>
