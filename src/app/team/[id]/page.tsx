@@ -72,7 +72,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </section>
 
-      <section className="card p-4">
+      <section className="card @container p-4">
         <Suspense fallback={<Loading />}>
           <WidgetBody type="task-counts" raw={{ who: "team", teamId: id }} auth={auth} />
         </Suspense>
