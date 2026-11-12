@@ -78,7 +78,7 @@ async function NavLinks() {
     ["/leads", "Leads", role === "super_admin"],
     ["/clients", "Clients", role === "super_admin" || role === "leader"],
     ["/reports", "Reports", role === "super_admin" || role === "leader"],
-    ["/team", "Team", role === "super_admin" || role === "leader"],
+    ["/team", "Teams & people", role === "super_admin" || role === "leader"],
   ];
   return (
     <nav aria-label="Main" className="flex flex-wrap gap-1 md:flex-col">

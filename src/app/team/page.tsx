@@ -75,6 +75,14 @@ async function TeamContent() {
 
       <section className="space-y-3">
         <SectionHead
+          title="People"
+          action={admin ? <AddMemberButton /> : undefined}
+        />
+        <PeopleList people={people} teams={teamOptions} admin={admin} />
+      </section>
+
+      <section className="space-y-3">
+        <SectionHead
           title={admin ? "Teams" : "Your team"}
           action={admin ? <NewTeamButton users={options} /> : undefined}
         />
@@ -164,14 +172,6 @@ async function TeamContent() {
           </table>
         </div>
       </section>
-
-      <section className="space-y-3">
-        <SectionHead
-          title="People"
-          action={admin ? <AddMemberButton /> : undefined}
-        />
-        <PeopleList people={people} teams={teamOptions} admin={admin} />
-      </section>
     </div>
   );
 }
@@ -179,7 +179,7 @@ async function TeamContent() {
 export default function TeamPage() {
   return (
     <div className="space-y-6">
-      <h1 className="sr-only">Team</h1>
+      <h1 className="sr-only">Teams & people</h1>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <TeamContent />
       </Suspense>

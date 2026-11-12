@@ -38,7 +38,7 @@ async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
 export async function mockSignIn(_prev: unknown, formData: FormData): Promise<{ error: string } | null> {
   if (authMode() !== "mock") return { error: "Simulated sign-in is turned off." };
   const user = await findApprovedUser(String(formData.get("email") ?? ""));
-  if (!user) return { error: "That account isn't on the approved list. Ask a super admin to add your email on the Team page." };
+  if (!user) return { error: "That account isn't on the approved list. Ask a super admin to add your email on the Teams & people page." };
   await createSession(user.id);
   redirect("/");
 }
