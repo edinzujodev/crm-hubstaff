@@ -25,6 +25,24 @@ import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLa
 const TITLE_MAX = 50;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 
+/** W weekly, M monthly, O one-time: a small coloured letter, with the full word on hover. */
+function TypeChip({ repeat }: { repeat: "weekly" | "monthly" | null }) {
+  const [letter, word, tone] = repeat === "weekly"
+    ? ["W", "Weekly", "bg-sky-500/15 text-sky-700 dark:text-sky-300"]
+    : repeat === "monthly"
+      ? ["M", "Monthly", "bg-violet-500/15 text-violet-700 dark:text-violet-300"]
+      : ["O", "One-time", "bg-black/5 text-muted dark:bg-white/10"];
+  return (
+    <span
+      title={word}
+      className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-semibold ${tone}`}
+    >
+      {letter}
+      <span className="sr-only"> {word}</span>
+    </span>
+  );
+}
+
 type SeriesEdit = {
   clients: { id: number; name: string }[];
   users: { id: number; name: string }[];
@@ -320,10 +338,13 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
             <tr>
               <th className="w-8" />
               <th className="px-3 py-2 font-medium">Task</th>
-              <th className="px-3 py-2 font-medium">Type</th>
+              <th className="px-3 py-2 font-medium" title="W weekly · M monthly · O one-time">
+                Repeat
+              </th>
               <th className="px-3 py-2 font-medium">Assignee</th>
               <th className="px-3 py-2 font-medium">Client</th>
               <th className="px-3 py-2 font-medium">Project</th>
+              <th className="px-3 py-2 font-medium">Project type</th>
               <th className="px-3 py-2 font-medium">Due</th>
               <th className="px-3 py-2 font-medium" />
             </tr>
@@ -354,7 +375,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                         </span>
                       )}
                     </div>,
-                    <span key="type" className="badge">{task.repeat ? repeatLabel[task.repeat] : "One-time"}</span>,
+                    <TypeChip key="type" repeat={task.repeat} />,
                     assigneeName ? (
                       <span key="assignee" className="whitespace-nowrap">
                         {assigneeName}
@@ -369,13 +390,13 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                     ) : (
                       <span key="client" className="text-muted">—</span>
                     ),
+                    projectName ? <span key="project">{projectName}</span> : <span key="project" className="text-muted">—</span>,
                     projectName ? (
-                      <span key="project" className="flex flex-col items-start gap-1">
-                        <span className="badge text-muted">{KIND_LABEL[projectKind ?? "one_off"]}</span>
-                        {projectName}
+                      <span key="kind" className="whitespace-nowrap text-muted">
+                        {KIND_LABEL[projectKind ?? "one_off"]}
                       </span>
                     ) : (
-                      <span key="project" className="text-muted">—</span>
+                      <span key="kind" className="text-muted">—</span>
                     ),
                     task.dueDate ? (
                       <span key="due" className="flex items-center gap-2 whitespace-nowrap">
@@ -464,7 +485,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-muted">
+                <td colSpan={9} className="px-3 py-6 text-center text-muted">
                   No tasks here.
                 </td>
               </tr>
