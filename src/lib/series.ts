@@ -30,6 +30,8 @@ export type SeriesSummary = {
   nextDue: string | null;
   /** The newest occurrence, which is the one to stop repeating on. */
   latestTaskId: number;
+  /** Every copy, oldest first. */
+  history: Occurrence[];
 };
 
 async function occurrencesBySeries(scope: SQL | undefined, onlySeriesId?: number) {
@@ -88,6 +90,7 @@ function summarize(id: number, g: { occurrences: Occurrence[]; clientId: number 
     trackedSeconds: g.occurrences.reduce((n, o) => n + o.trackedSeconds, 0),
     nextDue: g.occurrences.find((o) => o.status !== "done")?.dueDate ?? null,
     latestTaskId: latest.id,
+    history: g.occurrences,
   };
 }
 
