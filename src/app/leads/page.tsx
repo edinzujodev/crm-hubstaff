@@ -119,7 +119,7 @@ async function LeadList({ filter }: { filter: Promise<string | undefined> }) {
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-end gap-2">
                     {lead.status !== "won" && <ConvertLeadButton compact leadId={lead.id} name={lead.name} />}
-                    <LeadMenu leadId={lead.id} name={lead.name} converted={lead.status === "won"} />
+                    <LeadMenu lead={lead} users={users} />
                   </div>
                 </td>
               </tr>
