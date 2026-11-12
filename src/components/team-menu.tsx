@@ -56,7 +56,7 @@ export function TeamMenu({
         aria-label={`Actions for ${name}`}
         aria-haspopup="menu"
         aria-expanded={!!menu}
-        className="btn cursor-pointer px-2"
+        className="btn h-8 w-8 cursor-pointer justify-center px-0"
         // The window's pointerdown closes the menu; stop it so this click can toggle it.
         onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
         onClick={toggle}

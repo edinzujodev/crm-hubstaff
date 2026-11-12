@@ -131,7 +131,7 @@ async function TeamContent() {
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/team/${t.id}`}
-                          className="btn px-2"
+                          className="btn h-8 w-8 justify-center px-0"
                           title="Team details and tasks"
                           aria-label={`Details for ${t.name}`}
                         >
