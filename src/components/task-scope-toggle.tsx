@@ -25,7 +25,7 @@ export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLa
   }
 
   return (
-    <div role="group" aria-label="Whose tasks" className={`inline-flex gap-0.5 rounded-lg bg-black/5 p-0.5 text-sm dark:bg-white/10 ${pending ? "opacity-60" : ""}`}>
+    <div role="group" aria-label="Whose tasks" className={`inline-flex overflow-hidden rounded-md border border-border text-sm ${pending ? "opacity-60" : ""}`}>
       {(
         [
           ["mine", "My tasks"],
@@ -38,7 +38,7 @@ export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLa
           type="button"
           aria-pressed={scope === key}
           onClick={() => choose(key)}
-          className={`cursor-pointer rounded-md px-3 py-1 transition-colors ${scope === key ? "bg-surface font-semibold shadow-sm" : "text-muted hover:text-foreground"}`}
+          className={`px-3 py-1 ${scope === key ? "bg-primary/10 font-semibold" : "text-muted hover:bg-primary/5"}`}
         >
           {label}
         </button>
