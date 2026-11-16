@@ -19,22 +19,17 @@ import { ReviewHistory } from "@/components/review-history";
 import { ReviewActions } from "@/components/review-actions";
 import { NextPeriodButton } from "@/components/next-period-button";
 import { fmtDateTime, fmtDay, fmtDuration, localDay, truncate } from "@/lib/format";
-import { isSessionStale, trackedByTask } from "@/lib/report";
+import { isSessionStale } from "@/lib/report";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { listSeries } from "@/lib/series";
 import { listTemplates } from "@/lib/templates";
 import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
+import { Avatar } from "@/components/avatar";
 import { InlineChecklist } from "@/components/inline-checklist";
 import { SeriesRow } from "@/components/series-row";
 import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
 const TITLE_MAX = 50;
-const STATUS_LABEL = {
-  todo: "To do",
-  in_progress: "In progress",
-  review: "On review",
-  done: "Done",
-} as const;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 
 /** W weekly, M monthly, O one-time: a small coloured letter, with the full word on hover. */
@@ -204,7 +199,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const [auth, { show, scope: scopeParam }] = await Promise.all([getAuth(), filter]);
   if (!auth) redirect("/login");
   const me = auth.user;
-  const [tasks, clients, users, tracked, openSessions, teams, projects, series, templates] = await Promise.all([
+  const [tasks, clients, users, openSessions, teams, projects, series, templates] = await Promise.all([
     db
       .select({
         task: schema.tasks,
@@ -221,7 +216,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
       .orderBy(asc(schema.tasks.status), desc(schema.tasks.id)),
     db.select({ id: schema.clients.id, name: schema.clients.name }).from(schema.clients).orderBy(schema.clients.name),
     assignableUsers(auth),
-    trackedByTask(),
     db.select().from(schema.workSessions).where(isNull(schema.workSessions.endedAt)),
     db.select().from(schema.teams),
     db
@@ -241,9 +235,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
     teams.map((t) => [t.id, { approachingHours: t.approachingHours, criticalHours: t.criticalHours }]),
   );
   const isWorker = auth.role === "worker";
-  const allUserNames = await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users);
-  const teamNames = new Map(teams.map((t) => [t.id, t.name]));
-  const userNames = new Map(allUserNames.map((u) => [u.id, u.name]));
 
   const today = localDay(new Date(), config.timeZone);
   const mine = openSessions.find((s) => s.userId === me?.id);
@@ -427,10 +418,11 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                 <th className="px-3 py-2 font-medium" title="W weekly · M monthly · O one-time">
                   Repeat
                 </th>
-                <th className="px-3 py-2 font-medium">Assignee</th>
+                {!isWorker && <th className="px-3 py-2 font-medium">Assignee</th>}
                 <th className="px-3 py-2 font-medium">Client</th>
                 <th className="px-3 py-2 font-medium">Project</th>
                 <th className="px-3 py-2 font-medium">Project type</th>
+                <th className="px-3 py-2 font-medium">Created</th>
                 <th className="px-3 py-2 font-medium">Due</th>
                 <th className="px-3 py-2 font-medium" />
               </tr>
@@ -438,7 +430,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
             <tbody>
               {visible.map(({ task, clientName, assigneeName, projectName, projectKind }) => {
                 const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
-                const trackedSeconds = tracked.get(task.id);
                 const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
                 const manage = canManageTask(auth, task);
                 return (
@@ -476,15 +467,20 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                         )}
                       </div>,
                       <TypeChip key="type" repeat={task.repeat} />,
-                      assigneeName ? (
-                        <span key="assignee" className="whitespace-nowrap">
-                          {assigneeName}
-                        </span>
-                      ) : (
-                        <span key="assignee" className="text-muted">
-                          Unassigned
-                        </span>
-                      ),
+                      ...(isWorker
+                        ? []
+                        : [
+                            assigneeName ? (
+                              <span key="assignee" className="inline-flex" title={assigneeName}>
+                                <Avatar name={assigneeName} size="sm" />
+                                <span className="sr-only">{assigneeName}</span>
+                              </span>
+                            ) : (
+                              <span key="assignee" className="text-muted" title="Unassigned">
+                                —
+                              </span>
+                            ),
+                          ]),
                       task.clientId ? (
                         <Link key="client" href={`/clients/${task.clientId}`} className="text-muted hover:underline">
                           {clientName}
@@ -510,6 +506,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                           —
                         </span>
                       ),
+                      <span key="created" className="whitespace-nowrap text-muted">
+                        {fmtDay(localDay(task.createdAt, config.timeZone))}
+                      </span>,
                       task.dueDate ? (
                         <span key="due" className="flex items-center gap-2 whitespace-nowrap">
                           <span
@@ -582,25 +581,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                     }
                     details={
                       <div className="space-y-4 text-sm">
-                        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
-                          {(
-                            [
-                              ["Status", STATUS_LABEL[task.status]],
-                              ["Team", task.teamId ? (teamNames.get(task.teamId) ?? "—") : "—"],
-                              ["Created", fmtDateTime(task.createdAt, config.timeZone)],
-                              ["Finished", task.doneAt ? fmtDateTime(task.doneAt, config.timeZone) : "—"],
-                              ["Tracked in Hubstaff", trackedSeconds ? fmtDuration(trackedSeconds) : "—"],
-                              ["Hubstaff", task.hubstaffTaskId ? `Task #${task.hubstaffTaskId}` : "Not created yet"],
-                              ["Reviewer", task.reviewerId ? (userNames.get(task.reviewerId) ?? "—") : "—"],
-                            ] as const
-                          ).map(([label, value]) => (
-                            <div key={label}>
-                              <dt className="text-xs text-muted">{label}</dt>
-                              <dd>{value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-
                         {(reviews.get(task.id)?.length ?? 0) > 0 && (
                           <div>
                             <p className="mb-1 text-xs text-muted">Review history · {reviews.get(task.id)!.length}</p>
@@ -644,7 +624,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
               })}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-muted">
+                  <td colSpan={isWorker ? 9 : 10} className="px-3 py-6 text-center text-muted">
                     No tasks here.
                   </td>
                 </tr>
