@@ -79,17 +79,22 @@ export function LeadEditForm({ lead, users, onDone }: { lead: Lead; users: Optio
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
         Notes
-        <InputTextarea autoResize={false} style={{ width: "100%" }} name="notes" rows={4} defaultValue={lead.notes ?? ""} className="text-foreground" />
+        <InputTextarea
+          autoResize={false}
+          style={{ width: "100%" }}
+          name="notes"
+          rows={4}
+          defaultValue={lead.notes ?? ""}
+          className="text-foreground"
+        />
       </label>
       <div className={`flex items-center gap-3 sm:col-span-2 ${onDone ? "justify-end" : ""}`}>
         {onDone && (
-          <Button type="button"  severity="secondary" outlined onClick={onDone}>
+          <Button type="button" severity="secondary" outlined onClick={onDone}>
             Cancel
           </Button>
         )}
-        <Button  disabled={pending}>
-          {pending ? "Saving…" : "Save"}
-        </Button>
+        <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
         {!onDone && state?.ok && <span className="text-sm text-emerald-700 dark:text-emerald-400">Saved.</span>}
         {state && !state.ok && <span className="text-sm text-red-600">{state.error}</span>}
       </div>

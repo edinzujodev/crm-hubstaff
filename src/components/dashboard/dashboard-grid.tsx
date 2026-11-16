@@ -13,7 +13,13 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Modal } from "@/components/modal";
 import { WidgetForm, type Lookups } from "@/components/dashboard/widget-form";
@@ -59,7 +65,10 @@ const parseColId = (id: unknown): [number, number] | null => {
 
 /** Rows with their columns. A widget in a row or column that no longer exists goes in the last one. */
 function toSections(items: GridItem[], layouts: Layout[]): Section[] {
-  const sections: Section[] = layouts.map((layout) => ({ layout, cols: Array.from({ length: LAYOUTS[layout].count }, () => []) }));
+  const sections: Section[] = layouts.map((layout) => ({
+    layout,
+    cols: Array.from({ length: LAYOUTS[layout].count }, () => []),
+  }));
   for (const item of items) {
     const s = sections[Math.min(Math.max(item.section, 0), sections.length - 1)];
     s.cols[Math.min(Math.max(item.column, 0), s.cols.length - 1)].push(item.id);
@@ -98,7 +107,11 @@ function Frame({
     disabled: !editing,
   });
   const [confirming, setConfirming] = useState(false);
-  const style: CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   return (
     <section
@@ -125,22 +138,47 @@ function Frame({
         </h2>
         {editing && (
           <div className="flex shrink-0 items-center gap-1">
-            <Button type="button" className="py-1 text-xs" severity="secondary" outlined size="small" onClick={onConfigure} aria-label={`Settings for ${item.title}`}>
+            <Button
+              type="button"
+              className="py-1 text-xs"
+              severity="secondary"
+              outlined
+              size="small"
+              onClick={onConfigure}
+              aria-label={`Settings for ${item.title}`}
+            >
               Edit
             </Button>
             {confirming ? (
               <>
-                <Button type="button" className="py-1 text-xs" severity="danger" size="small" onClick={onRemove} disabled={busy}>
+                <Button
+                  type="button"
+                  className="py-1 text-xs"
+                  severity="danger"
+                  size="small"
+                  onClick={onRemove}
+                  disabled={busy}
+                >
                   Remove
                 </Button>
-                <Button type="button" className="py-1 text-xs" severity="secondary" outlined size="small" onClick={() => setConfirming(false)}>
+                <Button
+                  type="button"
+                  className="py-1 text-xs"
+                  severity="secondary"
+                  outlined
+                  size="small"
+                  onClick={() => setConfirming(false)}
+                >
                   Keep
                 </Button>
               </>
             ) : (
               <Button
                 type="button"
-                className="py-1 text-xs" severity="secondary" outlined size="small"
+                className="py-1 text-xs"
+                severity="secondary"
+                outlined
+                size="small"
                 onClick={() => setConfirming(true)}
                 aria-label={`Remove ${item.title}`}
               >
@@ -197,7 +235,9 @@ function Column({
         })}
       </SortableContext>
       {editing && ids.length === 0 && (
-        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted">Drop a widget here</p>
+        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted">
+          Drop a widget here
+        </p>
       )}
     </div>
   );
@@ -255,7 +295,11 @@ export function DashboardGrid({
   function commit(next: Section[], before: Section[]) {
     setSections(next);
     if (JSON.stringify(next) === JSON.stringify(before)) return;
-    act(() => saveLayout(toPayload(next)), undefined, () => setSections(before));
+    act(
+      () => saveLayout(toPayload(next)),
+      undefined,
+      () => setSections(before),
+    );
   }
 
   // Moving over another column puts the widget in it straight away, so it can be placed between that column's widgets.
@@ -345,31 +389,36 @@ export function DashboardGrid({
         <h1 className="sr-only">Dashboard</h1>
         {editing && (
           <>
-            <Button  severity="secondary" outlined onClick={() => setAdding(true)}>
+            <Button severity="secondary" outlined onClick={() => setAdding(true)}>
               + Add widget
             </Button>
             <Button
-               severity="secondary" outlined
+              severity="secondary"
+              outlined
               disabled={pending}
               onClick={() => {
-                if (window.confirm("Replace your widgets with the default layout for your role?")) act(() => resetDashboard());
+                if (window.confirm("Replace your widgets with the default layout for your role?"))
+                  act(() => resetDashboard());
               }}
             >
               Reset to default
             </Button>
           </>
         )}
-        <Button className={editing ?"":""} onClick={() => setEditing((v) => !v)}>
+        <Button className={editing ? "" : ""} onClick={() => setEditing((v) => !v)}>
           {editing ? "Done" : "Customize"}
         </Button>
       </div>
 
       {error && (
-        <p role="alert" className="card flex items-center justify-between gap-3 border-red-500/50 p-3 text-sm text-red-700 dark:text-red-400">
+        <p
+          role="alert"
+          className="card flex items-center justify-between gap-3 border-red-500/50 p-3 text-sm text-red-700 dark:text-red-400"
+        >
           {error}
-          <button className="underline" onClick={() => setError(null)}>
+          <Button link size="small" className="p-0" onClick={() => setError(null)}>
             Dismiss
-          </button>
+          </Button>
         </p>
       )}
 
@@ -421,7 +470,10 @@ export function DashboardGrid({
                       {sections.length > 1 && (
                         <Button
                           type="button"
-                          className="py-1 text-xs" severity="secondary" outlined size="small"
+                          className="py-1 text-xs"
+                          severity="secondary"
+                          outlined
+                          size="small"
                           disabled={pending}
                           onClick={() => removeSection(s)}
                           title="Remove this row. Its widgets move to the row above."
@@ -450,7 +502,14 @@ export function DashboardGrid({
               );
             })}
             {editing && (
-              <Button type="button" className="w-full justify-center border-dashed" severity="secondary" outlined onClick={addSection} disabled={pending}>
+              <Button
+                type="button"
+                className="w-full justify-center border-dashed"
+                severity="secondary"
+                outlined
+                onClick={addSection}
+                disabled={pending}
+              >
                 + Add row
               </Button>
             )}
@@ -469,7 +528,12 @@ export function DashboardGrid({
             submitLabel="Save"
             pending={pending}
             onCancel={() => setConfiguring(null)}
-            onSubmit={(config, title) => act(() => updateWidget(configuringItem.id, { config, title }), () => setConfiguring(null))}
+            onSubmit={(config, title) =>
+              act(
+                () => updateWidget(configuringItem.id, { config, title }),
+                () => setConfiguring(null),
+              )
+            }
           />
         </Modal>
       )}
@@ -480,7 +544,12 @@ export function DashboardGrid({
           lookups={lookups}
           pending={pending}
           onClose={() => setAdding(false)}
-          onAdd={(type, config, title) => act(() => addWidget({ type, config, title }), () => setAdding(false))}
+          onAdd={(type, config, title) =>
+            act(
+              () => addWidget({ type, config, title }),
+              () => setAdding(false),
+            )
+          }
         />
       )}
     </div>
@@ -531,13 +600,17 @@ function AddWidget({
             <ul className="space-y-1 pt-1">
               {presetsFor(type, role).map((preset) => (
                 <li key={preset.id}>
-                  <button
-                    className="w-full rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-border/30"
+                  <Button
+                    severity="secondary"
+                    outlined
+                    className="w-full justify-start text-left"
                     onClick={() => setPicked({ type, preset })}
                   >
-                    <span className="block font-medium">{preset.label}</span>
-                    <span className="block text-xs text-muted">{preset.description}</span>
-                  </button>
+                    <span className="block">
+                      <span className="block font-medium">{preset.label}</span>
+                      <span className="block text-xs text-muted">{preset.description}</span>
+                    </span>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -545,7 +618,7 @@ function AddWidget({
         ))}
       </div>
       <div className="flex justify-end">
-        <Button  severity="secondary" outlined onClick={onClose}>
+        <Button severity="secondary" outlined onClick={onClose}>
           Close
         </Button>
       </div>

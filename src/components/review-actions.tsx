@@ -33,7 +33,14 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
         <Button type="button" className="h-8" disabled={pending} onClick={approve}>
           Approve
         </Button>
-        <Button type="button" className="h-8" severity="secondary" outlined disabled={pending} onClick={() => setDeny(true)}>
+        <Button
+          type="button"
+          className="h-8"
+          severity="secondary"
+          outlined
+          disabled={pending}
+          onClick={() => setDeny(true)}
+        >
           Deny…
         </Button>
         {error && !deny && <span className="text-xs text-red-600">{error}</span>}
@@ -46,7 +53,9 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
             </p>
             <label className="flex flex-col gap-1 text-xs text-muted">
               Why is it not OK?
-              <InputTextarea autoResize={false} style={{ width: "100%" }}
+              <InputTextarea
+                autoResize={false}
+                style={{ width: "100%" }}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={4}
@@ -58,10 +67,10 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button type="button"  severity="secondary" outlined onClick={() => setDeny(false)}>
+              <Button type="button" severity="secondary" outlined onClick={() => setDeny(false)}>
                 Cancel
               </Button>
-              <Button type="button"  severity="danger" disabled={pending || !reason.trim()} onClick={submitDeny}>
+              <Button type="button" severity="danger" disabled={pending || !reason.trim()} onClick={submitDeny}>
                 {pending ? "Sending…" : "Send back"}
               </Button>
             </div>

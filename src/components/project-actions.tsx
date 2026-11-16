@@ -65,7 +65,14 @@ function ProjectForm({
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Name
-        <InputText name="name" required autoFocus maxLength={120} defaultValue={name} className="w-full text-foreground" />
+        <InputText
+          name="name"
+          required
+          autoFocus
+          maxLength={120}
+          defaultValue={name}
+          className="w-full text-foreground"
+        />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Type
@@ -76,12 +83,10 @@ function ProjectForm({
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button"  severity="secondary" outlined onClick={onDone}>
+        <Button type="button" severity="secondary" outlined onClick={onDone}>
           Cancel
         </Button>
-        <Button  disabled={pending}>
-          {pending ? "Saving…" : submitLabel}
-        </Button>
+        <Button disabled={pending}>{pending ? "Saving…" : submitLabel}</Button>
       </div>
     </form>
   );
@@ -92,7 +97,17 @@ function EditProject({ id, name, kind, onDone }: { id: number; name: string; kin
   useEffect(() => {
     if (state?.ok) onDone();
   }, [state, onDone]);
-  return <ProjectForm action={action} pending={pending} state={state} name={name} kind={kind} submitLabel="Save" onDone={onDone} />;
+  return (
+    <ProjectForm
+      action={action}
+      pending={pending}
+      state={state}
+      name={name}
+      kind={kind}
+      submitLabel="Save"
+      onDone={onDone}
+    />
+  );
 }
 
 /** "+ New project" for a client: a popup with a name and a type. */
@@ -100,7 +115,7 @@ export function NewProjectButton({ clientId }: { clientId: number }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button type="button"  severity="secondary" outlined onClick={() => setOpen(true)}>
+      <Button type="button" severity="secondary" outlined onClick={() => setOpen(true)}>
         + New project
       </Button>
       {open && (
@@ -117,5 +132,15 @@ function CreateProject({ clientId, onDone }: { clientId: number; onDone: () => v
   useEffect(() => {
     if (state?.ok) onDone();
   }, [state, onDone]);
-  return <ProjectForm action={action} pending={pending} state={state} name="" kind="one_off" submitLabel="Add project" onDone={onDone} />;
+  return (
+    <ProjectForm
+      action={action}
+      pending={pending}
+      state={state}
+      name=""
+      kind="one_off"
+      submitLabel="Add project"
+      onDone={onDone}
+    />
+  );
 }

@@ -44,7 +44,7 @@ export function TeamMenu({
             Delete <span className="font-medium">{name}</span>?
           </p>
           <div className="flex items-center justify-end gap-2">
-            <Button type="button"  severity="secondary" outlined onClick={() => setConfirm(false)}>
+            <Button type="button" severity="secondary" outlined onClick={() => setConfirm(false)}>
               Cancel
             </Button>
             <HoldToDelete title={name} action={() => deleteTeam(teamId)} />

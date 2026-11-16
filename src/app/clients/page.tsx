@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -30,74 +31,72 @@ async function ClientList() {
       )
       .groupBy(schema.tasks.clientId),
     trackedByClient(new Date(Date.parse(monthStart)), scope),
-    db.select({ clientId: schema.projects.clientId, n: count() }).from(schema.projects).groupBy(schema.projects.clientId),
-    db.select({ clientId: schema.clientCompanies.clientId, n: count() }).from(schema.clientCompanies).groupBy(schema.clientCompanies.clientId),
+    db
+      .select({ clientId: schema.projects.clientId, n: count() })
+      .from(schema.projects)
+      .groupBy(schema.projects.clientId),
+    db
+      .select({ clientId: schema.clientCompanies.clientId, n: count() })
+      .from(schema.clientCompanies)
+      .groupBy(schema.clientCompanies.clientId),
   ]);
   const companyCounts = new Map(companyRows.map((r) => [r.clientId, r.n]));
   const projectsOf = new Map(projectCounts.map((r) => [r.clientId, r.n]));
   const inProgress = new Map(taskCounts.map((r) => [r.clientId, r.n]));
 
   return (
-    <div className="card overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b border-border text-left text-xs text-muted">
-          <tr>
-            <th className="px-3 py-2 font-medium">Client</th>
-            <th className="px-3 py-2 font-medium">Contact</th>
-            <th className="px-3 py-2 text-right font-medium">Open tasks</th>
-            <th className="px-3 py-2 text-right font-medium">Projects</th>
-            <th className="px-3 py-2 text-right font-medium">Tracked this month</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {clients.map((c) => (
-            <tr key={c.id} className="border-b border-border last:border-0">
-              <td className="px-3 py-2">
-                <Link href={`/clients/${c.id}`} className="font-medium hover:underline">
-                  {c.name}
-                </Link>
-                {c.kind === "group" && (
-                  <span className="badge ml-2" title="A group with several companies">
-                    Group · {companyCounts.get(c.id) ?? 0}
-                  </span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-muted">{[c.contactName, c.email].filter(Boolean).join(" · ") || "—"}</td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums">{inProgress.get(c.id) ?? 0}</td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums">{projectsOf.get(c.id) ?? 0}</td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                {tracked.get(c.id) ? fmtDuration(tracked.get(c.id)!) : "—"}
-              </td>
-              <td className="px-3 py-2">
-                <div className="flex justify-end">
-                  <ClientActions
-                    client={{
-                      id: c.id,
-                      name: c.name,
-                      kind: c.kind,
-                      contactName: c.contactName,
-                      email: c.email,
-                      phone: c.phone,
-                      notes: c.notes,
-                      hubstaffProjectId: c.hubstaffProjectId,
-                    }}
-                    canDelete={auth.role === "super_admin"}
-                  />
-                </div>
-              </td>
-            </tr>
-          ))}
-          {clients.length === 0 && (
-            <tr>
-              <td colSpan={6} className="px-3 py-6 text-center text-muted">
-                No clients yet. Add the first one above.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <DataGrid
+      empty="No clients yet. Add the first one above."
+      headers={[
+        "Client",
+        "Contact",
+        { label: "Open tasks", align: "right" },
+        { label: "Projects", align: "right" },
+        { label: "Tracked this month", align: "right" },
+      ]}
+      rows={clients.map((c) => ({
+        key: c.id,
+        cells: [
+          <div key="c">
+            <Link href={`/clients/${c.id}`} className="font-medium hover:underline">
+              {c.name}
+            </Link>
+            {c.kind === "group" && (
+              <span className="badge ml-2" title="A group with several companies">
+                Group · {companyCounts.get(c.id) ?? 0}
+              </span>
+            )}
+          </div>,
+          <span key="k" className="text-muted">
+            {[c.contactName, c.email].filter(Boolean).join(" · ") || "—"}
+          </span>,
+          <span key="o" className="font-mono tabular-nums">
+            {inProgress.get(c.id) ?? 0}
+          </span>,
+          <span key="p" className="font-mono tabular-nums">
+            {projectsOf.get(c.id) ?? 0}
+          </span>,
+          <span key="t" className="font-mono tabular-nums">
+            {tracked.get(c.id) ? fmtDuration(tracked.get(c.id)!) : "—"}
+          </span>,
+        ],
+        actions: (
+          <ClientActions
+            client={{
+              id: c.id,
+              name: c.name,
+              kind: c.kind,
+              contactName: c.contactName,
+              email: c.email,
+              phone: c.phone,
+              notes: c.notes,
+              hubstaffProjectId: c.hubstaffProjectId,
+            }}
+            canDelete={auth.role === "super_admin"}
+          />
+        ),
+      }))}
+    />
   );
 }
 

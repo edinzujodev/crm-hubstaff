@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FINISHED_EVENT, type FinishedNotice } from "@/lib/toast";
@@ -27,10 +28,19 @@ export function Toaster() {
     <div role="status" className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]">
       <div className="card space-y-3 border-emerald-500/60 p-4 text-sm shadow-lg">
         <div className="flex items-start justify-between gap-3">
-          <p className="font-medium text-emerald-700 dark:text-emerald-400">{notice.inReview ? "✓ Sent for review" : "✓ Task finished"}</p>
-          <button type="button" aria-label="Dismiss" className="text-muted" onClick={() => setNotice(null)}>
-            ✕
-          </button>
+          <p className="font-medium text-emerald-700 dark:text-emerald-400">
+            {notice.inReview ? "✓ Sent for review" : "✓ Task finished"}
+          </p>
+          <Button
+            type="button"
+            icon="pi pi-times"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            aria-label="Dismiss"
+            onClick={() => setNotice(null)}
+          />
         </div>
         <p>
           <span className="font-medium">{truncate(notice.title, 50)}</span> was moved to{" "}
@@ -48,7 +58,13 @@ export function Toaster() {
         {notice.nextTaskId ? (
           <p className="rounded-md bg-emerald-500/10 p-2">
             ↻ A new task was created
-            {notice.nextDueDate ? <> and is due <span className="font-medium">{notice.nextDueDate}</span></> : null}.{" "}
+            {notice.nextDueDate ? (
+              <>
+                {" "}
+                and is due <span className="font-medium">{notice.nextDueDate}</span>
+              </>
+            ) : null}
+            .{" "}
             <Link className="font-medium underline" href={`/tasks/${notice.nextTaskId}`}>
               Open new task
             </Link>

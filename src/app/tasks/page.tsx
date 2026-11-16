@@ -10,7 +10,7 @@ import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
 import { SeriesMenu } from "@/components/series-menu";
 import { TaskMenu } from "@/components/task-menu";
-import { TaskRow } from "@/components/task-row";
+import { DataGrid } from "@/components/data-grid";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
@@ -26,7 +26,6 @@ import { listTemplates } from "@/lib/templates";
 import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
 import { Avatar } from "@/components/avatar";
 import { InlineChecklist } from "@/components/inline-checklist";
-import { SeriesRow } from "@/components/series-row";
 import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
 const TITLE_MAX = 50;
@@ -59,139 +58,108 @@ type SeriesEdit = {
 };
 
 function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listSeries>>; edit: SeriesEdit }) {
+  const today = localDay(new Date(), config.timeZone);
   return (
-    <div className="card overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b border-border text-left text-xs text-muted">
-          <tr>
-            <th className="w-8" />
-            <th className="px-3 py-2 font-medium">Task</th>
-            <th className="px-3 py-2 font-medium">Client</th>
-            <th className="px-3 py-2 font-medium">Repeats</th>
-            <th className="px-3 py-2 text-right font-medium">Done</th>
-            <th className="px-3 py-2 text-right font-medium">Total time</th>
-            <th className="px-3 py-2 font-medium">Next due</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {series.map((s) => {
-            const task = edit.taskOf(s.latestTaskId);
-            const rows = [...s.history].reverse();
-            const today = localDay(new Date(), config.timeZone);
-            return (
-              <SeriesRow
-                key={s.id}
-                title={s.title}
-                colSpan={8}
-                cells={
-                  <>
-                    <td className="px-3 py-2 font-medium">{s.title}</td>
-                    <td className="px-3 py-2 text-muted">
-                      {s.clientId ? (
-                        <Link href={`/clients/${s.clientId}`} className="hover:underline">
-                          {s.clientName}
-                        </Link>
-                      ) : (
-                        "—"
+    <DataGrid
+      empty={<>No recurring tasks yet. Add a task and answer Yes to &quot;Is this task recurring?&quot;</>}
+      headers={[
+        "Task",
+        "Client",
+        "Repeats",
+        { label: "Done", align: "right" },
+        { label: "Total time", align: "right" },
+        "Next due",
+      ]}
+      rows={series.map((s) => {
+        const task = edit.taskOf(s.latestTaskId);
+        const history = [...s.history].reverse();
+        return {
+          key: s.id,
+          cells: [
+            <span key="t" className="font-medium">
+              {s.title}
+            </span>,
+            s.clientId ? (
+              <Link key="c" href={`/clients/${s.clientId}`} className="text-muted hover:underline">
+                {s.clientName}
+              </Link>
+            ) : (
+              "—"
+            ),
+            s.repeat ? (
+              <span key="r" className="badge">
+                {repeatLabel[s.repeat]}
+              </span>
+            ) : (
+              <span key="r" className="badge text-muted">
+                Stopped
+              </span>
+            ),
+            <span key="d" className="font-mono tabular-nums">
+              {s.done} / {s.occurrences}
+            </span>,
+            <span key="tt" className="font-mono tabular-nums">
+              {s.trackedSeconds ? fmtDuration(s.trackedSeconds) : "—"}
+            </span>,
+            <span key="n" className="text-muted">
+              {s.nextDue ? fmtDay(s.nextDue) : "—"}
+            </span>,
+          ],
+          actions: task ? (
+            <SeriesMenu task={task} clients={edit.clients} users={edit.users} projects={edit.projects} />
+          ) : null,
+          details: (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <p className="text-muted">
+                  {s.occurrences} {s.occurrences === 1 ? "copy" : "copies"} · {s.done} finished · newest first
+                </p>
+                <Link href={`/recurring/${s.id}`} className="text-sm underline">
+                  Open full history →
+                </Link>
+              </div>
+              <DataGrid
+                plain
+                headers={["Period", "Due", "Status", "Assignee", "Finished", { label: "Time", align: "right" }]}
+                rows={history.map((o) => ({
+                  key: o.id,
+                  cells: [
+                    <div key="p">
+                      <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
+                        {s.repeat && o.dueDate ? periodLabel(s.repeat, o.dueDate) : o.title}
+                      </Link>
+                      {o.startDate && o.startDate > today && o.status !== "done" && (
+                        <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
                       )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {s.repeat ? (
-                        <span className="badge">{repeatLabel[s.repeat]}</span>
-                      ) : (
-                        <span className="badge text-muted">Stopped</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums">
-                      {s.done} / {s.occurrences}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums">
-                      {s.trackedSeconds ? fmtDuration(s.trackedSeconds) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-muted">{s.nextDue ? fmtDay(s.nextDue) : "—"}</td>
-                    <td className="px-3 py-2">
-                      {task && (
-                        <div className="flex justify-end">
-                          <SeriesMenu task={task} clients={edit.clients} users={edit.users} projects={edit.projects} />
+                      {o.checklist.length > 0 && o.status !== "done" && (
+                        <div className="mt-1">
+                          <InlineChecklist items={o.checklist} canTick />
                         </div>
                       )}
-                    </td>
-                  </>
-                }
-                details={
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                      <p className="text-muted">
-                        {s.occurrences} {s.occurrences === 1 ? "copy" : "copies"} · {s.done} finished · newest first
-                      </p>
-                      <Link href={`/recurring/${s.id}`} className="text-sm underline">
-                        Open full history →
-                      </Link>
-                    </div>
-                    <table className="w-full text-sm">
-                      <thead className="text-left text-xs text-muted">
-                        <tr>
-                          <th className="py-1 pr-3 font-medium">Period</th>
-                          <th className="py-1 pr-3 font-medium">Due</th>
-                          <th className="py-1 pr-3 font-medium">Status</th>
-                          <th className="py-1 pr-3 font-medium">Assignee</th>
-                          <th className="py-1 pr-3 font-medium">Finished</th>
-                          <th className="py-1 text-right font-medium">Time</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((o) => (
-                          <Fragment key={o.id}>
-                            <tr className="border-t border-border">
-                              <td className="py-1.5 pr-3">
-                                <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
-                                  {s.repeat && o.dueDate ? periodLabel(s.repeat, o.dueDate) : o.title}
-                                </Link>
-                                {o.startDate && o.startDate > today && o.status !== "done" && (
-                                  <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
-                                )}
-                              </td>
-                              <td className="py-1.5 pr-3 text-muted">{o.dueDate ? fmtDay(o.dueDate) : "—"}</td>
-                              <td className="py-1.5 pr-3">
-                                <span className="badge">
-                                  {o.status === "done" ? "Done" : o.status === "review" ? "On review" : "Open"}
-                                </span>
-                              </td>
-                              <td className="py-1.5 pr-3 text-muted">{o.assigneeName ?? "—"}</td>
-                              <td className="py-1.5 pr-3 text-muted">
-                                {o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}
-                              </td>
-                              <td className="py-1.5 text-right font-mono tabular-nums">
-                                {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
-                              </td>
-                            </tr>
-                            {o.checklist.length > 0 && o.status !== "done" && (
-                              <tr>
-                                <td colSpan={6} className="pb-2 pl-4">
-                                  <InlineChecklist items={o.checklist} canTick />
-                                </td>
-                              </tr>
-                            )}
-                          </Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                }
+                    </div>,
+                    <span key="due" className="text-muted">
+                      {o.dueDate ? fmtDay(o.dueDate) : "—"}
+                    </span>,
+                    <span key="s" className="badge">
+                      {o.status === "done" ? "Done" : o.status === "review" ? "On review" : "Open"}
+                    </span>,
+                    <span key="a" className="text-muted">
+                      {o.assigneeName ?? "—"}
+                    </span>,
+                    <span key="f" className="text-muted">
+                      {o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}
+                    </span>,
+                    <span key="tm" className="font-mono tabular-nums">
+                      {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
+                    </span>,
+                  ],
+                }))}
               />
-            );
-          })}
-          {series.length === 0 && (
-            <tr>
-              <td colSpan={8} className="px-3 py-6 text-center text-muted">
-                No recurring tasks yet. Add a task and answer Yes to &quot;Is this task recurring?&quot;
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+            </div>
+          ),
+        };
+      })}
+    />
   );
 }
 
@@ -409,229 +377,203 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
           }}
         />
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="w-8" />
-                <th className="px-3 py-2 font-medium">Task</th>
-                <th className="px-3 py-2 font-medium" title="W weekly · M monthly · O one-time">
-                  Repeat
-                </th>
-                {!isWorker && <th className="px-3 py-2 font-medium">Assignee</th>}
-                <th className="px-3 py-2 font-medium">Client</th>
-                <th className="px-3 py-2 font-medium">Project</th>
-                <th className="px-3 py-2 font-medium">Project type</th>
-                <th className="px-3 py-2 font-medium">Created</th>
-                <th className="px-3 py-2 font-medium">Due</th>
-                <th className="px-3 py-2 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map(({ task, clientName, assigneeName, projectName, projectKind }) => {
-                const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
-                const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
-                const manage = canManageTask(auth, task);
-                return (
-                  <TaskRow
-                    key={task.id}
-                    cells={[
-                      <div key="title">
-                        <Link href={`/tasks/${task.id}`} className="font-medium hover:underline" title={task.title}>
-                          {truncate(task.title, TITLE_MAX)}
-                        </Link>
-                        {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
-                        {task.status === "review" && (
-                          <span className="badge ml-2 text-amber-700 dark:text-amber-400">On review</span>
-                        )}
-                        {task.status === "todo" && task.reviewResult === "rejected" && (
-                          <span className="badge ml-2 text-red-600" title={task.reviewNote ?? undefined}>
-                            Checked: not OK
-                          </span>
-                        )}
-                        {task.status === "done" && task.reviewResult === "approved" && (
-                          <span className="badge ml-2 text-emerald-700 dark:text-emerald-400">Checked: OK</span>
-                        )}
-                        {task.startDate && task.startDate > today && task.status !== "done" && (
-                          <span className="badge ml-2 text-muted" title="Shows in your open tasks from this day">
-                            Starts {fmtDay(task.startDate)}
-                          </span>
-                        )}
-                        {others.length > 0 && (
-                          <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400">
-                            ● {others.length} working now
-                          </span>
-                        )}
-                        {task.repeat && task.dueDate && (
-                          <p className="text-xs text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
-                        )}
-                      </div>,
-                      <TypeChip key="type" repeat={task.repeat} />,
-                      ...(isWorker
-                        ? []
-                        : [
-                            assigneeName ? (
-                              <span key="assignee" className="inline-flex" title={assigneeName}>
-                                <Avatar name={assigneeName} size="sm" />
-                                <span className="sr-only">{assigneeName}</span>
-                              </span>
-                            ) : (
-                              <span key="assignee" className="text-muted" title="Unassigned">
-                                —
-                              </span>
-                            ),
-                          ]),
-                      task.clientId ? (
-                        <Link key="client" href={`/clients/${task.clientId}`} className="text-muted hover:underline">
-                          {clientName}
-                        </Link>
+        <DataGrid
+          empty="No tasks here."
+          headers={[
+            "Task",
+            { label: "Repeat", title: "W weekly · M monthly · O one-time" },
+            ...(isWorker ? [] : ["Assignee"]),
+            "Client",
+            "Project",
+            "Project type",
+            "Created",
+            "Due",
+          ]}
+          rows={visible.map(({ task, clientName, assigneeName, projectName, projectKind }) => {
+            const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
+            const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
+            const manage = canManageTask(auth, task);
+            return {
+              key: task.id,
+              cells: [
+                <div key="title">
+                  <Link href={`/tasks/${task.id}`} className="font-medium hover:underline" title={task.title}>
+                    {truncate(task.title, TITLE_MAX)}
+                  </Link>
+                  {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
+                  {task.status === "review" && (
+                    <span className="badge ml-2 text-amber-700 dark:text-amber-400">On review</span>
+                  )}
+                  {task.status === "todo" && task.reviewResult === "rejected" && (
+                    <span className="badge ml-2 text-red-600" title={task.reviewNote ?? undefined}>
+                      Checked: not OK
+                    </span>
+                  )}
+                  {task.status === "done" && task.reviewResult === "approved" && (
+                    <span className="badge ml-2 text-emerald-700 dark:text-emerald-400">Checked: OK</span>
+                  )}
+                  {task.startDate && task.startDate > today && task.status !== "done" && (
+                    <span className="badge ml-2 text-muted" title="Shows in your open tasks from this day">
+                      Starts {fmtDay(task.startDate)}
+                    </span>
+                  )}
+                  {others.length > 0 && (
+                    <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400">
+                      ● {others.length} working now
+                    </span>
+                  )}
+                  {task.repeat && task.dueDate && (
+                    <p className="text-xs text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
+                  )}
+                </div>,
+                <TypeChip key="type" repeat={task.repeat} />,
+                ...(isWorker
+                  ? []
+                  : [
+                      assigneeName ? (
+                        <span key="assignee" className="inline-flex" title={assigneeName}>
+                          <Avatar name={assigneeName} size="sm" />
+                          <span className="sr-only">{assigneeName}</span>
+                        </span>
                       ) : (
-                        <span key="client" className="text-muted">
+                        <span key="assignee" className="text-muted" title="Unassigned">
                           —
                         </span>
                       ),
-                      projectName ? (
-                        <span key="project">{projectName}</span>
-                      ) : (
-                        <span key="project" className="text-muted">
-                          —
-                        </span>
-                      ),
-                      projectName ? (
-                        <span key="kind" className="whitespace-nowrap text-muted">
-                          {KIND_LABEL[projectKind ?? "one_off"]}
-                        </span>
-                      ) : (
-                        <span key="kind" className="text-muted">
-                          —
-                        </span>
-                      ),
-                      <span key="created" className="whitespace-nowrap text-muted">
-                        {fmtDay(localDay(task.createdAt, config.timeZone))}
-                      </span>,
-                      task.dueDate ? (
-                        <span key="due" className="flex items-center gap-2 whitespace-nowrap">
-                          <span
-                            className={
-                              urgency === "critical" ? "font-medium text-red-600 dark:text-red-400" : undefined
-                            }
-                            title={urgency === "critical" ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
-                          >
-                            {fmtDay(task.dueDate)}
-                          </span>
-                          {urgency && urgency !== "on_track" && urgency !== "critical" && (
-                            <span
-                              className={`badge ${URGENCY_CLASS[urgency]}`}
-                              title={timeLeftLabel(task.dueDate, config.timeZone)}
-                            >
-                              {URGENCY_LABEL[urgency]}
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        <span key="due" className="text-muted">
-                          —
-                        </span>
-                      ),
-                    ]}
-                    actions={
-                      task.deletedAt ? (
-                        manage ? (
-                          <RestoreTaskButton compact taskId={task.id} />
-                        ) : null
-                      ) : (
-                        <>
-                          <TimerControls
-                            compact
-                            taskId={task.id}
-                            title={task.title}
-                            lockedTo={
-                              task.assigneeId && task.assigneeId !== me.id ? (assigneeName ?? "someone else") : null
-                            }
-                            done={task.status === "done" || task.status === "review"}
-                            runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
-                            otherTask={
-                              mine && mineTask && mine.taskId !== task.id
-                                ? { id: mineTask.id, title: mineTask.title }
-                                : null
-                            }
-                          />
-                          {canReviewTask(auth, task) && <ReviewActions taskId={task.id} title={task.title} />}
-                          {
-                            <TaskMenu
-                              canManage={manage}
-                              task={{
-                                id: task.id,
-                                title: task.title,
-                                clientId: task.clientId,
-                                projectId: task.projectId,
-                                assigneeId: task.assigneeId,
-                                dueDate: task.dueDate,
-                                repeat: task.repeat,
-                                repeatLeadDays: task.repeatLeadDays,
-                                repeatShow: task.repeatShow,
-                              }}
-                              clients={clients}
-                              users={users}
-                              projects={projects}
-                            />
-                          }
-                        </>
-                      )
-                    }
-                    details={
-                      <div className="space-y-4 text-sm">
-                        {(reviews.get(task.id)?.length ?? 0) > 0 && (
-                          <div>
-                            <p className="mb-1 text-xs text-muted">Review history · {reviews.get(task.id)!.length}</p>
-                            <ReviewHistory reviews={reviews.get(task.id)!} tz={config.timeZone} />
-                          </div>
-                        )}
-
-                        {task.description && (
-                          <div>
-                            <p className="text-xs text-muted">Instructions</p>
-                            <p className="whitespace-pre-wrap">{task.description}</p>
-                          </div>
-                        )}
-
-                        {(checklists.get(task.id)?.length ?? 0) > 0 && (
-                          <div>
-                            <p className="mb-1 text-xs text-muted">
-                              Checklist · {checklists.get(task.id)!.filter((i) => i.done).length} of{" "}
-                              {checklists.get(task.id)!.length} checked
-                            </p>
-                            <InlineChecklist
-                              items={checklists.get(task.id)!}
-                              canTick={!task.deletedAt && task.status !== "done"}
-                            />
-                          </div>
-                        )}
-
-                        {(() => {
-                          const next =
-                            manage && task.repeat && !task.deletedAt
-                              ? nextHidden(upcoming.get(task.seriesId ?? -1), task.dueDate)
-                              : null;
-                          return next && task.repeat ? (
-                            <NextPeriodButton nextTaskId={next.id} label={periodLabel(task.repeat, next.dueDate)} />
-                          ) : null;
-                        })()}
-                      </div>
+                    ]),
+                task.clientId ? (
+                  <Link key="client" href={`/clients/${task.clientId}`} className="text-muted hover:underline">
+                    {clientName}
+                  </Link>
+                ) : (
+                  <span key="client" className="text-muted">
+                    —
+                  </span>
+                ),
+                projectName ? (
+                  <span key="project">{projectName}</span>
+                ) : (
+                  <span key="project" className="text-muted">
+                    —
+                  </span>
+                ),
+                projectName ? (
+                  <span key="kind" className="whitespace-nowrap text-muted">
+                    {KIND_LABEL[projectKind ?? "one_off"]}
+                  </span>
+                ) : (
+                  <span key="kind" className="text-muted">
+                    —
+                  </span>
+                ),
+                <span key="created" className="whitespace-nowrap text-muted">
+                  {fmtDay(localDay(task.createdAt, config.timeZone))}
+                </span>,
+                task.dueDate ? (
+                  <span key="due" className="flex items-center gap-2 whitespace-nowrap">
+                    <span
+                      className={urgency === "critical" ? "font-medium text-red-600 dark:text-red-400" : undefined}
+                      title={urgency === "critical" ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
+                    >
+                      {fmtDay(task.dueDate)}
+                    </span>
+                    {urgency && urgency !== "on_track" && urgency !== "critical" && (
+                      <span
+                        className={`badge ${URGENCY_CLASS[urgency]}`}
+                        title={timeLeftLabel(task.dueDate, config.timeZone)}
+                      >
+                        {URGENCY_LABEL[urgency]}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span key="due" className="text-muted">
+                    —
+                  </span>
+                ),
+              ],
+              actions: task.deletedAt ? (
+                manage ? (
+                  <RestoreTaskButton compact taskId={task.id} />
+                ) : null
+              ) : (
+                <>
+                  <TimerControls
+                    compact
+                    taskId={task.id}
+                    title={task.title}
+                    lockedTo={task.assigneeId && task.assigneeId !== me.id ? (assigneeName ?? "someone else") : null}
+                    done={task.status === "done" || task.status === "review"}
+                    runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
+                    otherTask={
+                      mine && mineTask && mine.taskId !== task.id ? { id: mineTask.id, title: mineTask.title } : null
                     }
                   />
-                );
-              })}
-              {visible.length === 0 && (
-                <tr>
-                  <td colSpan={isWorker ? 9 : 10} className="px-3 py-6 text-center text-muted">
-                    No tasks here.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  {canReviewTask(auth, task) && <ReviewActions taskId={task.id} title={task.title} />}
+                  {
+                    <TaskMenu
+                      canManage={manage}
+                      task={{
+                        id: task.id,
+                        title: task.title,
+                        clientId: task.clientId,
+                        projectId: task.projectId,
+                        assigneeId: task.assigneeId,
+                        dueDate: task.dueDate,
+                        repeat: task.repeat,
+                        repeatLeadDays: task.repeatLeadDays,
+                        repeatShow: task.repeatShow,
+                      }}
+                      clients={clients}
+                      users={users}
+                      projects={projects}
+                    />
+                  }
+                </>
+              ),
+              details: (
+                <div className="space-y-4 text-sm">
+                  {(reviews.get(task.id)?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="mb-1 text-xs text-muted">Review history · {reviews.get(task.id)!.length}</p>
+                      <ReviewHistory reviews={reviews.get(task.id)!} tz={config.timeZone} />
+                    </div>
+                  )}
+
+                  {task.description && (
+                    <div>
+                      <p className="text-xs text-muted">Instructions</p>
+                      <p className="whitespace-pre-wrap">{task.description}</p>
+                    </div>
+                  )}
+
+                  {(checklists.get(task.id)?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="mb-1 text-xs text-muted">
+                        Checklist · {checklists.get(task.id)!.filter((i) => i.done).length} of{" "}
+                        {checklists.get(task.id)!.length} checked
+                      </p>
+                      <InlineChecklist
+                        items={checklists.get(task.id)!}
+                        canTick={!task.deletedAt && task.status !== "done"}
+                      />
+                    </div>
+                  )}
+
+                  {(() => {
+                    const next =
+                      manage && task.repeat && !task.deletedAt
+                        ? nextHidden(upcoming.get(task.seriesId ?? -1), task.dueDate)
+                        : null;
+                    return next && task.repeat ? (
+                      <NextPeriodButton nextTaskId={next.id} label={periodLabel(task.repeat, next.dueDate)} />
+                    ) : null;
+                  })()}
+                </div>
+              ),
+            };
+          })}
+        />
       )}
     </div>
   );

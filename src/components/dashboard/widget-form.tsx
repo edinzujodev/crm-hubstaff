@@ -39,7 +39,8 @@ export function WidgetForm({
   const [title, setTitle] = useState(initialTitle ?? "");
   const set = (key: string, value: unknown) => setValues((prev) => ({ ...prev, [key]: value }));
   const who = String(values.who ?? "me");
-  const needsPerson = def.fields.some((f) => f.kind === "who") && role !== "worker" && who === "person" && !values.userId;
+  const needsPerson =
+    def.fields.some((f) => f.kind === "who") && role !== "worker" && who === "person" && !values.userId;
 
   return (
     <form
@@ -175,12 +176,10 @@ export function WidgetForm({
       {needsPerson && <p className="text-xs text-amber-700 dark:text-amber-400">Pick a person to show.</p>}
 
       <div className="flex justify-end gap-2 pt-1">
-        <Button type="button"  severity="secondary" outlined onClick={onCancel}>
+        <Button type="button" severity="secondary" outlined onClick={onCancel}>
           Cancel
         </Button>
-        <Button  disabled={pending || needsPerson}>
-          {pending ? "Saving…" : submitLabel}
-        </Button>
+        <Button disabled={pending || needsPerson}>{pending ? "Saving…" : submitLabel}</Button>
       </div>
     </form>
   );

@@ -76,7 +76,10 @@ export function Select({
         onChange={(e) => {
           const next = String(e.value ?? "");
           if (value === undefined) setInner(next);
-          onChange?.({ target: { value: next, name }, currentTarget: { value: next, name } } as ChangeEvent<HTMLSelectElement>);
+          onChange?.({
+            target: { value: next, name },
+            currentTarget: { value: next, name },
+          } as ChangeEvent<HTMLSelectElement>);
         }}
       />
       {name && <input type="hidden" name={name} value={current} required={required} />}
@@ -97,7 +100,17 @@ type CheckboxProps = {
 };
 
 /** A PrimeReact checkbox that is used like <input type="checkbox">: name/value for forms, onChange reads e.target.checked. */
-export function Checkbox({ name, value, checked, defaultChecked, disabled, className, title, onChange, ...rest }: CheckboxProps) {
+export function Checkbox({
+  name,
+  value,
+  checked,
+  defaultChecked,
+  disabled,
+  className,
+  title,
+  onChange,
+  ...rest
+}: CheckboxProps) {
   const [inner, setInner] = useState(!!defaultChecked);
   const on = checked !== undefined ? checked : inner;
   return (

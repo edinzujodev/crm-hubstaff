@@ -64,7 +64,7 @@ export function TaskChecklist({
           <div className="flex gap-2">
             <Button
               type="button"
-              
+
               disabled={pending}
               onClick={() =>
                 run(
@@ -75,7 +75,12 @@ export function TaskChecklist({
             >
               Save
             </Button>
-            <Button type="button"  severity="secondary" outlined onClick={() => (setNotes(description ?? ""), setEditingNotes(false))}>
+            <Button
+              type="button"
+              severity="secondary"
+              outlined
+              onClick={() => (setNotes(description ?? ""), setEditingNotes(false))}
+            >
               Cancel
             </Button>
           </div>
@@ -84,24 +89,16 @@ export function TaskChecklist({
         <p className="whitespace-pre-wrap text-sm">
           {description}
           {canEdit && (
-            <button
-              type="button"
-              className="ml-2 cursor-pointer text-xs text-muted underline"
-              onClick={() => setEditingNotes(true)}
-            >
+            <Button type="button" link size="small" className="ml-2 p-0 text-xs" onClick={() => setEditingNotes(true)}>
               Edit
-            </button>
+            </Button>
           )}
         </p>
       ) : (
         canEdit && (
-          <button
-            type="button"
-            className="cursor-pointer text-sm text-muted underline"
-            onClick={() => setEditingNotes(true)}
-          >
+          <Button type="button" link size="small" className="p-0" onClick={() => setEditingNotes(true)}>
             + Add instructions
-          </button>
+          </Button>
         )
       )}
 
@@ -111,7 +108,6 @@ export function TaskChecklist({
             <li key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
               <label className={`flex flex-1 items-center gap-3 ${canTick ? "cursor-pointer" : ""}`}>
                 <Checkbox
-                  
                   checked={item.done}
                   disabled={pending || !canTick}
                   className="h-4 w-4 cursor-pointer"
@@ -121,15 +117,17 @@ export function TaskChecklist({
                 <span className={item.done ? "text-muted line-through" : ""}>{item.text}</span>
               </label>
               {canEdit && (
-                <button
+                <Button
                   type="button"
+                  icon="pi pi-times"
+                  text
+                  rounded
+                  size="small"
+                  severity="danger"
                   aria-label={`Remove ${item.text}`}
-                  className="cursor-pointer text-muted hover:text-red-600"
                   disabled={pending}
                   onClick={() => run(() => removeChecklistItem(item.id))}
-                >
-                  ✕
-                </button>
+                />
               )}
             </li>
           ))}
@@ -154,7 +152,7 @@ export function TaskChecklist({
             placeholder="Add a checklist item"
             className="w-full flex-1 text-foreground"
           />
-          <Button  severity="secondary" outlined disabled={pending || !text.trim()}>
+          <Button severity="secondary" outlined disabled={pending || !text.trim()}>
             Add
           </Button>
         </form>

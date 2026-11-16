@@ -33,13 +33,13 @@ export function ConfirmDelete({
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <Button type="button"  severity="secondary" outlined onClick={onClose} disabled={pending}>
+        <Button type="button" severity="secondary" outlined onClick={onClose} disabled={pending}>
           {error ? "Close" : "Cancel"}
         </Button>
         {!error && (
           <Button
             type="button"
-             severity="danger"
+            severity="danger"
             disabled={pending}
             onClick={() =>
               startTransition(async () => {

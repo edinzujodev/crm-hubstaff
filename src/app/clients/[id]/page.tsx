@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import { Button } from "@/components/ui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -38,7 +39,8 @@ async function ClientDetail({
   const tz = config.timeZone;
   const sp = await searchParams;
   const month = localDay(new Date(), tz).slice(0, 7);
-  const pick = (v: string | string[] | undefined, fallback: string) => (typeof v === "string" && DATE.test(v) ? v : fallback);
+  const pick = (v: string | string[] | undefined, fallback: string) =>
+    typeof v === "string" && DATE.test(v) ? v : fallback;
   let from = pick(sp.from, `${month}-01`);
   let to = pick(sp.to, lastDayOfMonth(month));
   if (from > to) [from, to] = [to, from];
@@ -52,7 +54,11 @@ async function ClientDetail({
       .from(schema.tasks)
       .where(eq(schema.tasks.clientId, id))
       .groupBy(schema.tasks.projectId),
-    db.select().from(schema.clientCompanies).where(eq(schema.clientCompanies.clientId, id)).orderBy(asc(schema.clientCompanies.name)),
+    db
+      .select()
+      .from(schema.clientCompanies)
+      .where(eq(schema.clientCompanies.clientId, id))
+      .orderBy(asc(schema.clientCompanies.name)),
   ]);
   const totalByProject = new Map(taskTotals.map((r) => [r.projectId, r.n]));
   // Per project: its tasks and the time tracked on them in the period.
@@ -71,7 +77,11 @@ async function ClientDetail({
       <header className="card p-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{client.name}</h1>
-          {client.kind === "group" && <span className="badge">Group of {companies.length} {companies.length === 1 ? "company" : "companies"}</span>}
+          {client.kind === "group" && (
+            <span className="badge">
+              Group of {companies.length} {companies.length === 1 ? "company" : "companies"}
+            </span>
+          )}
           <ClientActions
             client={{
               id: client.id,
@@ -111,7 +121,9 @@ async function ClientDetail({
           To
           <DateInput name="to" defaultValue={to} />
         </label>
-        <Button  severity="secondary" outlined>Show</Button>
+        <Button severity="secondary" outlined>
+          Show
+        </Button>
         <Link href={`/reports?client=${id}&from=${from}&to=${to}`} className="btn">
           Full report →
         </Link>
@@ -143,94 +155,70 @@ async function ClientDetail({
           <h2 className="font-semibold">Projects</h2>
           <NewProjectButton clientId={client.id} />
         </div>
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">Project</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 text-right font-medium">Open tasks</th>
-                <th className="px-3 py-2 text-right font-medium">Tracked in period</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {projectRows.map(({ project, tasks, open, tracked }) => (
-                <tr key={project.id} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2">
-                    <Link
-                      href={`/reports?project=${project.id}&from=${from}&to=${to}`}
-                      className="font-medium hover:underline"
-                    >
-                      {project.name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className="badge">{KIND_LABEL[project.kind]}</span>
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">
-                    {open} <span className="text-xs text-muted">of {tasks}</span>
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{tracked ? fmtDuration(tracked) : "—"}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex justify-end">
-                      <ProjectActions id={project.id} name={project.name} kind={project.kind} tasks={tasks} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {projectRows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-muted">
-                    No projects yet. They are created when you add a task.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid
+          empty="No projects yet. They are created when you add a task."
+          headers={[
+            "Project",
+            "Type",
+            { label: "Open tasks", align: "right" },
+            { label: "Tracked in period", align: "right" },
+          ]}
+          rows={projectRows.map(({ project, tasks, open, tracked }) => ({
+            key: project.id,
+            cells: [
+              <Link
+                key="n"
+                href={`/reports?project=${project.id}&from=${from}&to=${to}`}
+                className="font-medium hover:underline"
+              >
+                {project.name}
+              </Link>,
+              <span key="k" className="badge">
+                {KIND_LABEL[project.kind]}
+              </span>,
+              <span key="o" className="font-mono tabular-nums">
+                {open} <span className="text-xs text-muted">of {tasks}</span>
+              </span>,
+              <span key="t" className="font-mono tabular-nums">
+                {tracked ? fmtDuration(tracked) : "—"}
+              </span>,
+            ],
+            actions: <ProjectActions id={project.id} name={project.name} kind={project.kind} tasks={tasks} />,
+          }))}
+        />
       </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold">Tasks</h2>
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">Task</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 text-right font-medium">Tracked in period</th>
-                <th className="px-3 py-2 text-right font-medium">Activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.tasks.map(({ task, tracked, active }) => (
-                <tr key={task.id} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2">
-                    <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">
-                      {task.title}
-                    </Link>
-                    {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className="badge">{statusLabel[task.status]}</span>
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{tracked ? fmtDuration(tracked) : "—"}</td>
-                  <td className="px-3 py-2 text-right text-xs text-muted">
-                    {tracked ? `${Math.round((active / tracked) * 100)}%` : "—"}
-                  </td>
-                </tr>
-              ))}
-              {report.tasks.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-muted">
-                    No tasks for this client yet. Pick {client.name} when adding a task on the Tasks page.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid
+          empty={`No tasks for this client yet. Pick ${client.name} when adding a task on the Tasks page.`}
+          headers={[
+            "Task",
+            "Status",
+            { label: "Tracked in period", align: "right" },
+            { label: "Activity", align: "right" },
+          ]}
+          rows={report.tasks.map(({ task, tracked, active }) => ({
+            key: task.id,
+            cells: [
+              <div key="n">
+                <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">
+                  {task.title}
+                </Link>
+                {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
+              </div>,
+              <span key="s" className="badge">
+                {statusLabel[task.status]}
+              </span>,
+              <span key="t" className="font-mono tabular-nums">
+                {tracked ? fmtDuration(tracked) : "—"}
+              </span>,
+              <span key="a" className="text-xs text-muted">
+                {tracked ? `${Math.round((active / tracked) * 100)}%` : "—"}
+              </span>,
+            ],
+          }))}
+        />
       </section>
 
       <section className="grid gap-6 md:grid-cols-2">
@@ -249,26 +237,23 @@ async function ClientDetail({
 
 function TotalsTable({ rows }: { rows: { label: string; tracked: number; active: number }[] }) {
   return (
-    <div className="card">
-      <table className="w-full text-sm">
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.label} className="border-b border-border last:border-0">
-              <td className="px-3 py-2">{r.label}</td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums">{fmtDuration(r.tracked)}</td>
-              <td className="px-3 py-2 text-right text-xs text-muted">
-                {r.tracked ? Math.round((r.active / r.tracked) * 100) : 0}% active
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 && (
-            <tr>
-              <td className="px-3 py-4 text-center text-muted">No tracked time in this period.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <DataGrid
+      noHeader
+      empty="No tracked time in this period."
+      headers={["", { label: "", align: "right" }, { label: "", align: "right" }]}
+      rows={rows.map((r) => ({
+        key: r.label,
+        cells: [
+          r.label,
+          <span key="t" className="font-mono tabular-nums">
+            {fmtDuration(r.tracked)}
+          </span>,
+          <span key="a" className="text-xs text-muted">
+            {r.tracked ? Math.round((r.active / r.tracked) * 100) : 0}% active
+          </span>,
+        ],
+      }))}
+    />
   );
 }
 

@@ -21,7 +21,6 @@ export function InlineChecklist({
           <li key={item.id} className="text-sm">
             <label className={`flex items-center gap-2 ${canTick ? "cursor-pointer" : ""}`}>
               <Checkbox
-                
                 checked={item.done}
                 disabled={pending || !canTick}
                 className="h-4 w-4 cursor-pointer"

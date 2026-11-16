@@ -3,6 +3,7 @@
 import { Button, InputText, InputTextarea } from "@/components/ui";
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { createTemplate, deleteTemplate, updateTemplate } from "@/app/actions";
+import { DataGrid } from "@/components/data-grid";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Modal } from "@/components/modal";
 import { RowMenu } from "@/components/row-menu";
@@ -10,7 +11,9 @@ import type { TemplateOption } from "@/lib/templates";
 
 /** The templates list: instructions plus a checklist that a task can start from. Add, edit and delete. */
 export function TemplateManager({ templates }: { templates: TemplateOption[] }) {
-  const [modal, setModal] = useState<{ kind: "new" } | { kind: "edit" | "delete"; template: TemplateOption } | null>(null);
+  const [modal, setModal] = useState<{ kind: "new" } | { kind: "edit" | "delete"; template: TemplateOption } | null>(
+    null,
+  );
   const close = useCallback(() => setModal(null), []);
 
   return (
@@ -20,50 +23,38 @@ export function TemplateManager({ templates }: { templates: TemplateOption[] }) 
           A template is a description of what needs to be done plus a checklist. Pick one when you add a task, or build
           the checklist right inside the task.
         </p>
-        <Button type="button"  onClick={() => setModal({ kind: "new" })}>
+        <Button type="button" onClick={() => setModal({ kind: "new" })}>
           + New template
         </Button>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">Template</th>
-              <th className="px-3 py-2 font-medium">Instructions</th>
-              <th className="px-3 py-2 text-right font-medium">Checklist items</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map((t) => (
-              <tr key={t.id} className="border-b border-border align-top last:border-0">
-                <td className="px-3 py-2 font-medium">{t.name}</td>
-                <td className="max-w-md px-3 py-2 text-muted">{t.description ? t.description.slice(0, 140) : "—"}</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">{t.items.length}</td>
-                <td className="px-3 py-2">
-                  <div className="flex justify-end">
-                    <RowMenu
-                      label={`Actions for ${t.name}`}
-                      items={[
-                        { label: "Edit", onSelect: () => setModal({ kind: "edit", template: t }) },
-                        { label: "Delete", danger: true, onSelect: () => setModal({ kind: "delete", template: t }) },
-                      ]}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {templates.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-muted">
-                  No templates yet. Create one for work you do again and again.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        empty="No templates yet. Create one for work you do again and again."
+        headers={["Template", "Instructions", { label: "Checklist items", align: "right" }]}
+        rows={templates.map((t) => ({
+          key: t.id,
+          cells: [
+            <span key="n" className="font-medium">
+              {t.name}
+            </span>,
+            <span key="d" className="text-muted">
+              {t.description ? t.description.slice(0, 140) : "—"}
+            </span>,
+            <span key="i" className="font-mono tabular-nums">
+              {t.items.length}
+            </span>,
+          ],
+          actions: (
+            <RowMenu
+              label={`Actions for ${t.name}`}
+              items={[
+                { label: "Edit", onSelect: () => setModal({ kind: "edit", template: t }) },
+                { label: "Delete", danger: true, onSelect: () => setModal({ kind: "delete", template: t }) },
+              ]}
+            />
+          ),
+        }))}
+      />
 
       {modal?.kind === "new" && (
         <Modal title="New template" wide onClose={close}>
@@ -121,7 +112,9 @@ function TemplateForm({
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Instructions
-        <InputTextarea autoResize={false} style={{ width: "100%" }}
+        <InputTextarea
+          autoResize={false}
+          style={{ width: "100%" }}
           name="description"
           rows={3}
           defaultValue={template?.description ?? ""}
@@ -131,7 +124,9 @@ function TemplateForm({
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Checklist, one item per line
-        <InputTextarea autoResize={false} style={{ width: "100%" }}
+        <InputTextarea
+          autoResize={false}
+          style={{ width: "100%" }}
           name="items"
           rows={6}
           defaultValue={template?.items.join("\n") ?? ""}
@@ -140,12 +135,10 @@ function TemplateForm({
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button"  severity="secondary" outlined onClick={onDone}>
+        <Button type="button" severity="secondary" outlined onClick={onDone}>
           Cancel
         </Button>
-        <Button  disabled={pending}>
-          {pending ? "Saving…" : submitLabel}
-        </Button>
+        <Button disabled={pending}>{pending ? "Saving…" : submitLabel}</Button>
       </div>
     </form>
   );
@@ -164,5 +157,14 @@ function EditTemplate({ template, onDone }: { template: TemplateOption; onDone: 
   useEffect(() => {
     if (state?.ok) onDone();
   }, [state, onDone]);
-  return <TemplateForm action={action} pending={pending} state={state} template={template} submitLabel="Save" onDone={onDone} />;
+  return (
+    <TemplateForm
+      action={action}
+      pending={pending}
+      state={state}
+      template={template}
+      submitLabel="Save"
+      onDone={onDone}
+    />
+  );
 }

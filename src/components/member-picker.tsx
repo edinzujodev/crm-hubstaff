@@ -40,7 +40,7 @@ export function MemberPicker({ users, selected = [] }: { users: PickerUser[]; se
               q && !u.name.toLowerCase().includes(q) ? "hidden" : ""
             }`}
           >
-            <Checkbox  name="memberIds" value={u.id} checked={checked.has(u.id)} onChange={() => toggle(u.id)} />
+            <Checkbox name="memberIds" value={u.id} checked={checked.has(u.id)} onChange={() => toggle(u.id)} />
             <span className="flex-1">{u.name}</span>
             {u.teamName && checked.has(u.id) === false && <span className="text-xs text-muted">in {u.teamName}</span>}
           </label>

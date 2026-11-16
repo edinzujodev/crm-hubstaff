@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -80,60 +81,47 @@ async function LeadList({ filter }: { filter: Promise<string | undefined> }) {
         ))}
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">Lead</th>
-              <th className="px-3 py-2 font-medium">Contact</th>
-              <th className="px-3 py-2 font-medium">Source</th>
-              <th className="px-3 py-2 font-medium">Owner</th>
-              <th className="px-3 py-2 text-right font-medium">Est. / month</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium" />
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(({ lead, ownerName }) => (
-              <tr key={lead.id} className="border-b border-border last:border-0">
-                <td className="px-3 py-2">
-                  <Link href={`/leads/${lead.id}`} className="font-medium hover:underline">
-                    {lead.name}
-                  </Link>
-                </td>
-                <td className="px-3 py-2 text-muted">{[lead.contactName, lead.email].filter(Boolean).join(" · ") || "—"}</td>
-                <td className="px-3 py-2 text-muted">{lead.source ?? "—"}</td>
-                <td className="px-3 py-2 text-muted">{ownerName ?? "—"}</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
-                  {lead.expectedMonthlyValue != null ? money.format(lead.expectedMonthlyValue) : "—"}
-                </td>
-                <td className="px-3 py-2">
-                  {lead.status === "won" ? (
-                    <Link href={`/clients/${lead.clientId}`} className="badge border-emerald-500 text-emerald-700 dark:text-emerald-400">
-                      Client →
-                    </Link>
-                  ) : (
-                    <LeadStatusSelect leadId={lead.id} status={lead.status} />
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center justify-end gap-2">
-                    {lead.status !== "won" && <ConvertLeadButton compact leadId={lead.id} name={lead.name} />}
-                    <LeadMenu lead={lead} users={users} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {visible.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-muted">
-                  No leads here.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        empty="No leads here."
+        headers={["Lead", "Contact", "Source", "Owner", { label: "Est. / month", align: "right" }, "Status"]}
+        rows={visible.map(({ lead, ownerName }) => ({
+          key: lead.id,
+          cells: [
+            <Link key="l" href={`/leads/${lead.id}`} className="font-medium hover:underline">
+              {lead.name}
+            </Link>,
+            <span key="c" className="text-muted">
+              {[lead.contactName, lead.email].filter(Boolean).join(" · ") || "—"}
+            </span>,
+            <span key="s" className="text-muted">
+              {lead.source ?? "—"}
+            </span>,
+            <span key="o" className="text-muted">
+              {ownerName ?? "—"}
+            </span>,
+            <span key="m" className="font-mono tabular-nums">
+              {lead.expectedMonthlyValue != null ? money.format(lead.expectedMonthlyValue) : "—"}
+            </span>,
+            lead.status === "won" ? (
+              <Link
+                key="st"
+                href={`/clients/${lead.clientId}`}
+                className="badge border-emerald-500 text-emerald-700 dark:text-emerald-400"
+              >
+                Client →
+              </Link>
+            ) : (
+              <LeadStatusSelect key="st" leadId={lead.id} status={lead.status} />
+            ),
+          ],
+          actions: (
+            <>
+              {lead.status !== "won" && <ConvertLeadButton compact leadId={lead.id} name={lead.name} />}
+              <LeadMenu lead={lead} users={users} />
+            </>
+          ),
+        }))}
+      />
     </div>
   );
 }

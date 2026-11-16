@@ -13,9 +13,7 @@ export function AddMemberButton() {
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <Button  onClick={() => setOpen(true)}>
-        + Add member
-      </Button>
+      <Button onClick={() => setOpen(true)}>+ Add member</Button>
       {open && (
         <Modal title="Add a member" onClose={close}>
           <AddMemberForm onDone={close} onCancel={close} />
@@ -31,7 +29,7 @@ export function EditTeamButton({ team, users }: { team: TeamEditData; users: Pic
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <Button  severity="secondary" outlined onClick={() => setOpen(true)}>
+      <Button severity="secondary" outlined onClick={() => setOpen(true)}>
         Edit team
       </Button>
       {open && (
@@ -48,9 +46,7 @@ export function NewTeamButton({ users }: { users: PickerUser[] }) {
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <Button  onClick={() => setOpen(true)}>
-        + New team
-      </Button>
+      <Button onClick={() => setOpen(true)}>+ New team</Button>
       {open && (
         <Modal title="New team" onClose={close}>
           <NewTeamForm users={users} onDone={close} onCancel={close} />

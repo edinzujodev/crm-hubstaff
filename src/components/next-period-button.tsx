@@ -5,14 +5,25 @@ import { useState, useTransition } from "react";
 import { showTaskNow } from "@/app/actions";
 
 /** On a repeating task: creates the next period (e.g. "February") now, without finishing this one first. */
-export function NextPeriodButton({ nextTaskId, label, compact }: { nextTaskId: number; label: string; compact?: boolean }) {
+export function NextPeriodButton({
+  nextTaskId,
+  label,
+  compact,
+}: {
+  nextTaskId: number;
+  label: string;
+  compact?: boolean;
+}) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
     <span className="inline-flex items-center gap-2">
       <Button
         type="button"
-        className={`${compact ?"text-xs":""}`} severity="secondary" outlined size="small"
+        className={`${compact ? "text-xs" : ""}`}
+        severity="secondary"
+        outlined
+        size="small"
         disabled={pending}
         onClick={() =>
           start(async () => {

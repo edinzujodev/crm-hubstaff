@@ -41,7 +41,10 @@ export function NewClientForm() {
         Phone
         <InputText name="phone" className="w-full text-foreground" />
       </label>
-      <label className="flex flex-col gap-1 text-xs text-muted" title="Optional. Overrides HUBSTAFF_PROJECT_ID for this client's tasks.">
+      <label
+        className="flex flex-col gap-1 text-xs text-muted"
+        title="Optional. Overrides HUBSTAFF_PROJECT_ID for this client's tasks."
+      >
         Hubstaff project id
         <InputText name="hubstaffProjectId" inputMode="numeric" className="w-36 font-mono text-foreground" />
       </label>
@@ -49,9 +52,7 @@ export function NewClientForm() {
         Notes
         <InputText name="notes" className="w-full text-foreground" />
       </label>
-      <Button  disabled={pending}>
-        {pending ? "Adding…" : "Add client"}
-      </Button>
+      <Button disabled={pending}>{pending ? "Adding…" : "Add client"}</Button>
       {state && !state.ok && <p className="w-full text-sm text-red-600">{state.error}</p>}
     </form>
   );

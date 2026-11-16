@@ -1,6 +1,12 @@
 import { fmtDateTime } from "@/lib/format";
 
-export type ReviewEntry = { id: number; result: "approved" | "rejected"; note: string | null; reviewerName: string | null; at: Date };
+export type ReviewEntry = {
+  id: number;
+  result: "approved" | "rejected";
+  note: string | null;
+  reviewerName: string | null;
+  at: Date;
+};
 
 /** Every review a task went through, newest first: who checked it, when, and why when it was not OK. */
 export function ReviewHistory({ reviews, tz }: { reviews: ReviewEntry[]; tz: string }) {

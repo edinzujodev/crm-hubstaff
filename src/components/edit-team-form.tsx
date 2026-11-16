@@ -8,15 +8,7 @@ import { MemberPicker, type PickerUser } from "@/components/member-picker";
 export type TeamEditData = { id: number; name: string; leaderId: number | null; memberIds: number[] };
 
 /** Rename a team, change its leader and add or remove its members. */
-export function EditTeamForm({
-  team,
-  users,
-  onDone,
-}: {
-  team: TeamEditData;
-  users: PickerUser[];
-  onDone: () => void;
-}) {
+export function EditTeamForm({ team, users, onDone }: { team: TeamEditData; users: PickerUser[]; onDone: () => void }) {
   const [state, action, pending] = useActionState(updateTeam.bind(null, team.id), null);
   useEffect(() => {
     if (state?.ok) onDone();
@@ -43,12 +35,10 @@ export function EditTeamForm({
       <MemberPicker users={users} selected={team.memberIds} />
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">
-        <Button type="button"  severity="secondary" outlined onClick={onDone}>
+        <Button type="button" severity="secondary" outlined onClick={onDone}>
           Cancel
         </Button>
-        <Button  disabled={pending}>
-          {pending ? "Saving…" : "Save"}
-        </Button>
+        <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
       </div>
     </form>
   );

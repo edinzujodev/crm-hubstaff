@@ -55,9 +55,7 @@ export function NewLeadForm({ users }: { users: Option[] }) {
           ))}
         </Select>
       </label>
-      <Button  disabled={pending}>
-        {pending ? "Adding…" : "Add lead"}
-      </Button>
+      <Button disabled={pending}>{pending ? "Adding…" : "Add lead"}</Button>
       {state && !state.ok && <p className="w-full text-sm text-red-600">{state.error}</p>}
     </form>
   );

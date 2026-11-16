@@ -106,16 +106,21 @@ function EditClient({ client, onDone }: { client: ClientFields; onDone: () => vo
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
         Notes
-        <InputTextarea autoResize={false} style={{ width: "100%" }} name="notes" rows={3} defaultValue={client.notes ?? ""} className="text-foreground" />
+        <InputTextarea
+          autoResize={false}
+          style={{ width: "100%" }}
+          name="notes"
+          rows={3}
+          defaultValue={client.notes ?? ""}
+          className="text-foreground"
+        />
       </label>
       {state && !state.ok && <p className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
       <div className="flex justify-end gap-2 sm:col-span-2">
-        <Button type="button"  severity="secondary" outlined onClick={onDone}>
+        <Button type="button" severity="secondary" outlined onClick={onDone}>
           Cancel
         </Button>
-        <Button  disabled={pending}>
-          {pending ? "Saving…" : "Save"}
-        </Button>
+        <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
       </div>
     </form>
   );

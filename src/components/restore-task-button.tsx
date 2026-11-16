@@ -8,13 +8,16 @@ export function RestoreTaskButton({ taskId, compact }: { taskId: number; compact
   const [pending, startTransition] = useTransition();
   return (
     <Button
-      className={`${compact ?"py-1":""}`} severity="secondary" outlined
+      className={`${compact ? "py-1" : ""}`}
+      severity="secondary"
+      outlined
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
           const res = await restoreTask(taskId);
           if (!res.ok) alert(res.error);
-          else if (res.data.hubstaffError) alert(`Restored in the CRM, but Hubstaff could not be updated: ${res.data.hubstaffError}`);
+          else if (res.data.hubstaffError)
+            alert(`Restored in the CRM, but Hubstaff could not be updated: ${res.data.hubstaffError}`);
         })
       }
     >

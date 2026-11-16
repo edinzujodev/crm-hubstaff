@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import { Button, Select } from "@/components/ui";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -23,43 +24,36 @@ function Table({ title, rows, firstColumn }: { title: string; rows: Row[]; first
   return (
     <section className="space-y-2">
       <h2 className="font-semibold">{title}</h2>
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">{firstColumn}</th>
-              <th className="px-3 py-2 text-right font-medium">Tracked</th>
-              <th className="px-3 py-2 text-right font-medium">Billable</th>
-              <th className="px-3 py-2 text-right font-medium">Activity</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.key} className="border-b border-border last:border-0">
-                <td className="px-3 py-2">
-                  {r.href ? (
-                    <Link href={r.href} className="hover:underline">
-                      {r.label}
-                    </Link>
-                  ) : (
-                    r.label
-                  )}
-                </td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">{fmtDuration(r.tracked)}</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums text-muted">{fmtDuration(r.billable)}</td>
-                <td className="px-3 py-2 text-right text-xs text-muted">{pct(r.tracked, r.active)}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-3 py-4 text-center text-muted">
-                  No tracked time in this range.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        empty="No tracked time in this range."
+        headers={[
+          firstColumn,
+          { label: "Tracked", align: "right" },
+          { label: "Billable", align: "right" },
+          { label: "Activity", align: "right" },
+        ]}
+        rows={rows.map((r) => ({
+          key: r.key,
+          cells: [
+            r.href ? (
+              <Link key="l" href={r.href} className="hover:underline">
+                {r.label}
+              </Link>
+            ) : (
+              r.label
+            ),
+            <span key="t" className="font-mono tabular-nums">
+              {fmtDuration(r.tracked)}
+            </span>,
+            <span key="b" className="font-mono tabular-nums text-muted">
+              {fmtDuration(r.billable)}
+            </span>,
+            <span key="a" className="text-xs text-muted">
+              {pct(r.tracked, r.active)}
+            </span>,
+          ],
+        }))}
+      />
     </section>
   );
 }
@@ -93,7 +87,10 @@ ${longDay(d.day)}`,
         <section className="card p-4">
           <h2 className="font-semibold">Hours per day</h2>
           <p className="mb-2 text-xs text-muted">Time tracked in Hubstaff each day. The tallest day is labelled.</p>
-          <ColumnChart data={columns} ariaLabel={`Hours tracked per day from ${from} to ${to}. The same numbers are in the By day table below.`} />
+          <ColumnChart
+            data={columns}
+            ariaLabel={`Hours tracked per day from ${from} to ${to}. The same numbers are in the By day table below.`}
+          />
         </section>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -126,7 +123,10 @@ ${longDay(d.day)}`,
           <p className="mb-2 text-xs text-muted">
             Share of tracked time with keyboard or mouse activity. Days with no tracked time leave a gap.
           </p>
-          <LineChart data={activity} ariaLabel={`Activity percentage per day from ${from} to ${to}. The same numbers are in the By day table below.`} />
+          <LineChart
+            data={activity}
+            ariaLabel={`Activity percentage per day from ${from} to ${to}. The same numbers are in the By day table below.`}
+          />
         </section>
       </div>
     </ChartTip>
@@ -142,13 +142,19 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
   const filter = auth.role === "leader" ? { ...parsed, teamId: auth.ledTeam!.id } : parsed;
   const [report, clients, allProjects, allUsers, allTeams] = await Promise.all([
     getTimeReport(filter),
-    db.select({ id: schema.clients.id, name: schema.clients.name }).from(schema.clients).orderBy(asc(schema.clients.name)),
+    db
+      .select({ id: schema.clients.id, name: schema.clients.name })
+      .from(schema.clients)
+      .orderBy(asc(schema.clients.name)),
     db
       .select({ id: schema.projects.id, name: schema.projects.name, clientName: schema.clients.name })
       .from(schema.projects)
       .innerJoin(schema.clients, eq(schema.projects.clientId, schema.clients.id))
       .orderBy(asc(schema.clients.name), asc(schema.projects.name)),
-    db.select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId }).from(schema.users).orderBy(asc(schema.users.name)),
+    db
+      .select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId })
+      .from(schema.users)
+      .orderBy(asc(schema.users.name)),
     db.select({ id: schema.teams.id, name: schema.teams.name }).from(schema.teams).orderBy(asc(schema.teams.name)),
   ]);
   const users = auth.role === "leader" ? allUsers.filter((u) => u.teamId === auth.ledTeam!.id) : allUsers;
@@ -210,7 +216,7 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
             ))}
           </Select>
         </label>
-        <Button >Show</Button>
+        <Button>Show</Button>
       </form>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -264,42 +270,33 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
       {report.people.length > 1 && report.byClient.length > 0 && (
         <section className="space-y-2">
           <h2 className="font-semibold">Client by person</h2>
-          <div className="card overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border text-left text-xs text-muted">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Client</th>
-                  {report.people.map((p) => (
-                    <th key={p.key} className="px-3 py-2 text-right font-medium">
-                      {p.label}
-                    </th>
-                  ))}
-                  <th className="px-3 py-2 text-right font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.matrix.map((row) => (
-                  <tr key={row.key} className="border-b border-border last:border-0">
-                    <td className="px-3 py-2">
-                      {row.href ? (
-                        <Link href={row.href} className="hover:underline">
-                          {row.label}
-                        </Link>
-                      ) : (
-                        row.label
-                      )}
-                    </td>
-                    {row.cells.map((c, i) => (
-                      <td key={i} className="px-3 py-2 text-right font-mono tabular-nums text-muted">
-                        {c.tracked ? fmtDuration(c.tracked) : "—"}
-                      </td>
-                    ))}
-                    <td className="px-3 py-2 text-right font-mono tabular-nums">{fmtDuration(row.tracked)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataGrid
+            headers={[
+              "Client",
+              ...report.people.map((p) => ({ label: p.label, align: "right" as const })),
+              { label: "Total", align: "right" },
+            ]}
+            rows={report.matrix.map((row) => ({
+              key: row.key,
+              cells: [
+                row.href ? (
+                  <Link key="l" href={row.href} className="hover:underline">
+                    {row.label}
+                  </Link>
+                ) : (
+                  row.label
+                ),
+                ...row.cells.map((c, i) => (
+                  <span key={i} className="font-mono tabular-nums text-muted">
+                    {c.tracked ? fmtDuration(c.tracked) : "—"}
+                  </span>
+                )),
+                <span key="total" className="font-mono tabular-nums">
+                  {fmtDuration(row.tracked)}
+                </span>,
+              ],
+            }))}
+          />
         </section>
       )}
 

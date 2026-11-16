@@ -32,7 +32,13 @@ export function SeriesMenu({
         items={[
           { label: "Edit", onSelect: () => setEditing(true) },
           ...(task.repeat
-            ? [{ label: "Stop repeating", danger: true, onSelect: () => startTransition(async () => void (await stopRepeating(task.id))) }]
+            ? [
+                {
+                  label: "Stop repeating",
+                  danger: true,
+                  onSelect: () => startTransition(async () => void (await stopRepeating(task.id))),
+                },
+              ]
             : []),
         ]}
       />

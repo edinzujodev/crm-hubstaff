@@ -30,13 +30,11 @@ export function AddMemberForm({ onDone, onCancel }: { onDone?: () => void; onCan
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">
         {onCancel && (
-          <Button type="button"  severity="secondary" outlined onClick={onCancel}>
+          <Button type="button" severity="secondary" outlined onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button  disabled={pending}>
-          {pending ? "Adding…" : "Add member"}
-        </Button>
+        <Button disabled={pending}>{pending ? "Adding…" : "Add member"}</Button>
       </div>
     </form>
   );

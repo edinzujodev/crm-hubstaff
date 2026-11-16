@@ -33,7 +33,13 @@ export function NewTaskForm({
       </Button>
       {open && (
         <Modal title="New task" wide onClose={() => setOpen(false)}>
-          <TaskForm clients={clients} users={users} projects={projects} templates={templates} onDone={() => setOpen(false)} />
+          <TaskForm
+            clients={clients}
+            users={users}
+            projects={projects}
+            templates={templates}
+            onDone={() => setOpen(false)}
+          />
         </Modal>
       )}
     </>
@@ -160,7 +166,7 @@ function TaskForm({
               disabled={value !== "" && !due}
               onClick={() => chooseRepeat(value)}
               aria-pressed={repeat === value}
-              className={`${repeat === value ?"":""}`}
+              className={`${repeat === value ? "" : ""}`}
             >
               {label}
             </Button>
@@ -170,8 +176,8 @@ function TaskForm({
         {repeat && (
           <>
             <p className="text-xs text-muted">
-              The next one is created automatically, due one {repeat === "weekly" ? "week" : "month"} later, and shows up
-              when its time comes, even if this one is not finished.
+              The next one is created automatically, due one {repeat === "weekly" ? "week" : "month"} later, and shows
+              up when its time comes, even if this one is not finished.
             </p>
             <RepeatShowFields repeat={repeat} show={show} lead={lead} onShow={setShow} onLead={setLead} />
           </>
@@ -201,7 +207,9 @@ function TaskForm({
         <input type="hidden" name="templateId" value={templateId} />
         <label className="flex flex-col gap-1 text-xs text-muted">
           Instructions
-          <InputTextarea autoResize={false} style={{ width: "100%" }}
+          <InputTextarea
+            autoResize={false}
+            style={{ width: "100%" }}
             name="description"
             rows={2}
             value={notes}
@@ -212,7 +220,9 @@ function TaskForm({
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Checklist, one item per line
-          <InputTextarea autoResize={false} style={{ width: "100%" }}
+          <InputTextarea
+            autoResize={false}
+            style={{ width: "100%" }}
             name="checklist"
             rows={4}
             value={checklist}
@@ -221,7 +231,9 @@ function TaskForm({
             className="text-foreground"
           />
         </label>
-        <p className="text-xs text-muted">The task can be finished without ticking every item; finishing ticks what is left.</p>
+        <p className="text-xs text-muted">
+          The task can be finished without ticking every item; finishing ticks what is left.
+        </p>
       </fieldset>
 
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
@@ -231,14 +243,10 @@ function TaskForm({
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <Button type="button"  severity="secondary" outlined onClick={onDone}>
+        <Button type="button" severity="secondary" outlined onClick={onDone}>
           {hubstaffWarning ? "Close" : "Cancel"}
         </Button>
-        {!hubstaffWarning && (
-          <Button  disabled={pending}>
-            {pending ? "Adding…" : "Add task"}
-          </Button>
-        )}
+        {!hubstaffWarning && <Button disabled={pending}>{pending ? "Adding…" : "Add task"}</Button>}
       </div>
     </form>
   );

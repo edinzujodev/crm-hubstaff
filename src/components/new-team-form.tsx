@@ -41,12 +41,10 @@ export function NewTeamForm({
       <MemberPicker users={users} />
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">
-        <Button type="button"  severity="secondary" outlined onClick={onCancel}>
+        <Button type="button" severity="secondary" outlined onClick={onCancel}>
           Cancel
         </Button>
-        <Button  disabled={pending}>
-          {pending ? "Adding…" : "Add team"}
-        </Button>
+        <Button disabled={pending}>{pending ? "Adding…" : "Add team"}</Button>
       </div>
     </form>
   );

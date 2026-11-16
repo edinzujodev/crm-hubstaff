@@ -3,6 +3,7 @@
 import { Button, InputText, InputTextarea } from "@/components/ui";
 import { useActionState, useEffect, useState } from "react";
 import { createCompany, deleteCompany, updateCompany } from "@/app/actions";
+import { DataGrid } from "@/components/data-grid";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Modal } from "@/components/modal";
 import { RowMenu } from "@/components/row-menu";
@@ -18,47 +19,34 @@ export function CompanyList({ clientId, companies }: { clientId: number; compani
     <section className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold">Companies</h2>
-        <Button type="button"  severity="secondary" outlined onClick={() => setModal({ kind: "add" })}>
+        <Button type="button" severity="secondary" outlined onClick={() => setModal({ kind: "add" })}>
           + Add company
         </Button>
       </div>
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">Company</th>
-              <th className="px-3 py-2 font-medium">Notes</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((c) => (
-              <tr key={c.id} className="border-b border-border last:border-0">
-                <td className="px-3 py-2 font-medium">{c.name}</td>
-                <td className="px-3 py-2 text-muted">{c.notes ?? "—"}</td>
-                <td className="px-3 py-2">
-                  <div className="flex justify-end">
-                    <RowMenu
-                      label={`Actions for ${c.name}`}
-                      items={[
-                        { label: "Edit", onSelect: () => setModal({ kind: "edit", company: c }) },
-                        { label: "Delete", danger: true, onSelect: () => setModal({ kind: "delete", company: c }) },
-                      ]}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {companies.length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-3 py-6 text-center text-muted">
-                  No companies yet. Add the companies this group covers.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        empty="No companies yet. Add the companies this group covers."
+        headers={["Company", "Notes"]}
+        rows={companies.map((c) => ({
+          key: c.id,
+          cells: [
+            <span key="n" className="font-medium">
+              {c.name}
+            </span>,
+            <span key="o" className="text-muted">
+              {c.notes ?? "—"}
+            </span>,
+          ],
+          actions: (
+            <RowMenu
+              label={`Actions for ${c.name}`}
+              items={[
+                { label: "Edit", onSelect: () => setModal({ kind: "edit", company: c }) },
+                { label: "Delete", danger: true, onSelect: () => setModal({ kind: "delete", company: c }) },
+              ]}
+            />
+          ),
+        }))}
+      />
 
       {modal?.kind === "add" && (
         <Modal title="Add company" onClose={close}>
@@ -103,20 +91,32 @@ function CompanyForm({
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Name
-        <InputText name="name" required autoFocus maxLength={120} defaultValue={company?.name ?? ""} className="w-full text-foreground" />
+        <InputText
+          name="name"
+          required
+          autoFocus
+          maxLength={120}
+          defaultValue={company?.name ?? ""}
+          className="w-full text-foreground"
+        />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Notes
-        <InputTextarea autoResize={false} style={{ width: "100%" }} name="notes" rows={2} defaultValue={company?.notes ?? ""} className="text-foreground" />
+        <InputTextarea
+          autoResize={false}
+          style={{ width: "100%" }}
+          name="notes"
+          rows={2}
+          defaultValue={company?.notes ?? ""}
+          className="text-foreground"
+        />
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button"  severity="secondary" outlined onClick={onDone}>
+        <Button type="button" severity="secondary" outlined onClick={onDone}>
           Cancel
         </Button>
-        <Button  disabled={pending}>
-          {pending ? "Saving…" : submitLabel}
-        </Button>
+        <Button disabled={pending}>{pending ? "Saving…" : submitLabel}</Button>
       </div>
     </form>
   );
@@ -135,5 +135,7 @@ function EditCompany({ company, onDone }: { company: Company; onDone: () => void
   useEffect(() => {
     if (state?.ok) onDone();
   }, [state, onDone]);
-  return <CompanyForm action={action} pending={pending} state={state} company={company} submitLabel="Save" onDone={onDone} />;
+  return (
+    <CompanyForm action={action} pending={pending} state={state} company={company} submitLabel="Save" onDone={onDone} />
+  );
 }

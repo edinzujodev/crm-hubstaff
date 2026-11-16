@@ -51,7 +51,11 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
           tone: "warn",
           text: `Session started. The Hubstaff helper isn't running, so start task #${res.data.hubstaffTaskId} in the Hubstaff app.`,
         });
-      else setMessage({ tone: "warn", text: `Session started, but the helper said: ${h.detail ?? "error"}. Start the task in Hubstaff.` });
+      else
+        setMessage({
+          tone: "warn",
+          text: `Session started, but the helper said: ${h.detail ?? "error"}. Start the task in Hubstaff.`,
+        });
     });
 
   const onFinish = () =>
@@ -60,7 +64,9 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
       const h = await helper.stop();
       const res = await finishTask();
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
-      const parts = [h.ok ? "Hubstaff timer stopped." : "Session stopped. Stop the timer in the Hubstaff app if it's still running."];
+      const parts = [
+        h.ok ? "Hubstaff timer stopped." : "Session stopped. Stop the timer in the Hubstaff app if it's still running.",
+      ];
       if (res.data.syncError) parts.push(`Sync failed: ${res.data.syncError}`);
       else parts.push("Hours synced; Hubstaff can take up to ~20 min to report the last minutes.");
       setMessage({ tone: h.ok && !res.data.syncError ? "ok" : "warn", text: parts.join(" ") });
@@ -93,19 +99,22 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
     <div className={compact ? "flex items-center gap-2" : "space-y-2"}>
       <div className="flex items-center gap-2">
         {runningSince && (
-          <span suppressHydrationWarning className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400">
+          <span
+            suppressHydrationWarning
+            className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400"
+          >
             ● {elapsed(runningSince)}
           </span>
         )}
         {runningSince ? (
-          <Button onClick={onFinish} disabled={pending}  severity="danger">
+          <Button onClick={onFinish} disabled={pending} severity="danger">
             Stop
           </Button>
         ) : (
           <Button
             onClick={onStart}
             disabled={pending || done || !!lockedTo}
-            
+
             title={
               lockedTo
                 ? `Assigned to ${lockedTo}. Only they can start it. A team leader can reassign it.`
@@ -117,7 +126,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
             {otherTask ? "Switch here" : "Start"}
           </Button>
         )}
-        <Button onClick={onFinishTask} disabled={pending || done}  severity="secondary" outlined>
+        <Button onClick={onFinishTask} disabled={pending || done} severity="secondary" outlined>
           Finish
         </Button>
       </div>

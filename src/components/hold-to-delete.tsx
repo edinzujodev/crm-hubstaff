@@ -65,7 +65,9 @@ export function HoldToDelete({
       onKeyUp={cancel}
       onBlur={cancel}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative select-none overflow-hidden text-red-600 touch-none" severity="secondary" outlined
+      className="relative select-none overflow-hidden text-red-600 touch-none"
+      severity="secondary"
+      outlined
     >
       <span
         aria-hidden

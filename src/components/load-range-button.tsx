@@ -12,7 +12,8 @@ export function LoadRangeButton({ from, to }: { from: string; to: string }) {
     <span className="flex items-center gap-2">
       <Button
         type="button"
-         severity="secondary" outlined
+        severity="secondary"
+        outlined
         disabled={pending}
         title="Reads this date range from Hubstaff and stores it. Use it for days before the CRM was syncing."
         onClick={() =>

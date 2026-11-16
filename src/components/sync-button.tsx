@@ -51,7 +51,7 @@ export function SyncButton() {
           Sync failed: {error}
         </span>
       )}
-      <Button  severity="secondary" outlined disabled={pending} onClick={() => void sync(true)}>
+      <Button severity="secondary" outlined disabled={pending} onClick={() => void sync(true)}>
         {pending ? "Syncing…" : "Sync Hubstaff"}
       </Button>
     </span>

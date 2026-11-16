@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
 import { connection } from "next/server";
 import { eq, isNull } from "drizzle-orm";
@@ -27,11 +28,14 @@ function Note({ children }: { children: React.ReactNode }) {
 }
 
 function Narrowed() {
-  return <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">Narrowed to the data you are allowed to see.</p>;
+  return (
+    <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">Narrowed to the data you are allowed to see.</p>
+  );
 }
 
 function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "bad" | "warn" }) {
-  const color = tone === "bad" ? "text-red-700 dark:text-red-400" : tone === "warn" ? "text-amber-700 dark:text-amber-400" : "";
+  const color =
+    tone === "bad" ? "text-red-700 dark:text-red-400" : tone === "warn" ? "text-amber-700 dark:text-amber-400" : "";
   return (
     <div className="min-w-0 rounded-md border border-border p-3">
       <p className="truncate text-xs text-muted">{label}</p>
@@ -56,7 +60,8 @@ type DueBadge = { dueDate: string | null; urgency: Urgency | null };
 
 function Due({ dueDate, urgency }: DueBadge) {
   if (!dueDate) return <span className="text-xs text-muted">No deadline</span>;
-  if (!urgency || urgency === "on_track") return <span className="whitespace-nowrap text-xs text-muted">{fmtDay(dueDate)}</span>;
+  if (!urgency || urgency === "on_track")
+    return <span className="whitespace-nowrap text-xs text-muted">{fmtDay(dueDate)}</span>;
   return (
     <span className={`badge whitespace-nowrap ${URGENCY_CLASS[urgency]}`} title={`Due ${fmtDay(dueDate)}`}>
       {timeLeftLabel(dueDate, config.timeZone)}
@@ -69,7 +74,14 @@ async function TasksWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const r = await resolveScope(auth, cfg);
   if (r.needsSetup) return <Note>Choose a person in this widget&apos;s settings.</Note>;
 
-  type Row = { id: number; title: string; clientName: string | null; assigneeName: string | null; dueDate: string | null; urgency: Urgency | null };
+  type Row = {
+    id: number;
+    title: string;
+    clientName: string | null;
+    assigneeName: string | null;
+    dueDate: string | null;
+    urgency: Urgency | null;
+  };
   let rows: Row[];
   let total: number;
   if (cfg.show === "done") {
@@ -122,7 +134,8 @@ async function TasksWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
                   {truncate(t.title, 70)}
                 </Link>
                 <p className="truncate text-xs text-muted">
-                  {[t.clientName, showAssignee ? (t.assigneeName ?? "Unassigned") : null].filter(Boolean).join(" · ") || "No client"}
+                  {[t.clientName, showAssignee ? (t.assigneeName ?? "Unassigned") : null].filter(Boolean).join(" · ") ||
+                    "No client"}
                 </p>
               </div>
               <Due dueDate={t.dueDate} urgency={t.urgency} />
@@ -130,7 +143,9 @@ async function TasksWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
           ))}
         </ul>
       )}
-      <ViewAll href={link}>{total > rows.length ? `Showing ${rows.length} of ${total}. ` : ""}Open the task list →</ViewAll>
+      <ViewAll href={link}>
+        {total > rows.length ? `Showing ${rows.length} of ${total}. ` : ""}Open the task list →
+      </ViewAll>
     </>
   );
 }
@@ -189,7 +204,9 @@ async function TimeChartWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
             data={days.map((d) => ({
               key: d.day,
               value: d.tracked ? Math.round((d.active / d.tracked) * 100) : null,
-              tip: d.tracked ? `${pct(d.tracked, d.active)} active\n${longDay(d.day)}\n${fmtDuration(d.tracked)} tracked` : `No time tracked\n${longDay(d.day)}`,
+              tip: d.tracked
+                ? `${pct(d.tracked, d.active)} active\n${longDay(d.day)}\n${fmtDuration(d.tracked)} tracked`
+                : `No time tracked\n${longDay(d.day)}`,
             }))}
           />
         ) : (
@@ -254,34 +271,39 @@ async function ClientsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
       {shown.length === 0 ? (
         <Note>No client has open tasks or tracked time.</Note>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="py-2 pr-3 font-medium">Client</th>
-                <th className="px-3 py-2 text-right font-medium">Open</th>
-                <th className="px-3 py-2 text-right font-medium">Late</th>
-                <th className="py-2 pl-3 text-right font-medium">Tracked</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0">
-                  <td className="py-2 pr-3">
-                    <Link href={`/clients/${c.id}`} className="hover:underline">
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{c.open}</td>
-                  <td className={`px-3 py-2 text-right font-mono tabular-nums ${c.late ? "text-red-700 dark:text-red-400" : "text-muted"}`}>{c.late}</td>
-                  <td className="py-2 pl-3 text-right font-mono tabular-nums">{c.tracked ? fmtDuration(c.tracked) : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid
+          plain
+          headers={[
+            "Client",
+            { label: "Open", align: "right" },
+            { label: "Late", align: "right" },
+            { label: "Tracked", align: "right" },
+          ]}
+          rows={shown.map((c) => ({
+            key: c.id,
+            cells: [
+              <Link key="n" href={`/clients/${c.id}`} className="hover:underline">
+                {c.name}
+              </Link>,
+              <span key="o" className="font-mono tabular-nums">
+                {c.open}
+              </span>,
+              <span
+                key="l"
+                className={`font-mono tabular-nums ${c.late ? "text-red-700 dark:text-red-400" : "text-muted"}`}
+              >
+                {c.late}
+              </span>,
+              <span key="t" className="font-mono tabular-nums">
+                {c.tracked ? fmtDuration(c.tracked) : "—"}
+              </span>,
+            ],
+          }))}
+        />
       )}
-      <ViewAll href="/clients">{rows.length > shown.length ? `Showing ${shown.length} of ${rows.length}. ` : ""}All clients →</ViewAll>
+      <ViewAll href="/clients">
+        {rows.length > shown.length ? `Showing ${shown.length} of ${rows.length}. ` : ""}All clients →
+      </ViewAll>
     </>
   );
 }
@@ -338,47 +360,65 @@ async function TeamWorkloadWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
       {rows.length === 0 ? (
         <Note>No people here yet.</Note>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="py-2 pr-3 font-medium">Person</th>
-                <th className="px-3 py-2 text-right font-medium">Open</th>
-                <th className="px-3 py-2 text-right font-medium">Late</th>
-                <th className="py-2 pl-3 text-right font-medium">Tracked</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0">
-                  <td className="py-2 pr-3">
-                    <Link href={`/reports?user=${p.id}`} className="hover:underline">
-                      {p.name}
-                    </Link>
-                    {p.working && (
-                      <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400" title="Has a task running">
-                        ● working
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{p.open}</td>
-                  <td className={`px-3 py-2 text-right font-mono tabular-nums ${p.late ? "text-red-700 dark:text-red-400" : "text-muted"}`}>{p.late}</td>
-                  <td className="py-2 pl-3 text-right font-mono tabular-nums">{p.tracked ? fmtDuration(p.tracked) : "—"}</td>
-                </tr>
-              ))}
-              {unassigned.length > 0 && (
-                <tr>
-                  <td className="py-2 pr-3 text-muted">Unassigned</td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{unassigned.length}</td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums text-muted">
-                    {unassigned.filter((t) => t.hours !== null && t.hours < 0).length}
-                  </td>
-                  <td className="py-2 pl-3 text-right text-muted">—</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid
+          plain
+          headers={[
+            "Person",
+            { label: "Open", align: "right" },
+            { label: "Late", align: "right" },
+            { label: "Tracked", align: "right" },
+          ]}
+          rows={[
+            ...rows.map((p) => ({
+              key: p.id,
+              cells: [
+                <div key="n">
+                  <Link href={`/reports?user=${p.id}`} className="hover:underline">
+                    {p.name}
+                  </Link>
+                  {p.working && (
+                    <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400" title="Has a task running">
+                      ● working
+                    </span>
+                  )}
+                </div>,
+                <span key="o" className="font-mono tabular-nums">
+                  {p.open}
+                </span>,
+                <span
+                  key="l"
+                  className={`font-mono tabular-nums ${p.late ? "text-red-700 dark:text-red-400" : "text-muted"}`}
+                >
+                  {p.late}
+                </span>,
+                <span key="t" className="font-mono tabular-nums">
+                  {p.tracked ? fmtDuration(p.tracked) : "—"}
+                </span>,
+              ],
+            })),
+            ...(unassigned.length > 0
+              ? [
+                  {
+                    key: "unassigned",
+                    cells: [
+                      <span key="n" className="text-muted">
+                        Unassigned
+                      </span>,
+                      <span key="o" className="font-mono tabular-nums">
+                        {unassigned.length}
+                      </span>,
+                      <span key="l" className="font-mono tabular-nums text-muted">
+                        {unassigned.filter((t) => t.hours !== null && t.hours < 0).length}
+                      </span>,
+                      <span key="t" className="text-muted">
+                        —
+                      </span>,
+                    ],
+                  },
+                ]
+              : []),
+          ]}
+        />
       )}
     </>
   );
@@ -409,7 +449,9 @@ async function WorkingNowWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
                 <Link href={`/tasks/${s.taskId}`} className="hover:underline" title={s.title}>
                   {truncate(s.title, 60)}
                 </Link>
-                {isSessionStale(s.startedAt) && <span className="ml-2 text-amber-700 dark:text-amber-400">open for a long time</span>}
+                {isSessionStale(s.startedAt) && (
+                  <span className="ml-2 text-amber-700 dark:text-amber-400">open for a long time</span>
+                )}
               </p>
             </li>
           ))}
@@ -420,7 +462,14 @@ async function WorkingNowWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
 }
 
 const STAGES = ["new", "contacted", "meeting", "proposal", "won", "lost"] as const;
-const STAGE_LABEL = { new: "New", contacted: "Contacted", meeting: "Meeting", proposal: "Proposal", won: "Won", lost: "Lost" } as const;
+const STAGE_LABEL = {
+  new: "New",
+  contacted: "Contacted",
+  meeting: "Meeting",
+  proposal: "Proposal",
+  won: "Won",
+  lost: "Lost",
+} as const;
 
 async function LeadsWidget() {
   const leads = await db
@@ -447,7 +496,10 @@ async function LeadsWidget() {
               <span className="font-mono tabular-nums">{s.count}</span>
             </div>
             <div className="h-2">
-              <div className="h-full rounded-r-[4px]" style={{ width: `${s.count ? Math.max(2, (s.count / max) * 100) : 0}%`, background: "var(--series-1)" }} />
+              <div
+                className="h-full rounded-r-[4px]"
+                style={{ width: `${s.count ? Math.max(2, (s.count / max) * 100) : 0}%`, background: "var(--series-1)" }}
+              />
             </div>
           </li>
         ))}

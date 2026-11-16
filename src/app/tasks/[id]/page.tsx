@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -27,7 +28,11 @@ const endReasonLabel = { finished: "Finished", switched: "Switched task", auto_c
 function FlagText({ flag }: { flag: SessionFlag }) {
   switch (flag.kind) {
     case "open_too_long":
-      return <>Open for {flag.hours}h. Forgot to Stop? It will auto-close after {config.autoCloseSessionHours}h.</>;
+      return (
+        <>
+          Open for {flag.hours}h. Forgot to Stop? It will auto-close after {config.autoCloseSessionHours}h.
+        </>
+      );
     case "no_hubstaff_time":
       return <>Hubstaff tracked nothing in this session. Was the timer running on this task?</>;
     case "partly_tracked":
@@ -76,8 +81,14 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           where: and(eq(schema.workSessions.userId, me.id), isNull(schema.workSessions.endedAt)),
         })
       : undefined,
-    db.select().from(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.taskId, id)).orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id)),
-    task.reviewerId ? db.query.users.findFirst({ where: eq(schema.users.id, task.reviewerId), columns: { name: true } }) : null,
+    db
+      .select()
+      .from(schema.taskChecklistItems)
+      .where(eq(schema.taskChecklistItems.taskId, id))
+      .orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id)),
+    task.reviewerId
+      ? db.query.users.findFirst({ where: eq(schema.users.id, task.reviewerId), columns: { name: true } })
+      : null,
     reviewsByTask([id]),
   ]);
   const canReview = canReviewTask(auth, task);
@@ -96,7 +107,9 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">{task.title}</h1>
-          {task.repeat && task.dueDate && <p className="text-sm text-muted">{periodLabel(task.repeat, task.dueDate)}</p>}
+          {task.repeat && task.dueDate && (
+            <p className="text-sm text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
+          )}
           <p className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted">
             <span>
               Client:{" "}
@@ -112,7 +125,13 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             {task.dueDate && <span>Due: {task.dueDate}</span>}
             {task.repeat && (
               <span>
-                Repeats {task.repeat}{manage && <> · <StopRepeatingButton taskId={task.id} /></>}
+                Repeats {task.repeat}
+                {manage && (
+                  <>
+                    {" "}
+                    · <StopRepeatingButton taskId={task.id} />
+                  </>
+                )}
               </span>
             )}
             {task.seriesId && (
@@ -120,7 +139,11 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
                 See all occurrences →
               </Link>
             )}
-            <span>{task.hubstaffTaskId ? `Hubstaff task #${task.hubstaffTaskId}` : "Not in Hubstaff yet (created on first Start)"}</span>
+            <span>
+              {task.hubstaffTaskId
+                ? `Hubstaff task #${task.hubstaffTaskId}`
+                : "Not in Hubstaff yet (created on first Start)"}
+            </span>
           </p>
         </div>
         <div className="flex items-start gap-3">
@@ -155,7 +178,9 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
 
       {waiting && (
         <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
-          <span>This copy is waiting for its start date ({task.startDate}); it is hidden from the open lists until then.</span>
+          <span>
+            This copy is waiting for its start date ({task.startDate}); it is hidden from the open lists until then.
+          </span>
         </div>
       )}
 
@@ -163,7 +188,9 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         <div className="card flex flex-wrap items-center justify-between gap-3 border-amber-500/50 p-3 text-sm">
           <span>
             <span className="font-medium">On review.</span>{" "}
-            {reviewer ? `${reviewer.name} will approve it or send it back with a reason.` : "Waiting for the team leader."}
+            {reviewer
+              ? `${reviewer.name} will approve it or send it back with a reason.`
+              : "Waiting for the team leader."}
           </span>
           {canReview && <ReviewActions taskId={task.id} title={task.title} />}
         </div>
@@ -236,49 +263,47 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
 
       <section className="space-y-2">
         <h2 className="font-semibold">Sessions</h2>
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">Who</th>
-                <th className="px-3 py-2 font-medium">Start → Finish</th>
-                <th className="px-3 py-2 text-right font-medium">Open</th>
-                <th className="px-3 py-2 text-right font-medium">Hubstaff</th>
-                <th className="px-3 py-2 font-medium">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.sessions.map((s) => (
-                <tr key={s.id} className="border-b border-border align-top last:border-0">
-                  <td className="px-3 py-2">{s.userName}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {fmtDateTime(s.startedAt, tz)} → {s.endedAt ? fmtTime(s.endedAt, tz) : <span className="text-emerald-700 dark:text-emerald-400">running</span>}
-                    {s.endReason && <span className="ml-2 text-xs text-muted">{endReasonLabel[s.endReason]}</span>}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums text-muted">{fmtDuration(s.openSeconds)}</td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">{fmtDuration(s.trackedSeconds)}</td>
-                  <td className="px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-                    {s.flags.map((f, i) => (
-                      <p key={i}>
-                        <FlagText flag={f} />
-                      </p>
-                    ))}
-                  </td>
-                </tr>
-              ))}
-              {report.sessions.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-muted">
-                    No sessions yet. Click Start to begin.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid
+          empty="No sessions yet. Click Start to begin."
+          headers={[
+            "Who",
+            "Start → Finish",
+            { label: "Open", align: "right" },
+            { label: "Hubstaff", align: "right" },
+            "Notes",
+          ]}
+          rows={report.sessions.map((s) => ({
+            key: s.id,
+            cells: [
+              s.userName,
+              <span key="w" className="whitespace-nowrap">
+                {fmtDateTime(s.startedAt, tz)} →{" "}
+                {s.endedAt ? (
+                  fmtTime(s.endedAt, tz)
+                ) : (
+                  <span className="text-emerald-700 dark:text-emerald-400">running</span>
+                )}
+                {s.endReason && <span className="ml-2 text-xs text-muted">{endReasonLabel[s.endReason]}</span>}
+              </span>,
+              <span key="o" className="font-mono tabular-nums text-muted">
+                {fmtDuration(s.openSeconds)}
+              </span>,
+              <span key="h" className="font-mono tabular-nums">
+                {fmtDuration(s.trackedSeconds)}
+              </span>,
+              <div key="n" className="text-xs text-amber-700 dark:text-amber-400">
+                {s.flags.map((f, i) => (
+                  <p key={i}>
+                    <FlagText flag={f} />
+                  </p>
+                ))}
+              </div>,
+            ],
+          }))}
+        />
         <p className="text-xs text-muted">
-          Sessions are what was clicked in the CRM. Hours always come from Hubstaff, and several sessions on one task are
-          added up.
+          Sessions are what was clicked in the CRM. Hours always come from Hubstaff, and several sessions on one task
+          are added up.
         </p>
       </section>
 
@@ -298,26 +323,23 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
 
 function TotalsTable({ rows }: { rows: { label: string; tracked: number; active: number }[] }) {
   return (
-    <div className="card">
-      <table className="w-full text-sm">
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.label} className="border-b border-border last:border-0">
-              <td className="px-3 py-2">{r.label}</td>
-              <td className="px-3 py-2 text-right font-mono tabular-nums">{fmtDuration(r.tracked)}</td>
-              <td className="px-3 py-2 text-right text-xs text-muted">
-                {r.tracked ? Math.round((r.active / r.tracked) * 100) : 0}% active
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 && (
-            <tr>
-              <td className="px-3 py-4 text-center text-muted">No tracked time yet.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <DataGrid
+      noHeader
+      empty="No tracked time yet."
+      headers={["", { label: "", align: "right" }, { label: "", align: "right" }]}
+      rows={rows.map((r) => ({
+        key: r.label,
+        cells: [
+          r.label,
+          <span key="t" className="font-mono tabular-nums">
+            {fmtDuration(r.tracked)}
+          </span>,
+          <span key="a" className="text-xs text-muted">
+            {r.tracked ? Math.round((r.active / r.tracked) * 100) : 0}% active
+          </span>,
+        ],
+      }))}
+    />
   );
 }
 

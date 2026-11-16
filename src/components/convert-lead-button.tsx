@@ -10,7 +10,7 @@ export function ConvertLeadButton({ leadId, name, compact }: { leadId: number; n
   const router = useRouter();
   return (
     <Button
-      className={`${compact ?"py-1":""}`}
+      className={`${compact ? "py-1" : ""}`}
       disabled={pending}
       title={`Create a client from ${name}`}
       onClick={() =>

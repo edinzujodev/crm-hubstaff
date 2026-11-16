@@ -4,6 +4,7 @@ import { Button, InputText, Select } from "@/components/ui";
 import Link from "next/link";
 import { useState } from "react";
 import { setHubstaffUserId } from "@/app/actions";
+import { DataGrid } from "@/components/data-grid";
 import { Avatar } from "@/components/avatar";
 import { RoleSelect } from "@/components/role-select";
 import { TeamSelect } from "@/components/team-select";
@@ -19,11 +20,6 @@ export type Person = {
 };
 
 type Team = { id: number; name: string };
-
-const chip = (on: boolean) =>
-  `cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors ${
-    on ? "border-primary bg-primary/10 font-medium text-foreground" : "border-border text-muted hover:bg-primary/5 hover:text-foreground"
-  }`;
 
 /** Everyone the viewer manages, with search and filters. Super admins can edit team, role and Hubstaff id inline. */
 export function PeopleList({ people, teams, admin }: { people: Person[]; teams: Team[]; admin: boolean }) {
@@ -53,7 +49,12 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
           className="w-64 max-w-full"
         />
         {teams.length > 1 && (
-          <Select value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Filter by team" className="w-full ">
+          <Select
+            value={team}
+            onChange={(e) => setTeam(e.target.value)}
+            aria-label="Filter by team"
+            className="w-full "
+          >
             <option value="all">All teams</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
@@ -64,92 +65,90 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
           </Select>
         )}
         {admin && (
-          <button type="button" className={chip(missingId)} aria-pressed={missingId} onClick={() => setMissingId((v) => !v)}>
+          <Button
+            type="button"
+            size="small"
+            rounded
+            severity="secondary"
+            outlined={!missingId}
+            aria-pressed={missingId}
+            onClick={() => setMissingId((v) => !v)}
+          >
             No Hubstaff id ({missingCount})
-          </button>
+          </Button>
         )}
         <span className="ml-auto text-xs text-muted" aria-live="polite">
           {shown.length === people.length ? `${people.length} people` : `${shown.length} of ${people.length}`}
         </span>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">Person</th>
-              <th className="px-3 py-2 font-medium">Team</th>
-              {admin && <th className="px-3 py-2 font-medium">Role</th>}
-              {admin && <th className="px-3 py-2 font-medium">Hubstaff user id</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((p) => (
-              <tr key={p.id} className="border-b border-border transition-colors last:border-0 hover:bg-primary/5">
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={p.name} />
-                    <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-x-2">
-                        <Link href={`/reports?user=${p.id}`} className="font-medium hover:underline" title="See this person's report">
-                          {p.name}
-                        </Link>
-                        {p.isLeader && <span className="badge">Leader</span>}
-                        {p.role === "super_admin" && <span className="badge">Super admin</span>}
-                      </p>
-                      <p className="truncate text-xs text-muted">{p.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-3 py-2">
-                  {admin ? (
-                    <TeamSelect userId={p.id} teamId={p.teamId} teams={teams} name={p.name} />
-                  ) : (
-                    <span className="text-muted">{teamName.get(p.teamId ?? -1) ?? "No team"}</span>
-                  )}
-                </td>
-                {admin && (
-                  <td className="px-3 py-2">
-                    <RoleSelect userId={p.id} role={p.role} name={p.name} />
-                  </td>
-                )}
-                {admin && (
-                  <td className="px-3 py-2">
-                    <form action={setHubstaffUserId.bind(null, p.id)} className="flex items-center gap-2">
-                      <InputText
-                        name="hubstaffUserId"
-                        defaultValue={p.hubstaffUserId ?? ""}
-                        inputMode="numeric"
-                        placeholder="Not set"
-                        aria-label={`Hubstaff user id for ${p.name}`}
-                        className={`w-28 font-mono ${p.hubstaffUserId === null ?"border-amber-500/60":""}`}
-                      />
-                      <Button  severity="secondary" outlined>Save</Button>
-                    </form>
-                  </td>
-                )}
-              </tr>
-            ))}
-            {shown.length === 0 && (
-              <tr>
-                <td colSpan={admin ? 4 : 2} className="px-3 py-8 text-center text-muted">
-                  No one matches.{" "}
-                  <button
-                    className="cursor-pointer underline"
-                    onClick={() => {
-                      setQ("");
-                      setTeam("all");
-                      setMissingId(false);
-                    }}
+      <DataGrid
+        headers={["Person", "Team", ...(admin ? ["Role", "Hubstaff user id"] : [])]}
+        empty={
+          <>
+            No one matches.{" "}
+            <Button
+              link
+              size="small"
+              className="p-0"
+              onClick={() => {
+                setQ("");
+                setTeam("all");
+                setMissingId(false);
+              }}
+            >
+              Clear filters
+            </Button>
+          </>
+        }
+        rows={shown.map((p) => ({
+          key: p.id,
+          cells: [
+            <div key="p" className="flex items-center gap-3">
+              <Avatar name={p.name} />
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-x-2">
+                  <Link
+                    href={`/reports?user=${p.id}`}
+                    className="font-medium hover:underline"
+                    title="See this person's report"
                   >
-                    Clear filters
-                  </button>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    {p.name}
+                  </Link>
+                  {p.isLeader && <span className="badge">Leader</span>}
+                  {p.role === "super_admin" && <span className="badge">Super admin</span>}
+                </p>
+                <p className="truncate text-xs text-muted">{p.email}</p>
+              </div>
+            </div>,
+            admin ? (
+              <TeamSelect key="t" userId={p.id} teamId={p.teamId} teams={teams} name={p.name} />
+            ) : (
+              <span key="t" className="text-muted">
+                {teamName.get(p.teamId ?? -1) ?? "No team"}
+              </span>
+            ),
+            ...(admin
+              ? [
+                  <RoleSelect key="r" userId={p.id} role={p.role} name={p.name} />,
+                  <form key="h" action={setHubstaffUserId.bind(null, p.id)} className="flex items-center gap-2">
+                    <InputText
+                      name="hubstaffUserId"
+                      defaultValue={p.hubstaffUserId ?? ""}
+                      inputMode="numeric"
+                      placeholder="Not set"
+                      aria-label={`Hubstaff user id for ${p.name}`}
+                      className={`w-28 font-mono ${p.hubstaffUserId === null ? "border-amber-500/60" : ""}`}
+                    />
+                    <Button severity="secondary" outlined>
+                      Save
+                    </Button>
+                  </form>,
+                ]
+              : []),
+          ],
+        }))}
+      />
     </div>
   );
 }

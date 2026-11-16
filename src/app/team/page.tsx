@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
 import { Suspense } from "react";
 import { asc } from "drizzle-orm";
@@ -13,7 +14,11 @@ function Tile({ label, value, tone, hint }: { label: string; value: number; tone
   return (
     <div className="card p-4" title={hint}>
       <p className="text-xs text-muted">{label}</p>
-      <p className={`mt-1 font-mono text-2xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}>{value}</p>
+      <p
+        className={`mt-1 font-mono text-2xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -44,7 +49,11 @@ async function TeamContent() {
   const users = admin ? allUsers : allUsers.filter((u) => u.teamId === auth.ledTeam?.id);
   const leaderIds = new Set(allTeams.map((t) => t.leaderId).filter((id) => id !== null));
   const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
-  const options = allUsers.map((u) => ({ id: u.id, name: u.name, teamName: u.teamId ? (teamName.get(u.teamId) ?? null) : null }));
+  const options = allUsers.map((u) => ({
+    id: u.id,
+    name: u.name,
+    teamName: u.teamId ? (teamName.get(u.teamId) ?? null) : null,
+  }));
   const teamOptions = allTeams.map((t) => ({ id: t.id, name: t.name }));
 
   const people: Person[] = users.map((u) => ({
@@ -74,10 +83,7 @@ async function TeamContent() {
       </section>
 
       <section className="space-y-3">
-        <SectionHead
-          title="People"
-          action={admin ? <AddMemberButton /> : undefined}
-        />
+        <SectionHead title="People" action={admin ? <AddMemberButton /> : undefined} />
         <PeopleList people={people} teams={teamOptions} admin={admin} />
       </section>
 
@@ -86,91 +92,70 @@ async function TeamContent() {
           title={admin ? "Teams" : "Your team"}
           action={admin ? <NewTeamButton users={options} /> : undefined}
         />
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">Team</th>
-                <th className="px-3 py-2 font-medium">Leader</th>
-                <th className="px-3 py-2 font-medium">Members</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {teams.map((t) => {
-                const members = allUsers.filter((u) => u.teamId === t.id);
-                const leader = allUsers.find((u) => u.id === t.leaderId);
-                return (
-                  <tr key={t.id} className="border-b border-border transition-colors last:border-0 hover:bg-primary/5">
-                    <td className="px-3 py-2">
-                      <Link href={`/team/${t.id}`} className="font-medium hover:underline" title="Open this team">
-                        {t.name}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2">
-                      {leader ? (
-                        <span className="flex items-center gap-2">
-                          <Avatar name={leader.name} size="sm" />
-                          {leader.name}
+        <DataGrid
+          empty={admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
+          headers={["Team", "Leader", "Members"]}
+          rows={teams.map((t) => {
+            const members = allUsers.filter((u) => u.teamId === t.id);
+            const leader = allUsers.find((u) => u.id === t.leaderId);
+            return {
+              key: t.id,
+              cells: [
+                <Link key="n" href={`/team/${t.id}`} className="font-medium hover:underline" title="Open this team">
+                  {t.name}
+                </Link>,
+                leader ? (
+                  <span key="l" className="flex items-center gap-2">
+                    <Avatar name={leader.name} size="sm" />
+                    {leader.name}
+                  </span>
+                ) : (
+                  <span key="l" className="text-muted">
+                    None yet
+                  </span>
+                ),
+                members.length ? (
+                  <span key="m" className="flex items-center gap-2">
+                    <span className="flex -space-x-2">
+                      {members.slice(0, 4).map((m) => (
+                        <span key={m.id} title={m.name} className="rounded-full ring-2 ring-surface">
+                          <Avatar name={m.name} size="sm" />
                         </span>
-                      ) : (
-                        <span className="text-muted">None yet</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {members.length ? (
-                        <span className="flex items-center gap-2">
-                          <span className="flex -space-x-2">
-                            {members.slice(0, 4).map((m) => (
-                              <span key={m.id} title={m.name} className="rounded-full ring-2 ring-surface">
-                                <Avatar name={m.name} size="sm" />
-                              </span>
-                            ))}
-                          </span>
-                          <span className="text-muted">
-                            {members.length} {members.length === 1 ? "member" : "members"}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-muted">No members yet</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/team/${t.id}`}
-                          className="btn h-8 w-8 justify-center px-0"
-                          title="Team details and tasks"
-                          aria-label={`Details for ${t.name}`}
-                        >
-                          <svg aria-hidden viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M7 17 17 7" />
-                            <path d="M8 7h9v9" />
-                          </svg>
-                        </Link>
-                        {admin && (
-                          <TeamMenu
-                            teamId={t.id}
-                            name={t.name}
-                            team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id) }}
-                            users={options}
-                          />
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {teams.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-3 py-8 text-center text-muted">
-                    {admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                      ))}
+                    </span>
+                    <span className="text-muted">
+                      {members.length} {members.length === 1 ? "member" : "members"}
+                    </span>
+                  </span>
+                ) : (
+                  <span key="m" className="text-muted">
+                    No members yet
+                  </span>
+                ),
+              ],
+              actions: (
+                <>
+                  <Link
+                    href={`/team/${t.id}`}
+                    className="p-button p-button-icon-only p-button-outlined p-button-secondary"
+                    title="Team details and tasks"
+                    aria-label={`Details for ${t.name}`}
+                  >
+                    <i aria-hidden className="pi pi-arrow-up-right" />
+                  </Link>
+                  {admin && (
+                    <TeamMenu
+                      teamId={t.id}
+                      name={t.name}
+                      team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id) }}
+                      users={options}
+                    />
+                  )}
+                </>
+              ),
+            };
+          })}
+        />
       </section>
     </div>
   );

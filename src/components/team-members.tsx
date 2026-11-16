@@ -31,7 +31,7 @@ export function TeamMembers({ members, canEdit }: { members: Member[]; canEdit: 
               <span className="block text-xs text-muted">{m.email}</span>
             </span>
             {canEdit && (
-              <Button type="button"  severity="secondary" outlined disabled={pending} onClick={() => remove(m.id)}>
+              <Button type="button" severity="secondary" outlined disabled={pending} onClick={() => remove(m.id)}>
                 Remove
               </Button>
             )}

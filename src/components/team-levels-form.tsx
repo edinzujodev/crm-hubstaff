@@ -47,26 +47,25 @@ function HoursField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={invalid || !valid}
-          className={`w-24 text-center ${invalid || !valid ?"border-red-500":""}`}
+          className={`w-24 text-center ${invalid || !valid ? "border-red-500" : ""}`}
         />
         <span className="text-muted">hours</span>
         <span className="w-16 text-xs text-muted">{valid && n >= 48 ? `= ${long(n)}` : ""}</span>
       </label>
       <div className="flex flex-wrap gap-1.5">
         {presets.map((p) => (
-          <button
+          <Button
             key={p}
             type="button"
+            size="small"
+            rounded
+            severity="secondary"
+            outlined={n !== p}
             onClick={() => onChange(String(p))}
             aria-pressed={n === p}
-            className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
-              n === p
-                ? "border-transparent bg-primary font-medium text-(--primary-fg)"
-                : "border-border text-muted hover:border-primary/50 hover:bg-primary/10 hover:text-foreground"
-            }`}
           >
             {long(p)}
-          </button>
+          </Button>
         ))}
       </div>
     </div>
@@ -153,9 +152,7 @@ export function TeamLevelsForm({
       )}
 
       <div className="flex items-center gap-3">
-        <Button  disabled={!canSave}>
-          {pending ? "Saving…" : "Save levels"}
-        </Button>
+        <Button disabled={!canSave}>{pending ? "Saving…" : "Save levels"}</Button>
         {!dirty && state?.ok && <span className="text-sm text-emerald-700 dark:text-emerald-400">✓ Saved</span>}
         {dirty && numbersOk && orderOk && <span className="text-xs text-muted">Unsaved changes</span>}
       </div>

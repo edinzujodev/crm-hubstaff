@@ -1,3 +1,4 @@
+import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -24,7 +25,9 @@ async function SeriesDetail({ params }: { params: Promise<{ seriesId: string }> 
   const repeat = [...occurrences].reverse().find((o) => o.repeat)?.repeat ?? null;
   const today = localDay(new Date(), config.timeZone);
   const doneOnes = occurrences.filter((o) => o.status === "done");
-  const average = doneOnes.length ? Math.round(doneOnes.reduce((n, o) => n + o.trackedSeconds, 0) / doneOnes.length) : 0;
+  const average = doneOnes.length
+    ? Math.round(doneOnes.reduce((n, o) => n + o.trackedSeconds, 0) / doneOnes.length)
+    : 0;
   const maxSeconds = Math.max(1, ...occurrences.map((o) => o.trackedSeconds));
   // Newest first.
   const rows = [...occurrences].reverse();
@@ -71,50 +74,44 @@ async function SeriesDetail({ params }: { params: Promise<{ seriesId: string }> 
         </div>
       </section>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">Period</th>
-              <th className="px-3 py-2 font-medium">Due</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Assignee</th>
-              <th className="px-3 py-2 font-medium">Finished</th>
-              <th className="px-3 py-2 font-medium">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((o) => (
-              <tr key={o.id} className="border-b border-border last:border-0">
-                <td className="px-3 py-2">
-                  <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
-                    {repeat && o.dueDate ? periodLabel(repeat, o.dueDate) : o.title}
-                  </Link>
-                  {o.startDate && o.startDate > today && o.status !== "done" && (
-                    <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-muted">{o.dueDate ? fmtDay(o.dueDate) : "—"}</td>
-                <td className="px-3 py-2">
-                  <span className="badge">{statusLabel[o.status]}</span>
-                </td>
-                <td className="px-3 py-2 text-muted">{o.assigneeName ?? "—"}</td>
-                <td className="px-3 py-2 text-muted">{o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}</td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-16 font-mono tabular-nums">{o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}</span>
-                    <span
-                      aria-hidden
-                      className="h-2 rounded-full bg-(--series-1)"
-                      style={{ width: `${Math.round((o.trackedSeconds / maxSeconds) * 120)}px` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        headers={["Period", "Due", "Status", "Assignee", "Finished", "Time"]}
+        rows={rows.map((o) => ({
+          key: o.id,
+          cells: [
+            <div key="p">
+              <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
+                {repeat && o.dueDate ? periodLabel(repeat, o.dueDate) : o.title}
+              </Link>
+              {o.startDate && o.startDate > today && o.status !== "done" && (
+                <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
+              )}
+            </div>,
+            <span key="d" className="text-muted">
+              {o.dueDate ? fmtDay(o.dueDate) : "—"}
+            </span>,
+            <span key="s" className="badge">
+              {statusLabel[o.status]}
+            </span>,
+            <span key="a" className="text-muted">
+              {o.assigneeName ?? "—"}
+            </span>,
+            <span key="f" className="text-muted">
+              {o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}
+            </span>,
+            <div key="t" className="flex items-center gap-2">
+              <span className="w-16 font-mono tabular-nums">
+                {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
+              </span>
+              <span
+                aria-hidden
+                className="h-2 rounded-full bg-(--series-1)"
+                style={{ width: `${Math.round((o.trackedSeconds / maxSeconds) * 120)}px` }}
+              />
+            </div>,
+          ],
+        }))}
+      />
     </div>
   );
 }

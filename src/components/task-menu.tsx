@@ -173,14 +173,10 @@ export function EditForm({
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <Button type="button"  severity="secondary" outlined onClick={onDone}>
+        <Button type="button" severity="secondary" outlined onClick={onDone}>
           {hubstaffWarning ? "Close" : "Cancel"}
         </Button>
-        {!hubstaffWarning && (
-          <Button  disabled={pending}>
-            {pending ? "Saving…" : "Save"}
-          </Button>
-        )}
+        {!hubstaffWarning && <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>}
       </div>
     </form>
   );
@@ -207,7 +203,7 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
           Deleted in the CRM, but the Hubstaff task could not be marked ({warning}).
         </p>
         <div className="flex justify-end">
-          <Button  severity="secondary" outlined onClick={onDone}>
+          <Button severity="secondary" outlined onClick={onDone}>
             Close
           </Button>
         </div>
@@ -225,10 +221,10 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
       </p>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button"  severity="secondary" outlined onClick={onDone} disabled={pending}>
+        <Button type="button" severity="secondary" outlined onClick={onDone} disabled={pending}>
           Cancel
         </Button>
-        <Button type="button"  severity="danger" onClick={onDelete} disabled={pending}>
+        <Button type="button" severity="danger" onClick={onDelete} disabled={pending}>
           {pending ? "Deleting…" : "Delete"}
         </Button>
       </div>
