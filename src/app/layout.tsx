@@ -111,16 +111,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
-        {/* PrimeReact theme: green (emerald) in light and dark, picked by the system setting. */}
+        {/* PrimeReact theme: green (rose) in light and dark, picked by the system setting. */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-light-green/theme.css" media="(prefers-color-scheme: light)" />
+        <link rel="stylesheet" href="/themes/lara-light-rose/theme.css" media="(prefers-color-scheme: light)" />
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-dark-green/theme.css" media="(prefers-color-scheme: dark)" />
+        <link rel="stylesheet" href="/themes/lara-dark-rose/theme.css" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="min-h-full font-sans">
         <PrimeProvider>
         <div className="flex min-h-screen flex-col md:flex-row">
-          <aside className="flex flex-col gap-4 border-b border-border bg-surface px-3 py-3 md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r md:py-5">
+          <aside className="sidebar-rose flex flex-col gap-4 bg-rose-600 px-3 py-3 text-white md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:py-5 dark:bg-rose-900">
             <Link href="/" className="px-3 font-semibold">
               Client tracker
             </Link>

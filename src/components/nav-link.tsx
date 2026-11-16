@@ -14,13 +14,13 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`group relative flex items-center overflow-hidden rounded-md px-3 py-2 text-sm transition-colors duration-200 hover:bg-primary/10 focus-visible:bg-primary/10 ${
-        active ? "bg-primary/10 font-semibold" : "text-foreground/80 hover:text-foreground"
+      className={`group relative flex items-center overflow-hidden rounded-md px-3 py-2 text-sm transition-colors duration-200 hover:bg-white/15 focus-visible:bg-white/15 ${
+        active ? "bg-white/20 font-semibold text-white" : "text-white/85 hover:text-white"
       }`}
     >
       <span
         aria-hidden
-        className={`absolute inset-y-1.5 left-0 w-1 origin-center rounded-r bg-primary transition-transform duration-200 motion-reduce:transition-none ${
+        className={`absolute inset-y-1.5 left-0 w-1 origin-center rounded-r bg-white transition-transform duration-200 motion-reduce:transition-none ${
           active ? "scale-y-100" : "scale-y-0 group-hover:scale-y-100 group-focus-visible:scale-y-100"
         }`}
       />

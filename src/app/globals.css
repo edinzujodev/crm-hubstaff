@@ -7,7 +7,7 @@
   --foreground: #1c1c1a;
   --muted: #6b6b66;
   --border: #e4e4df;
-  --primary: #059669;
+  --primary: #e11d48;
   --primary-fg: #ffffff;
   --danger: #b4372f;
   /* Charts */
@@ -24,8 +24,8 @@
     --foreground: #ececea;
     --muted: #9b9b94;
     --border: #33332f;
-    --primary: #34d399;
-    --primary-fg: #0d1f1a;
+    --primary: #fb7185;
+    --primary-fg: #3b0a16;
     --danger: #e0645b;
     --series-1: #3987e5;
     --viz-grid: #2c2c2a;
@@ -33,20 +33,20 @@
   }
 }
 
-/* PrimeReact's green theme, tuned to emerald so it matches the rest of the app. */
+/* PrimeReact's green theme, tuned to rose so it matches the rest of the app. */
 html:root {
-  --primary-color: #059669;
+  --primary-color: #e11d48;
   --primary-color-text: #ffffff;
-  --highlight-bg: color-mix(in srgb, #059669 16%, transparent);
-  --highlight-text-color: #047857;
+  --highlight-bg: color-mix(in srgb, #e11d48 16%, transparent);
+  --highlight-text-color: #be123c;
   --font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   html:root {
-    --primary-color: #34d399;
-    --primary-color-text: #052e22;
-    --highlight-bg: color-mix(in srgb, #34d399 16%, transparent);
-    --highlight-text-color: #6ee7b7;
+    --primary-color: #fb7185;
+    --primary-color-text: #3b0a16;
+    --highlight-bg: color-mix(in srgb, #fb7185 16%, transparent);
+    --highlight-text-color: #fda4af;
   }
 }
 
@@ -105,4 +105,95 @@ body {
   .badge {
     @apply inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs;
   }
+}
+
+/* PrimeReact's theme is roomy. These keep its components as compact as the rest of the app.
+   Unlayered on purpose: it wins over the theme's own layer. */
+.p-component,
+.p-inputtext,
+.p-button,
+.p-dropdown-item,
+.p-menuitem-link,
+.p-datatable {
+  font-size: 0.875rem;
+}
+.p-button:not(.p-button-icon-only):not(.p-button-link) {
+  padding: 0.4rem 0.85rem;
+}
+.p-button.p-button-sm:not(.p-button-icon-only):not(.p-button-link) {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8125rem;
+}
+.p-button.p-button-icon-only {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+.p-button.p-button-icon-only.p-button-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.p-button.p-button-link {
+  padding: 0;
+}
+.p-inputtext {
+  padding: 0.4rem 0.65rem;
+}
+.p-dropdown .p-dropdown-label,
+.p-dropdown .p-dropdown-label.p-inputtext {
+  padding: 0.4rem 0.65rem;
+}
+.p-dropdown .p-dropdown-trigger {
+  width: 2.25rem;
+}
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item {
+  padding: 0.45rem 0.75rem;
+}
+.p-datatable .p-datatable-thead > tr > th {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 0.5rem 0.75rem;
+}
+.p-datatable .p-datatable-emptymessage > td {
+  text-align: center;
+}
+.p-dialog .p-dialog-header {
+  padding: 1rem 1.25rem;
+}
+.p-dialog .p-dialog-title {
+  font-size: 1rem;
+}
+.p-dialog .p-dialog-content {
+  padding: 0 1.25rem 1.25rem;
+}
+.p-checkbox,
+.p-checkbox .p-checkbox-box {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.p-menu .p-menuitem-link {
+  padding: 0.5rem 0.75rem;
+}
+.p-calendar .p-inputtext {
+  padding: 0.4rem 0.65rem;
+}
+.p-datepicker {
+  font-size: 0.8125rem;
+}
+
+/* The sidebar is rose, so what sits on it (the account menu, badges) needs light-on-dark colours. */
+.sidebar-rose {
+  --foreground: #ffffff;
+  --muted: rgb(255 255 255 / 0.75);
+  --border: rgb(255 255 255 / 0.3);
+  --surface: #be123c;
+  --primary: #ffffff;
+  --primary-fg: #be123c;
+}
+.sidebar-rose .badge {
+  color: #ffffff;
+  border-color: rgb(255 255 255 / 0.4);
 }

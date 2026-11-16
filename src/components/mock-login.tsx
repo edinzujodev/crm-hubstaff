@@ -25,21 +25,19 @@ export function MockLogin({ accounts }: { accounts: Account[] }) {
       <form action={action} className="space-y-2">
         <p className="text-xs text-muted">Approved accounts</p>
         {accounts.map((a) => (
-          <Button
+          <button
             key={a.email}
             name="email"
             value={a.email}
             disabled={pending}
-            severity="secondary"
-            outlined
-            className="w-full justify-between text-left"
+            className="card flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-primary/5 disabled:opacity-50"
           >
             <span>
               <span className="block font-medium">{a.name}</span>
               <span className="block text-xs text-muted">{a.email}</span>
             </span>
             <span className="badge">{a.role}</span>
-          </Button>
+          </button>
         ))}
       </form>
 

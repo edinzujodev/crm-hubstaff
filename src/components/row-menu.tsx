@@ -28,7 +28,7 @@ export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] 
         rounded
         onClick={(e) => menu.current?.toggle(e)}
       />
-      <Menu model={model} popup ref={menu} appendTo="self" />
+      <Menu model={model} popup ref={menu} appendTo={typeof document === "undefined" ? undefined : document.body} />
     </>
   );
 }

@@ -600,17 +600,14 @@ function AddWidget({
             <ul className="space-y-1 pt-1">
               {presetsFor(type, role).map((preset) => (
                 <li key={preset.id}>
-                  <Button
-                    severity="secondary"
-                    outlined
-                    className="w-full justify-start text-left"
+                  <button
+                    type="button"
+                    className="w-full rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-primary/5"
                     onClick={() => setPicked({ type, preset })}
                   >
-                    <span className="block">
-                      <span className="block font-medium">{preset.label}</span>
-                      <span className="block text-xs text-muted">{preset.description}</span>
-                    </span>
-                  </Button>
+                    <span className="block font-medium">{preset.label}</span>
+                    <span className="block text-xs text-muted">{preset.description}</span>
+                  </button>
                 </li>
               ))}
             </ul>

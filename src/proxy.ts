@@ -10,5 +10,5 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Not the login page, the sign-in routes, the scheduler's sync route (it has its own secret) or static files.
-  matcher: ["/((?!login|api/auth|api/sync|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!login|api/auth|api/sync|themes|_next/static|_next/image|favicon.ico).*)"],
 };

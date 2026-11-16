@@ -72,7 +72,7 @@ export function Select({
         className={className}
         title={title}
         aria-label={ariaLabel}
-        appendTo="self"
+        appendTo={typeof document === "undefined" ? undefined : document.body}
         onChange={(e) => {
           const next = String(e.value ?? "");
           if (value === undefined) setInner(next);
