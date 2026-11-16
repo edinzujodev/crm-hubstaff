@@ -18,11 +18,7 @@ export function TemplateManager({ templates }: { templates: TemplateOption[] }) 
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">
-          A template is a description of what needs to be done plus a checklist. Pick one when you add a task, or build
-          the checklist right inside the task.
-        </p>
+      <div className="flex items-center justify-end gap-3">
         <Button type="button" onClick={() => setModal({ kind: "new" })}>
           + New template
         </Button>

@@ -1,4 +1,5 @@
 import { DataGrid } from "@/components/data-grid";
+import { LinkTabs } from "@/components/link-tabs";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -11,12 +12,12 @@ import { fmtDuration, localDay } from "@/lib/format";
 import { trackedByClient } from "@/lib/report";
 import { pageGuard, taskScope } from "@/lib/auth";
 
-async function ClientList() {
+async function ClientList({ show }: { show?: string }) {
   await connection();
   const auth = await pageGuard("super_admin", "leader");
   const scope = taskScope(auth);
   const monthStart = `${localDay(new Date(), config.timeZone).slice(0, 7)}-01`;
-  const [clients, taskCounts, tracked, projectCounts, companyRows] = await Promise.all([
+  const [allClients, taskCounts, tracked, projectCounts, companyRows, companyNameRows] = await Promise.all([
     db.select().from(schema.clients).orderBy(asc(schema.clients.name)),
     db
       .select({ clientId: schema.tasks.clientId, n: count() })
@@ -39,74 +40,108 @@ async function ClientList() {
       .select({ clientId: schema.clientCompanies.clientId, n: count() })
       .from(schema.clientCompanies)
       .groupBy(schema.clientCompanies.clientId),
+    db
+      .select({ clientId: schema.clientCompanies.clientId, name: schema.clientCompanies.name })
+      .from(schema.clientCompanies)
+      .orderBy(asc(schema.clientCompanies.name)),
   ]);
+  const companyNames = new Map<number, string[]>();
+  for (const r of companyNameRows) companyNames.set(r.clientId, [...(companyNames.get(r.clientId) ?? []), r.name]);
+  const tabs = [
+    ["", "All", allClients.length],
+    ["companies", "Companies", allClients.filter((c) => c.kind === "company").length],
+    ["groups", "Groups", allClients.filter((c) => c.kind === "group").length],
+  ] as const;
+  const clients = allClients.filter((c) =>
+    show === "groups" ? c.kind === "group" : show === "companies" ? c.kind === "company" : true,
+  );
   const companyCounts = new Map(companyRows.map((r) => [r.clientId, r.n]));
   const projectsOf = new Map(projectCounts.map((r) => [r.clientId, r.n]));
   const inProgress = new Map(taskCounts.map((r) => [r.clientId, r.n]));
 
   return (
-    <DataGrid
-      empty="No clients yet. Add the first one above."
-      headers={[
-        "Client",
-        "Contact",
-        { label: "Open tasks", align: "right" },
-        { label: "Projects", align: "right" },
-        { label: "Tracked this month", align: "right" },
-      ]}
-      rows={clients.map((c) => ({
-        key: c.id,
-        cells: [
-          <div key="c">
-            <Link href={`/clients/${c.id}`} className="font-medium hover:underline">
-              {c.name}
-            </Link>
-            {c.kind === "group" && (
-              <span className="badge ml-2" title="A group with several companies">
-                Group · {companyCounts.get(c.id) ?? 0}
-              </span>
-            )}
-          </div>,
-          <span key="k" className="text-muted">
-            {[c.contactName, c.email].filter(Boolean).join(" · ") || "—"}
-          </span>,
-          <span key="o" className="font-mono tabular-nums">
-            {inProgress.get(c.id) ?? 0}
-          </span>,
-          <span key="p" className="font-mono tabular-nums">
-            {projectsOf.get(c.id) ?? 0}
-          </span>,
-          <span key="t" className="font-mono tabular-nums">
-            {tracked.get(c.id) ? fmtDuration(tracked.get(c.id)!) : "—"}
-          </span>,
-        ],
-        actions: (
-          <ClientActions
-            client={{
-              id: c.id,
-              name: c.name,
-              kind: c.kind,
-              contactName: c.contactName,
-              email: c.email,
-              phone: c.phone,
-              notes: c.notes,
-              hubstaffProjectId: c.hubstaffProjectId,
-            }}
-            canDelete={auth.role === "super_admin"}
-          />
-        ),
-      }))}
-    />
+    <>
+      <LinkTabs
+        tabs={tabs.map(([key, label, n]) => ({ label, href: key ? `/clients?show=${key}` : "/clients", count: n }))}
+        active={Math.max(
+          0,
+          tabs.findIndex(([key]) => key === (show ?? "")),
+        )}
+      />
+      <DataGrid
+        empty="No clients here yet."
+        headers={[
+          "Client",
+          "Group",
+          "Contact",
+          { label: "Open tasks", align: "right" },
+          { label: "Projects", align: "right" },
+          { label: "Tracked this month", align: "right" },
+        ]}
+        rows={clients.map((c) => ({
+          key: c.id,
+          cells: [
+            <div key="c">
+              <Link href={`/clients/${c.id}`} className="font-medium hover:underline">
+                {c.name}
+              </Link>
+              {c.kind === "group" && (
+                <span className="badge ml-2" title="A group with several companies">
+                  Group · {companyCounts.get(c.id) ?? 0}
+                </span>
+              )}
+            </div>,
+            <span key="g" className="text-muted" title={(companyNames.get(c.id) ?? []).join(", ")}>
+              {c.kind === "group"
+                ? `${companyCounts.get(c.id) ?? 0} ${companyCounts.get(c.id) === 1 ? "company" : "companies"}${companyNames.get(c.id)?.length ? `: ${companyNames.get(c.id)!.slice(0, 3).join(", ")}${companyNames.get(c.id)!.length > 3 ? "…" : ""}` : ""}`
+                : "—"}
+            </span>,
+            <span key="k" className="text-muted">
+              {[c.contactName, c.email].filter(Boolean).join(" · ") || "—"}
+            </span>,
+            <span key="o" className="font-mono tabular-nums">
+              {inProgress.get(c.id) ?? 0}
+            </span>,
+            <span key="p" className="font-mono tabular-nums">
+              {projectsOf.get(c.id) ?? 0}
+            </span>,
+            <span key="t" className="font-mono tabular-nums">
+              {tracked.get(c.id) ? fmtDuration(tracked.get(c.id)!) : "—"}
+            </span>,
+          ],
+          actions: (
+            <ClientActions
+              client={{
+                id: c.id,
+                name: c.name,
+                kind: c.kind,
+                contactName: c.contactName,
+                email: c.email,
+                phone: c.phone,
+                notes: c.notes,
+                hubstaffProjectId: c.hubstaffProjectId,
+              }}
+              canDelete={auth.role === "super_admin"}
+            />
+          ),
+        }))}
+      />
+    </>
   );
 }
 
-export default function ClientsPage() {
+async function ClientListLoader({ show }: { show: Promise<string | undefined> }) {
+  return <ClientList show={await show} />;
+}
+
+export default function ClientsPage({ searchParams }: PageProps<"/clients">) {
+  const show = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
   return (
     <div className="space-y-4">
       <h1 className="sr-only">Clients</h1>
       <NewClientForm />
       <Suspense fallback={<p className="text-muted">Loading clients…</p>}>
-        <ClientList />
+        <ClientListLoader show={show} />
       </Suspense>
     </div>
   );

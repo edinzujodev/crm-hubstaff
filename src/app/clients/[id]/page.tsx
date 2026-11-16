@@ -115,11 +115,11 @@ async function ClientDetail({
       <form className="card flex flex-wrap items-end gap-2 p-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           From
-          <DateInput name="from" defaultValue={from} />
+          <DateInput key={from} name="from" defaultValue={from} />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           To
-          <DateInput name="to" defaultValue={to} />
+          <DateInput key={to} name="to" defaultValue={to} />
         </label>
         <Button severity="secondary" outlined className="ml-auto">
           Show

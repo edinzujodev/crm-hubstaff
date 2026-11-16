@@ -291,3 +291,29 @@ body {
 .p-tabmenu .p-tabmenu-nav {
   background: transparent;
 }
+
+/* Smaller, quieter sort arrows in table headers. */
+.p-datatable .p-sortable-column .p-sortable-column-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--muted);
+}
+.p-datatable .p-sortable-column.p-highlight .p-sortable-column-icon {
+  color: var(--foreground);
+}
+.p-tabmenu .p-tabmenu-nav,
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem .p-menuitem-link {
+  background: transparent;
+}
+
+/* Approaching tasks: the same row design as critical, in amber. */
+.p-datatable .p-datatable-tbody > tr.row-approaching > td {
+  background: rgb(245 158 11 / 0.07);
+}
+.p-datatable .p-datatable-tbody > tr.row-approaching > td:first-child {
+  box-shadow: inset 4px 0 0 #f59e0b;
+}
+.p-datatable .p-datatable-tbody > tr.row-approaching:hover > td {
+  background: rgb(245 158 11 / 0.13);
+}
+

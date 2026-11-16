@@ -11,6 +11,7 @@ import { NewTaskForm } from "@/components/new-task-form";
 import { SeriesMenu } from "@/components/series-menu";
 import { TaskMenu } from "@/components/task-menu";
 import { DataGrid } from "@/components/data-grid";
+import { LinkTabs } from "@/components/link-tabs";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
@@ -26,7 +27,7 @@ import { listTemplates } from "@/lib/templates";
 import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
 import { Avatar } from "@/components/avatar";
 import { InlineChecklist } from "@/components/inline-checklist";
-import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
+import { DEFAULT_LEVELS, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
 const TITLE_MAX = 50;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
@@ -254,6 +255,16 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
     finished: inScope.filter(matches.finished).length,
     deleted: inScope.filter(matches.deleted).length,
   };
+  const taskTabs = (
+    [
+      ["open", "Open"],
+      ["review", "On review"],
+      ["critical", "Critical"],
+      ["recurring", "Recurring"],
+      ["finished", "Finished"],
+      ["deleted", "Deleted"],
+    ] as const
+  ).filter(([key]) => !isWorker || !managerOnly.includes(key));
   const hoursLeft = (r: Row) => hoursUntilDue(r.task.dueDate!, config.timeZone, now);
   const visible =
     tab === "recurring"
@@ -302,42 +313,18 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <nav aria-label="Task lists" className="flex flex-wrap items-center gap-1 text-sm">
-          {(
-            [
-              ["open", "Open"],
-              ["review", "On review"],
-              ["critical", "Critical"],
-              ["recurring", "Recurring"],
-              ["finished", "Finished"],
-              ["deleted", "Deleted"],
-            ] as const
-          )
-            .filter(([key]) => !isWorker || !managerOnly.includes(key))
-            .map(([key, label]) => {
-              const active = tab === key;
-              const alarm = key === "critical" && counts.critical > 0;
-              return (
-                <Link
-                  key={key}
-                  href={key === "open" ? "/tasks" : `/tasks?show=${key}`}
-                  aria-current={active ? "page" : undefined}
-                  className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 transition-colors ${
-                    active
-                      ? "bg-primary/10 font-semibold text-foreground"
-                      : "text-muted hover:bg-primary/5 hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                  <span
-                    className={`font-mono text-xs tabular-nums ${alarm ? "font-semibold text-red-600 dark:text-red-400" : "opacity-70"}`}
-                  >
-                    {counts[key]}
-                  </span>
-                </Link>
-              );
-            })}
-        </nav>
+        <LinkTabs
+          tabs={taskTabs.map(([key, label]) => ({
+            label,
+            href: key === "open" ? "/tasks" : `/tasks?show=${key}`,
+            count: counts[key],
+            alarm: key === "critical" && counts.critical > 0,
+          }))}
+          active={Math.max(
+            0,
+            taskTabs.findIndex(([key]) => key === tab),
+          )}
+        />
         {!isWorker && (
           <div className="flex flex-wrap items-center gap-2">
             {tab !== "recurring" && (
@@ -391,7 +378,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
           ]}
           rows={visible.map(({ task, clientName, assigneeName, projectName, projectKind }) => {
             const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
-            const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
+            const urgency = task.deletedAt
+              ? null
+              : urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
             const manage = canManageTask(auth, task);
             const nextPeriod =
               manage && task.repeat && !task.deletedAt
@@ -404,7 +393,12 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
               !!nextPeriod;
             return {
               key: task.id,
-              tone: urgency === "critical" ? ("critical" as const) : undefined,
+              tone:
+                urgency === "critical"
+                  ? ("critical" as const)
+                  : urgency === "approaching"
+                    ? ("approaching" as const)
+                    : undefined,
               sort: [
                 task.title,
                 task.repeat ?? "",
@@ -420,15 +414,6 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                   <Link href={`/tasks/${task.id}`} className="font-medium hover:underline" title={task.title}>
                     {truncate(task.title, TITLE_MAX)}
                   </Link>
-                  {urgency === "critical" && (
-                    <span
-                      className="badge ml-2 gap-1 border-red-500/60 bg-red-500/10 font-semibold text-red-700 dark:text-red-300"
-                      title={task.dueDate ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
-                    >
-                      <i aria-hidden className="pi pi-exclamation-triangle text-[0.7rem]" />
-                      Critical
-                    </span>
-                  )}
                   {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
                   {task.status === "review" && (
                     <span className="badge ml-2 text-amber-700 dark:text-amber-400">On review</span>
@@ -501,19 +486,21 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                 task.dueDate ? (
                   <span key="due" className="flex items-center gap-2 whitespace-nowrap">
                     <span
-                      className={urgency === "critical" ? "font-medium text-red-600 dark:text-red-400" : undefined}
-                      title={urgency === "critical" ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
+                      className={
+                        urgency === "critical"
+                          ? "font-medium text-red-600 dark:text-red-400"
+                          : urgency === "approaching"
+                            ? "font-medium text-amber-700 dark:text-amber-400"
+                            : undefined
+                      }
+                      title={
+                        urgency === "critical" || urgency === "approaching"
+                          ? timeLeftLabel(task.dueDate, config.timeZone)
+                          : undefined
+                      }
                     >
                       {fmtDay(task.dueDate)}
                     </span>
-                    {urgency && urgency !== "on_track" && urgency !== "critical" && (
-                      <span
-                        className={`badge ${URGENCY_CLASS[urgency]}`}
-                        title={timeLeftLabel(task.dueDate, config.timeZone)}
-                      >
-                        {URGENCY_LABEL[urgency]}
-                      </span>
-                    )}
                   </span>
                 ) : (
                   <span key="due" className="text-muted">

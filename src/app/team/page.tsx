@@ -1,4 +1,5 @@
 import { DataGrid } from "@/components/data-grid";
+import { LinkTabs } from "@/components/link-tabs";
 import Link from "next/link";
 import { Suspense } from "react";
 import { asc } from "drizzle-orm";
@@ -36,7 +37,7 @@ function SectionHead({ title, hint, action }: { title: string; hint?: string; ac
 }
 
 /** Setting teams up: who is in which team, who leads it, and its urgency levels. Tasks live on each team's own page. */
-async function TeamContent() {
+async function TeamContent({ show }: { show?: string }) {
   await connection();
   const auth = await pageGuard("super_admin", "leader");
   const admin = auth.role === "super_admin";
@@ -82,91 +83,108 @@ async function TeamContent() {
         )}
       </section>
 
-      <section className="space-y-3">
-        <SectionHead title="People" action={admin ? <AddMemberButton /> : undefined} />
-        <PeopleList people={people} teams={teamOptions} admin={admin} />
-      </section>
+      <LinkTabs
+        tabs={[
+          { label: "People", href: "/team", count: people.length },
+          { label: admin ? "Teams" : "Your team", href: "/team?show=teams", count: teams.length },
+        ]}
+        active={show === "teams" ? 1 : 0}
+      />
 
-      <section className="space-y-3">
-        <SectionHead
-          title={admin ? "Teams" : "Your team"}
-          action={admin ? <NewTeamButton users={options} /> : undefined}
-        />
-        <DataGrid
-          empty={admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
-          headers={["Team", "Leader", "Members"]}
-          rows={teams.map((t) => {
-            const members = allUsers.filter((u) => u.teamId === t.id);
-            const leader = allUsers.find((u) => u.id === t.leaderId);
-            return {
-              key: t.id,
-              cells: [
-                <Link key="n" href={`/team/${t.id}`} className="font-medium hover:underline" title="Open this team">
-                  {t.name}
-                </Link>,
-                leader ? (
-                  <span key="l" className="flex items-center gap-2">
-                    <Avatar name={leader.name} size="sm" />
-                    {leader.name}
-                  </span>
-                ) : (
-                  <span key="l" className="text-muted">
-                    None yet
-                  </span>
-                ),
-                members.length ? (
-                  <span key="m" className="flex items-center gap-2">
-                    <span className="flex -space-x-2">
-                      {members.slice(0, 4).map((m) => (
-                        <span key={m.id} title={m.name} className="rounded-full ring-2 ring-surface">
-                          <Avatar name={m.name} size="sm" />
-                        </span>
-                      ))}
+      {show !== "teams" && (
+        <section className="space-y-3">
+          <SectionHead title="People" action={admin ? <AddMemberButton /> : undefined} />
+          <PeopleList people={people} teams={teamOptions} admin={admin} />
+        </section>
+      )}
+
+      {show === "teams" && (
+        <section className="space-y-3">
+          <SectionHead
+            title={admin ? "Teams" : "Your team"}
+            action={admin ? <NewTeamButton users={options} /> : undefined}
+          />
+          <DataGrid
+            empty={admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
+            headers={["Team", "Leader", "Members"]}
+            rows={teams.map((t) => {
+              const members = allUsers.filter((u) => u.teamId === t.id);
+              const leader = allUsers.find((u) => u.id === t.leaderId);
+              return {
+                key: t.id,
+                cells: [
+                  <Link key="n" href={`/team/${t.id}`} className="font-medium hover:underline" title="Open this team">
+                    {t.name}
+                  </Link>,
+                  leader ? (
+                    <span key="l" className="flex items-center gap-2">
+                      <Avatar name={leader.name} size="sm" />
+                      {leader.name}
                     </span>
-                    <span className="text-muted">
-                      {members.length} {members.length === 1 ? "member" : "members"}
+                  ) : (
+                    <span key="l" className="text-muted">
+                      None yet
                     </span>
-                  </span>
-                ) : (
-                  <span key="m" className="text-muted">
-                    No members yet
-                  </span>
+                  ),
+                  members.length ? (
+                    <span key="m" className="flex items-center gap-2">
+                      <span className="flex -space-x-2">
+                        {members.slice(0, 4).map((m) => (
+                          <span key={m.id} title={m.name} className="rounded-full ring-2 ring-surface">
+                            <Avatar name={m.name} size="sm" />
+                          </span>
+                        ))}
+                      </span>
+                      <span className="text-muted">
+                        {members.length} {members.length === 1 ? "member" : "members"}
+                      </span>
+                    </span>
+                  ) : (
+                    <span key="m" className="text-muted">
+                      No members yet
+                    </span>
+                  ),
+                ],
+                actions: (
+                  <>
+                    <Link
+                      href={`/team/${t.id}`}
+                      className="p-button p-button-icon-only p-button-outlined p-button-secondary"
+                      title="Team details and tasks"
+                      aria-label={`Details for ${t.name}`}
+                    >
+                      <i aria-hidden className="pi pi-arrow-up-right" />
+                    </Link>
+                    {admin && (
+                      <TeamMenu
+                        teamId={t.id}
+                        name={t.name}
+                        team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id) }}
+                        users={options}
+                      />
+                    )}
+                  </>
                 ),
-              ],
-              actions: (
-                <>
-                  <Link
-                    href={`/team/${t.id}`}
-                    className="p-button p-button-icon-only p-button-outlined p-button-secondary"
-                    title="Team details and tasks"
-                    aria-label={`Details for ${t.name}`}
-                  >
-                    <i aria-hidden className="pi pi-arrow-up-right" />
-                  </Link>
-                  {admin && (
-                    <TeamMenu
-                      teamId={t.id}
-                      name={t.name}
-                      team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id) }}
-                      users={options}
-                    />
-                  )}
-                </>
-              ),
-            };
-          })}
-        />
-      </section>
+              };
+            })}
+          />
+        </section>
+      )}
     </div>
   );
 }
 
-export default function TeamPage() {
+async function TeamLoader({ show }: { show: Promise<string | undefined> }) {
+  return <TeamContent show={await show} />;
+}
+
+export default function TeamPage({ searchParams }: PageProps<"/team">) {
+  const show = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Teams & people</h1>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
-        <TeamContent />
+        <TeamLoader show={show} />
       </Suspense>
     </div>
   );

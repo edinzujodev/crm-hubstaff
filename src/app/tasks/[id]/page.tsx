@@ -142,14 +142,19 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
-      {urgency === "critical" && task.dueDate && (
+      {(urgency === "critical" || urgency === "approaching") && task.dueDate && (
         <div
           role="alert"
-          className="flex items-center gap-3 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+          className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm ${
+            urgency === "critical"
+              ? "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-300"
+              : "border-amber-500/60 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+          }`}
         >
           <i aria-hidden className="pi pi-exclamation-triangle text-base" />
           <span>
-            <span className="font-semibold">Critical.</span> {timeLeftLabel(task.dueDate, tz)}
+            <span className="font-semibold">{urgency === "critical" ? "Critical." : "Approaching."}</span>{" "}
+            {timeLeftLabel(task.dueDate, tz)}
           </span>
         </div>
       )}

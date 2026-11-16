@@ -166,11 +166,11 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
       <form className="card flex flex-wrap items-end gap-2 p-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           From
-          <DateInput name="from" defaultValue={filter.from} className="w-40" />
+          <DateInput key={filter.from} name="from" defaultValue={filter.from} className="w-40" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           To
-          <DateInput name="to" defaultValue={filter.to} className="w-40" />
+          <DateInput key={filter.to} name="to" defaultValue={filter.to} className="w-40" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Client

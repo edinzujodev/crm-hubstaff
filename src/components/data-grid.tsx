@@ -15,8 +15,8 @@ export type GridRow = {
   details?: ReactNode;
   /** Values to sort each column by, when the text of the cell would sort wrongly (dates, for example). */
   sort?: (string | number | null | undefined)[];
-  /** "critical" marks the row in red. */
-  tone?: "critical";
+  /** "critical" marks the row in red, "approaching" the same way in amber. */
+  tone?: "critical" | "approaching";
 };
 
 export type GridHeader = string | { label: string; title?: string; align?: "right"; className?: string };
@@ -126,7 +126,7 @@ export function DataGrid({
           const row = e.data as GridRow;
           if (row.details) toggle(row.key);
         }}
-        rowClassName={(row: GridRow) => `${row.details ? "cursor-pointer" : ""} ${row.tone === "critical" ? "row-critical" : ""}`}
+        rowClassName={(row: GridRow) => `${row.details ? "cursor-pointer" : ""} ${row.tone ? `row-${row.tone}` : ""}`}
         tableStyle={{ minWidth: "100%" }}
       >
         {expandable && <Column expander={(row: GridRow) => !!row.details} style={{ width: "3rem" }} />}
