@@ -17,21 +17,32 @@ export function InlineChecklist({
     <div>
       <ul className="space-y-1">
         {items.map((item) => (
-          <li key={item.id} className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={item.done}
-              disabled={pending || !canTick}
-              className="h-4 w-4 cursor-pointer"
-              aria-label={item.text}
-              onChange={(e) =>
-                start(async () => {
-                  const res = await toggleChecklistItem(item.id, e.target.checked);
-                  setError(res.ok ? null : (res.error ?? "Something went wrong"));
-                })
-              }
-            />
-            <span className={item.done ? "text-muted line-through" : ""}>{item.text}</span>
+          <li key={item.id} className="text-sm">
+            <label
+              className={`flex items-center gap-2 ${canTick ? "cursor-pointer" : ""}`}
+            >
+              <input
+                type="checkbox"
+                checked={item.done}
+                disabled={pending || !canTick}
+                className="h-4 w-4 cursor-pointer"
+                aria-label={item.text}
+                onChange={(e) =>
+                  start(async () => {
+                    const res = await toggleChecklistItem(
+                      item.id,
+                      e.target.checked,
+                    );
+                    setError(
+                      res.ok ? null : (res.error ?? "Something went wrong"),
+                    );
+                  })
+                }
+              />
+              <span className={item.done ? "text-muted line-through" : ""}>
+                {item.text}
+              </span>
+            </label>
           </li>
         ))}
       </ul>
