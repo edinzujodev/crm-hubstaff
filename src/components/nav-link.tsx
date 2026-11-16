@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
  * A sidebar link. On hover the row tints, a bar grows in on its left edge and the label slides a little to
  * the right; the current page keeps the bar and the tint. Motion is skipped for people who ask for less.
  */
-export function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function NavLink({ href, icon, children }: { href: string; icon: string; children: React.ReactNode }) {
   const path = usePathname();
   const active = path === href || path.startsWith(`${href}/`);
   return (
@@ -24,7 +24,8 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
           active ? "scale-y-100" : "scale-y-0 group-hover:scale-y-100 group-focus-visible:scale-y-100"
         }`}
       />
-      <span className="transition-transform duration-200 ease-out group-hover:translate-x-1.5 group-focus-visible:translate-x-1.5 motion-reduce:transform-none motion-reduce:transition-none">
+      <span className="flex items-center gap-3 transition-transform duration-200 ease-out group-hover:translate-x-1.5 group-focus-visible:translate-x-1.5 motion-reduce:transform-none motion-reduce:transition-none">
+        <i aria-hidden className={`pi ${icon} w-4 text-center text-sm`} />
         {children}
       </span>
     </Link>

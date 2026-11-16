@@ -4,7 +4,7 @@ import { Select } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { setParentTeam } from "@/app/actions";
 
-/** Which team's leader reviews this team leader's own tasks. */
+/** Which team leader reviews this team leader's own tasks. Saved as that leader's team. */
 export function ReportsToSelect({
   teamId,
   value,
@@ -32,11 +32,10 @@ export function ReportsToSelect({
       >
         <option value="">Nobody (the leader&apos;s tasks skip review)</option>
         {teams
-          .filter((t) => t.id !== teamId)
+          .filter((t) => t.id !== teamId && t.leaderName)
           .map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name}
-              {t.leaderName ? ` — ${t.leaderName}` : " — no leader"}
+              {t.leaderName} (leader of {t.name})
             </option>
           ))}
       </Select>

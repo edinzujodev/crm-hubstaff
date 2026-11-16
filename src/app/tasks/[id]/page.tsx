@@ -1,7 +1,7 @@
 import { DataGrid } from "@/components/data-grid";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { MoveTimeButton } from "@/components/move-time-button";
-import { InlineChecklist } from "@/components/inline-checklist";
+import { TabCard } from "@/components/tab-card";
 import { getSeries } from "@/lib/series";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -17,7 +17,8 @@ import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
 import { canReviewTask, reviewsByTask } from "@/lib/review";
 import { ReviewHistory } from "@/components/review-history";
 import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
-import { DEFAULT_LEVELS, timeLeftLabel, urgencyOf } from "@/lib/urgency";
+import { timeLeftLabel, urgencyOf } from "@/lib/urgency";
+import { getLevels } from "@/lib/urgency-settings";
 import { asc } from "drizzle-orm";
 import { ReviewActions } from "@/components/review-actions";
 import { NextPeriodButton } from "@/components/next-period-button";
@@ -27,27 +28,39 @@ import { getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime, fmtDay, fmtDuration, fmtTime } from "@/lib/format";
 import { getTaskReport, type SessionFlag } from "@/lib/report";
 
-const endReasonLabel = { finished: "Finished", switched: "Switched task", auto_closed: "Auto-closed" } as const;
+const endReasonLabel = {
+  finished: "Finished",
+  switched: "Switched task",
+  auto_closed: "Auto-closed",
+} as const;
 
 function FlagText({ flag }: { flag: SessionFlag }) {
   switch (flag.kind) {
     case "open_too_long":
       return (
         <>
-          Open for {flag.hours}h. Forgot to Stop? It will auto-close after {config.autoCloseSessionHours}h.
+          Open for {flag.hours}h. Forgot to Stop? It will auto-close after{" "}
+          {config.autoCloseSessionHours}h.
         </>
       );
     case "no_hubstaff_time":
-      return <>Hubstaff tracked nothing in this session. Was the timer running on this task?</>;
+      return (
+        <>
+          Hubstaff tracked nothing in this session. Was the timer running on
+          this task?
+        </>
+      );
     case "partly_tracked":
       return (
         <>
-          Hubstaff tracked {fmtDuration(flag.trackedSeconds)} of {fmtDuration(flag.openSeconds)} open (idle timeout or
-          timer stopped).
+          Hubstaff tracked {fmtDuration(flag.trackedSeconds)} of{" "}
+          {fmtDuration(flag.openSeconds)} open (idle timeout or timer stopped).
         </>
       );
     case "auto_closed":
-      return <>Auto-closed at the last Hubstaff activity because it was left open.</>;
+      return (
+        <>Auto-closed at the last Hubstaff activity because it was left open.</>
+      );
     case "overlaps":
       return (
         <>
@@ -61,12 +74,22 @@ function FlagText({ flag }: { flag: SessionFlag }) {
   }
 }
 
-async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
+async function TaskDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
   const me = await getCurrentUser();
   const [row] = await db
-    .select({ task: schema.tasks, clientName: schema.clients.name, assigneeName: schema.users.name })
+    .select({
+      task: schema.tasks,
+      clientName: schema.clients.name,
+      assigneeName: schema.users.name,
+    })
     .from(schema.tasks)
     .leftJoin(schema.clients, eq(schema.tasks.clientId, schema.clients.id))
     .leftJoin(schema.users, eq(schema.tasks.assigneeId, schema.users.id))
@@ -82,23 +105,39 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
     getTaskReport(id, tz),
     me
       ? db.query.workSessions.findFirst({
-          where: and(eq(schema.workSessions.userId, me.id), isNull(schema.workSessions.endedAt)),
+          where: and(
+            eq(schema.workSessions.userId, me.id),
+            isNull(schema.workSessions.endedAt),
+          ),
         })
       : undefined,
     db
       .select()
       .from(schema.taskChecklistItems)
       .where(eq(schema.taskChecklistItems.taskId, id))
-      .orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id)),
+      .orderBy(
+        asc(schema.taskChecklistItems.position),
+        asc(schema.taskChecklistItems.id),
+      ),
     task.reviewerId
-      ? db.query.users.findFirst({ where: eq(schema.users.id, task.reviewerId), columns: { name: true } })
+      ? db.query.users.findFirst({
+          where: eq(schema.users.id, task.reviewerId),
+          columns: { name: true },
+        })
       : null,
     reviewsByTask([id]),
   ]);
   const canReview = canReviewTask(auth, task);
   // Hours can be moved to another task of the same person, by that person or by someone who manages this task.
-  const movable = (userId: number) => !task.deletedAt && (userId === auth.user.id || manage);
-  const sessionUsers = [...new Set(report.sessions.filter((x) => x.endedAt && movable(x.userId)).map((x) => x.userId))];
+  const movable = (userId: number) =>
+    !task.deletedAt && (userId === auth.user.id || manage);
+  const sessionUsers = [
+    ...new Set(
+      report.sessions
+        .filter((x) => x.endedAt && movable(x.userId))
+        .map((x) => x.userId),
+    ),
+  ];
   const targetRows = sessionUsers.length
     ? await db
         .select({
@@ -111,40 +150,94 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         })
         .from(schema.tasks)
         .where(
-          and(inArray(schema.tasks.assigneeId, sessionUsers), isNull(schema.tasks.deletedAt), ne(schema.tasks.id, id)),
+          and(
+            inArray(schema.tasks.assigneeId, sessionUsers),
+            isNull(schema.tasks.deletedAt),
+            ne(schema.tasks.id, id),
+          ),
         )
         .orderBy(asc(schema.tasks.status), desc(schema.tasks.id))
     : [];
   const project = task.projectId
-    ? await db.query.projects.findFirst({ where: eq(schema.projects.id, task.projectId) })
+    ? await db.query.projects.findFirst({
+        where: eq(schema.projects.id, task.projectId),
+      })
     : null;
   const series = task.seriesId ? await getSeries(task.seriesId, auth) : null;
   const today = localDay(new Date(), tz);
-  const team = task.teamId ? await db.query.teams.findFirst({ where: eq(schema.teams.id, task.teamId) }) : null;
+  const team = task.teamId
+    ? await db.query.teams.findFirst({
+        where: eq(schema.teams.id, task.teamId),
+      })
+    : null;
   const urgency = task.deletedAt
     ? null
-    : urgencyOf(
-        task,
-        team ? { approachingHours: team.approachingHours, criticalHours: team.criticalHours } : DEFAULT_LEVELS,
-        tz,
-      );
-  const waiting = !!task.startDate && task.startDate > localDay(new Date(), tz) && task.status !== "done";
+    : urgencyOf(task, await getLevels(), tz);
+  const waiting =
+    !!task.startDate &&
+    task.startDate > localDay(new Date(), tz) &&
+    task.status !== "done";
   const next =
     manage && task.repeat && task.seriesId && !task.deletedAt && !waiting
-      ? nextHidden((await upcomingCopies([task.seriesId], localDay(new Date(), tz))).get(task.seriesId), task.dueDate)
+      ? nextHidden(
+          (await upcomingCopies([task.seriesId], localDay(new Date(), tz))).get(
+            task.seriesId,
+          ),
+          task.dueDate,
+        )
       : null;
   const otherTask =
     mine && mine.taskId !== id
-      ? await db.query.tasks.findFirst({ where: eq(schema.tasks.id, mine.taskId), columns: { id: true, title: true } })
+      ? await db.query.tasks.findFirst({
+          where: eq(schema.tasks.id, mine.taskId),
+          columns: { id: true, title: true },
+        })
       : null;
+
+  const statusLabel = task.deletedAt
+    ? "Deleted"
+    : task.status === "done"
+      ? "Done"
+      : task.status === "review"
+        ? "On review"
+        : task.status === "in_progress"
+          ? "In progress"
+          : "Open";
+  const reviews = reviewMap.get(id) ?? [];
+  const showOccurrences = !!series && series.occurrences.length > 1;
+  const wanted = (await searchParams).tab;
+  const tabList = [
+    { key: "checklist", label: "Checklist" },
+    { key: "time", label: "Time" },
+    ...(showOccurrences
+      ? [
+          {
+            key: "occurrences",
+            label: "Occurrences",
+            count: series!.occurrences.length,
+          },
+        ]
+      : []),
+    { key: "reviews", label: "Reviews", count: reviews.length },
+  ];
+  const activeTab = Math.max(
+    0,
+    tabList.findIndex((t) => t.key === wanted),
+  );
+  const tab = tabList[activeTab].key;
 
   return (
     <div className="space-y-6">
       <section className="card flex flex-wrap items-center justify-between gap-4 p-4">
         <div>
-          <h1 className="text-xl font-semibold">{task.title}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold">{task.title}</h1>
+            <span className="badge">{statusLabel}</span>
+          </div>
           {task.repeat && task.dueDate && (
-            <p className="text-sm text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
+            <p className="text-sm text-muted">
+              {periodLabel(task.repeat, task.dueDate)}
+            </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -154,17 +247,36 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             <>
               {manage && (
                 <div className="flex items-center gap-2">
-                  {task.repeat && <StopRepeatingButton taskId={task.id} />}
-                  <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/tasks" />
+                  {task.repeat && (
+                    <span title="No more copies will be created after this one">
+                      <StopRepeatingButton taskId={task.id} />
+                    </span>
+                  )}
+                  <DeleteTaskButton
+                    taskId={task.id}
+                    title={task.title}
+                    redirectTo="/tasks"
+                  />
                 </div>
               )}
-              {manage && <span aria-hidden className="hidden h-8 w-px bg-border sm:block" />}
+              {manage && (
+                <span
+                  aria-hidden
+                  className="hidden h-8 w-px bg-border sm:block"
+                />
+              )}
               <TimerControls
                 taskId={task.id}
                 title={task.title}
-                lockedTo={task.assigneeId && task.assigneeId !== me?.id ? (row.assigneeName ?? "someone else") : null}
+                lockedTo={
+                  task.assigneeId && task.assigneeId !== me?.id
+                    ? (row.assigneeName ?? "someone else")
+                    : null
+                }
                 done={task.status === "done" || task.status === "review"}
-                runningSince={mine?.taskId === id ? mine.startedAt.toISOString() : null}
+                runningSince={
+                  mine?.taskId === id ? mine.startedAt.toISOString() : null
+                }
                 otherTask={otherTask ?? null}
               />
             </>
@@ -172,30 +284,40 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </section>
 
-      {(urgency === "critical" || urgency === "approaching") && task.dueDate && (
-        <div
-          role="alert"
-          className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm ${
-            urgency === "critical"
-              ? "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-300"
-              : "border-amber-500/60 bg-amber-500/10 text-amber-800 dark:text-amber-300"
-          }`}
-        >
-          <i aria-hidden className="pi pi-exclamation-triangle text-base" />
-          <span>
-            <span className="font-semibold">{urgency === "critical" ? "Critical." : "Approaching."}</span>{" "}
-            {timeLeftLabel(task.dueDate, tz)}
-          </span>
-        </div>
-      )}
+      {(urgency === "critical" || urgency === "approaching") &&
+        task.dueDate && (
+          <div
+            role="alert"
+            className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm ${
+              urgency === "critical"
+                ? "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-300"
+                : "border-amber-500/60 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+            }`}
+          >
+            <i aria-hidden className="pi pi-exclamation-triangle text-base" />
+            <span>
+              <span className="font-semibold">
+                {urgency === "critical" ? "Critical." : "Approaching."}
+              </span>{" "}
+              {timeLeftLabel(task.dueDate, tz)}
+            </span>
+          </div>
+        )}
 
-      <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3 lg:grid-cols-4">
+      <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3">
         <InfoItem icon="pi-tag" label="Kind of task">
-          {task.repeat ? (task.repeat === "weekly" ? "Weekly, repeats" : "Monthly, repeats") : "One-time"}
+          {task.repeat
+            ? task.repeat === "weekly"
+              ? "Weekly, repeats"
+              : "Monthly, repeats"
+            : "One-time"}
         </InfoItem>
         <InfoItem icon="pi-briefcase" label="Client">
           {task.clientId ? (
-            <Link href={`/clients/${task.clientId}`} className="hover:underline">
+            <Link
+              href={`/clients/${task.clientId}`}
+              className="hover:underline"
+            >
               {row.clientName}
             </Link>
           ) : (
@@ -214,57 +336,18 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         <InfoItem icon="pi-calendar" label="Due">
           {task.dueDate
             ? fmtDay(task.dueDate) +
-              (task.dueDate.slice(0, 4) !== today.slice(0, 4) ? ` ${task.dueDate.slice(0, 4)}` : "")
+              (task.dueDate.slice(0, 4) !== today.slice(0, 4)
+                ? ` ${task.dueDate.slice(0, 4)}`
+                : "")
             : "—"}
         </InfoItem>
-        <InfoItem icon="pi-flag" label="Status">
-          {task.deletedAt
-            ? "Deleted"
-            : task.status === "done"
-              ? "Done"
-              : task.status === "review"
-                ? "On review"
-                : task.status === "in_progress"
-                  ? "In progress"
-                  : "Open"}
-        </InfoItem>
-        <InfoItem icon="pi-check-circle" label="Reviewed by">
-          {reviewer?.name ?? "—"}
-        </InfoItem>
-        <InfoItem icon="pi-plus-circle" label="Created">
-          {fmtDateTime(task.createdAt, tz)}
-        </InfoItem>
-        <InfoItem icon="pi-check" label="Finished">
-          {task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}
-        </InfoItem>
-        <InfoItem icon="pi-stopwatch" label="Time tracked">
-          {report.trackedSeconds ? fmtDuration(report.trackedSeconds) : "—"}
-        </InfoItem>
-        <InfoItem icon="pi-clock" label="Hubstaff">
-          {task.hubstaffTaskId ? (
-            `Task #${task.hubstaffTaskId}`
-          ) : (
-            <span className="text-muted" title="It is created in Hubstaff the first time you press Start">
-              Not created yet
-            </span>
-          )}
-        </InfoItem>
       </section>
-
-      {next && task.repeat && (
-        <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
-          <span>
-            The next one ({periodLabel(task.repeat, next.dueDate)}) shows up on its own when its time comes. Need it
-            earlier?
-          </span>
-          <NextPeriodButton nextTaskId={next.id} label={periodLabel(task.repeat, next.dueDate)} />
-        </div>
-      )}
 
       {waiting && (
         <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
           <span>
-            This copy is waiting for its start date ({task.startDate}); it is hidden from the open lists until then.
+            This copy is waiting for its start date ({task.startDate}); it is
+            hidden from the open lists until then.
           </span>
         </div>
       )}
@@ -283,206 +366,345 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
 
       {task.reviewResult === "rejected" && task.status === "todo" && (
         <div className="card space-y-1 border-red-500/50 p-3 text-sm">
-          <p className="font-medium text-red-600 dark:text-red-400">Checked: not OK</p>
+          <p className="font-medium text-red-600 dark:text-red-400">
+            Checked: not OK
+          </p>
           <p className="whitespace-pre-wrap">{task.reviewNote}</p>
-          <p className="text-xs text-muted">Fix it and press Finish again to send it back for review.</p>
+          <p className="text-xs text-muted">
+            Fix it and press Finish again to send it back for review.
+          </p>
         </div>
       )}
 
       {task.reviewResult === "approved" && task.status === "done" && (
         <p className="card border-emerald-500/50 p-3 text-sm">
-          <span className="font-medium text-emerald-700 dark:text-emerald-400">Checked: OK</span>
-          {task.reviewedAt && <span className="text-muted"> · {fmtDateTime(task.reviewedAt, tz)}</span>}
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">
+            Checked: OK
+          </span>
+          {task.reviewedAt && (
+            <span className="text-muted">
+              {" "}
+              · {fmtDateTime(task.reviewedAt, tz)}
+            </span>
+          )}
           {task.reviewNote && <span> — {task.reviewNote}</span>}
         </p>
       )}
 
       {task.deletedAt && (
         <p className="card border-red-500/40 p-3 text-sm">
-          This task was deleted on {fmtDateTime(task.deletedAt, tz)}. It is hidden from the task list and can&apos;t be
-          started. Its Hubstaff task is marked [SOFT-DELETED], and the hours below still count in reports. Restore it to
-          use it again.
+          This task was deleted on {fmtDateTime(task.deletedAt, tz)}. It is
+          hidden from the task list and can&apos;t be started. Its Hubstaff task
+          is marked [SOFT-DELETED], and the hours below still count in reports.
+          Restore it to use it again.
         </p>
       )}
 
-      {(reviewMap.get(id)?.length ?? 0) > 0 && (
-        <section className="card space-y-3 p-4">
-          <h2 className="font-semibold">
-            Review history <span className="text-sm font-normal text-muted">{reviewMap.get(id)!.length}</span>
-          </h2>
-          <ReviewHistory reviews={reviewMap.get(id)!} tz={tz} />
-        </section>
-      )}
+      <TabCard
+        padded
+        active={activeTab}
+        tabs={tabList.map((t) => ({
+          label: t.label,
+          count: "count" in t ? t.count : undefined,
+          href:
+            t.key === "checklist"
+              ? `/tasks/${id}`
+              : `/tasks/${id}?tab=${t.key}`,
+        }))}
+      >
+        <div className="space-y-6">
+          {tab === "checklist" && (
+            <TaskChecklist
+              taskId={task.id}
+              description={task.description}
+              items={checklist.map((c) => ({
+                id: c.id,
+                text: c.text,
+                done: c.doneAt !== null,
+              }))}
+              canEdit={manage && !task.deletedAt}
+              canTick={!task.deletedAt && task.status !== "done"}
+            />
+          )}
 
-      {series && series.occurrences.length > 1 && (
-        <section className="space-y-2">
-          <h2 className="font-semibold">
-            All occurrences <span className="text-sm font-normal text-muted">{series.occurrences.length}</span>
-          </h2>
-          <DataGrid
-            headers={["Period", "Due", "Status", "Assignee", "Finished", { label: "Time", align: "right" }]}
-            rows={[...series.occurrences].reverse().map((o) => ({
-              key: o.id,
-              cells: [
-                <div key="p">
-                  {o.id === id ? (
-                    <span className="font-semibold">
-                      {series.summary.repeat && o.dueDate ? periodLabel(series.summary.repeat, o.dueDate) : o.title}{" "}
-                      <span className="badge ml-1 text-muted">Current</span>
-                    </span>
-                  ) : (
-                    <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
-                      {series.summary.repeat && o.dueDate ? periodLabel(series.summary.repeat, o.dueDate) : o.title}
-                    </Link>
-                  )}
-                  {o.startDate && o.startDate > today && o.status !== "done" && (
-                    <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
-                  )}
-                  {o.checklist.length > 0 && o.status !== "done" && o.id !== id && (
-                    <div className="mt-1">
-                      <InlineChecklist items={o.checklist} canTick />
-                    </div>
-                  )}
-                </div>,
-                <span key="d" className="text-muted">
-                  {o.dueDate ? fmtDay(o.dueDate) : "—"}
-                </span>,
-                <span key="s" className="badge">
-                  {o.status === "done" ? "Done" : o.status === "review" ? "On review" : "Open"}
-                </span>,
-                <span key="a" className="text-muted">
-                  {o.assigneeName ?? "—"}
-                </span>,
-                <span key="f" className="text-muted">
-                  {o.doneAt ? fmtDateTime(o.doneAt, tz) : "—"}
-                </span>,
-                <span key="t" className="font-mono tabular-nums">
-                  {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
-                </span>,
-              ],
-            }))}
-          />
-        </section>
-      )}
-
-      <TaskChecklist
-        taskId={task.id}
-        description={task.description}
-        items={checklist.map((c) => ({ id: c.id, text: c.text, done: c.doneAt !== null }))}
-        canEdit={manage && !task.deletedAt}
-        canTick={!task.deletedAt && task.status !== "done"}
-      />
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        <div className="card p-4">
-          <p className="text-xs text-muted">Tracked in Hubstaff</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">{fmtDuration(report.trackedSeconds)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-muted">Activity</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">
-            {report.activityPercent === null ? "—" : `${report.activityPercent}%`}
-          </p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-muted">Last tracked</p>
-          <p className="mt-1 text-lg">{report.lastActivityAt ? fmtDateTime(report.lastActivityAt, tz) : "—"}</p>
-        </div>
-      </section>
-
-      {report.outsideSessionsSeconds > 0 && (
-        <p className="text-sm text-muted">
-          {fmtDuration(report.outsideSessionsSeconds)} of this was tracked in the Hubstaff app without Start in the CRM.
-          It still counts toward the task.
-        </p>
-      )}
-
-      <section className="space-y-2">
-        <h2 className="font-semibold">Sessions</h2>
-        <DataGrid
-          empty="No sessions yet. Click Start to begin."
-          headers={[
-            "Who",
-            "Start → Finish",
-            { label: "Open", align: "right" },
-            { label: "Hubstaff", align: "right" },
-            "Notes",
-          ]}
-          actionsWidth="9rem"
-          rows={report.sessions.map((s) => ({
-            key: s.id,
-            cells: [
-              s.userName,
-              <span key="w" className="whitespace-nowrap">
-                {fmtDateTime(s.startedAt, tz)} →{" "}
-                {s.endedAt ? (
-                  fmtTime(s.endedAt, tz)
-                ) : (
-                  <span className="text-emerald-700 dark:text-emerald-400">running</span>
-                )}
-                {s.endReason && <span className="ml-2 text-xs text-muted">{endReasonLabel[s.endReason]}</span>}
-              </span>,
-              <span key="o" className="font-mono tabular-nums text-muted">
-                {fmtDuration(s.openSeconds)}
-              </span>,
-              <span key="h" className="font-mono tabular-nums">
-                {fmtDuration(s.trackedSeconds)}
-              </span>,
-              <div key="n" className="text-xs text-amber-700 dark:text-amber-400">
-                {s.flags.map((f, i) => (
-                  <p key={i}>
-                    <FlagText flag={f} />
+          {tab === "time" && (
+            <>
+              <section className="grid gap-3 sm:grid-cols-3">
+                <div className="card p-4">
+                  <p className="text-xs text-muted">Tracked in Hubstaff</p>
+                  <p className="mt-1 font-mono text-2xl tabular-nums">
+                    {fmtDuration(report.trackedSeconds)}
                   </p>
-                ))}
-              </div>,
-            ],
-            actions:
-              s.endedAt && movable(s.userId) ? (
-                <MoveTimeButton
-                  sessionId={s.id}
-                  summary={`${s.userName} · ${fmtDateTime(s.startedAt, tz)} → ${fmtTime(s.endedAt, tz)} · ${fmtDuration(s.trackedSeconds || s.openSeconds)}`}
-                  targets={targetRows
-                    .filter((t) => t.assigneeId === s.userId)
-                    .map((t) => ({
-                      id: t.id,
-                      title: t.title,
-                      label: [
-                        t.repeat && t.dueDate ? periodLabel(t.repeat, t.dueDate) : "",
-                        t.status === "done" ? "Done" : t.status === "review" ? "On review" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" · "),
-                    }))}
-                />
-              ) : null,
-          }))}
-        />
-        <p className="text-xs text-muted">
-          Sessions are what was clicked in the CRM. Hours always come from Hubstaff, and several sessions on one task
-          are added up. Tracked on the wrong task? Use Move hours on the session.
-        </p>
-      </section>
+                </div>
+                <div className="card p-4">
+                  <p className="text-xs text-muted">Activity</p>
+                  <p className="mt-1 font-mono text-2xl tabular-nums">
+                    {report.activityPercent === null
+                      ? "—"
+                      : `${report.activityPercent}%`}
+                  </p>
+                </div>
+                <div className="card p-4">
+                  <p className="text-xs text-muted">Last tracked</p>
+                  <p className="mt-1 text-lg">
+                    {report.lastActivityAt
+                      ? fmtDateTime(report.lastActivityAt, tz)
+                      : "—"}
+                  </p>
+                </div>
+              </section>
 
-      <section className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-2">
-          <h2 className="font-semibold">By person</h2>
-          <TotalsTable rows={report.byUser.map((r) => ({ label: r.name, ...r }))} />
+              {report.outsideSessionsSeconds > 0 && (
+                <p className="text-sm text-muted">
+                  {fmtDuration(report.outsideSessionsSeconds)} of this was
+                  tracked in the Hubstaff app without Start in the CRM. It still
+                  counts toward the task.
+                </p>
+              )}
+
+              <section className="space-y-2">
+                <h2 className="font-semibold">Sessions</h2>
+                <DataGrid
+                  empty="No sessions yet. Click Start to begin."
+                  headers={[
+                    "Who",
+                    "Start → Finish",
+                    { label: "Session length", align: "right" },
+                    { label: "Tracked in Hubstaff", align: "right" },
+                    "Notes",
+                  ]}
+                  actionsWidth="9rem"
+                  rows={report.sessions.map((s) => ({
+                    key: s.id,
+                    cells: [
+                      s.userName,
+                      <span key="w" className="whitespace-nowrap">
+                        {fmtDateTime(s.startedAt, tz)} →{" "}
+                        {s.endedAt ? (
+                          fmtTime(s.endedAt, tz)
+                        ) : (
+                          <span className="text-emerald-700 dark:text-emerald-400">
+                            running
+                          </span>
+                        )}
+                        {s.endReason && (
+                          <span className="ml-2 text-xs text-muted">
+                            {endReasonLabel[s.endReason]}
+                          </span>
+                        )}
+                      </span>,
+                      <span
+                        key="o"
+                        className="font-mono tabular-nums text-muted"
+                      >
+                        {fmtDuration(s.openSeconds)}
+                      </span>,
+                      <span key="h" className="font-mono tabular-nums">
+                        {fmtDuration(s.trackedSeconds)}
+                      </span>,
+                      <div
+                        key="n"
+                        className="text-xs text-amber-700 dark:text-amber-400"
+                      >
+                        {s.flags.map((f, i) => (
+                          <p key={i}>
+                            <FlagText flag={f} />
+                          </p>
+                        ))}
+                      </div>,
+                    ],
+                    actions:
+                      s.endedAt && movable(s.userId) ? (
+                        <MoveTimeButton
+                          sessionId={s.id}
+                          summary={`${s.userName} · ${fmtDateTime(s.startedAt, tz)} → ${fmtTime(s.endedAt, tz)} · ${fmtDuration(s.trackedSeconds || s.openSeconds)}`}
+                          targets={targetRows
+                            .filter((t) => t.assigneeId === s.userId)
+                            .map((t) => ({
+                              id: t.id,
+                              title: t.title,
+                              label: [
+                                t.repeat && t.dueDate
+                                  ? periodLabel(t.repeat, t.dueDate)
+                                  : "",
+                                t.status === "done"
+                                  ? "Done"
+                                  : t.status === "review"
+                                    ? "On review"
+                                    : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" · "),
+                            }))}
+                        />
+                      ) : null,
+                  }))}
+                />
+                <p className="text-xs text-muted">
+                  Session length is how long Start was on. Tracked in Hubstaff
+                  is what Hubstaff counted in that time (idle time is left out).
+                  Tracked on the wrong task? Use Move hours on the session.
+                </p>
+              </section>
+
+              {(report.byUser.length > 1 || report.byDay.length > 1) && (
+                <section className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <h2 className="font-semibold">By person</h2>
+                    <TotalsTable
+                      rows={report.byUser.map((r) => ({ label: r.name, ...r }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="font-semibold">By day</h2>
+                    <TotalsTable
+                      rows={report.byDay.map((r) => ({ label: r.day, ...r }))}
+                    />
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+
+          {tab === "occurrences" && series && (
+            <section className="space-y-3">
+              {next && task.repeat && (
+                <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                  <span>
+                    {periodLabel(task.repeat, next.dueDate)} is created but
+                    hidden until its time comes. Need it earlier?
+                  </span>
+                  <NextPeriodButton
+                    nextTaskId={next.id}
+                    label={periodLabel(task.repeat, next.dueDate)}
+                  />
+                </div>
+              )}
+              <DataGrid
+                headers={[
+                  "Period",
+                  "Due",
+                  "Status",
+                  "Assignee",
+                  "Finished",
+                  { label: "Time", align: "right" },
+                ]}
+                rows={[...series.occurrences].reverse().map((o) => ({
+                  key: o.id,
+                  cells: [
+                    <div key="p">
+                      {o.id === id ? (
+                        <span className="font-semibold">
+                          {series.summary.repeat && o.dueDate
+                            ? periodLabel(series.summary.repeat, o.dueDate)
+                            : o.title}{" "}
+                          <span className="badge ml-1 text-muted">Current</span>
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/tasks/${o.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {series.summary.repeat && o.dueDate
+                            ? periodLabel(series.summary.repeat, o.dueDate)
+                            : o.title}
+                        </Link>
+                      )}
+                      {o.startDate &&
+                        o.startDate > today &&
+                        o.status !== "done" && (
+                          <span className="badge ml-2 text-muted">
+                            Hidden until {fmtDay(o.startDate)}
+                          </span>
+                        )}
+                    </div>,
+                    <span key="d" className="text-muted">
+                      {o.dueDate ? fmtDay(o.dueDate) : "—"}
+                    </span>,
+                    <span key="s" className="badge">
+                      {o.status === "done"
+                        ? "Done"
+                        : o.status === "review"
+                          ? "On review"
+                          : "Open"}
+                    </span>,
+                    <span key="a" className="text-muted">
+                      {o.assigneeName ?? "—"}
+                    </span>,
+                    <span key="f" className="text-muted">
+                      {o.doneAt ? fmtDateTime(o.doneAt, tz) : "—"}
+                    </span>,
+                    <span key="t" className="font-mono tabular-nums">
+                      {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
+                    </span>,
+                  ],
+                }))}
+              />
+            </section>
+          )}
+
+          {tab === "reviews" && (
+            <>
+              <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-4">
+                <InfoItem icon="pi-plus-circle" label="Created">
+                  {fmtDateTime(task.createdAt, tz)}
+                </InfoItem>
+                <InfoItem icon="pi-check" label="Finished">
+                  {task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}
+                </InfoItem>
+                <InfoItem icon="pi-check-circle" label="Reviewed by">
+                  {reviewer?.name ?? "—"}
+                </InfoItem>
+                <InfoItem icon="pi-clock" label="Hubstaff">
+                  {task.hubstaffTaskId ? (
+                    `Task #${task.hubstaffTaskId}`
+                  ) : (
+                    <span
+                      className="text-muted"
+                      title="It is created in Hubstaff the first time you press Start"
+                    >
+                      Not created yet
+                    </span>
+                  )}
+                </InfoItem>
+              </section>
+              {reviews.length > 0 ? (
+                <section className="card space-y-3 p-4">
+                  <h2 className="font-semibold">
+                    Review history{" "}
+                    <span className="text-sm font-normal text-muted">
+                      {reviews.length}
+                    </span>
+                  </h2>
+                  <ReviewHistory reviews={reviews} tz={tz} />
+                </section>
+              ) : (
+                <p className="text-sm text-muted">
+                  Nobody has checked this task yet.
+                </p>
+              )}
+            </>
+          )}
         </div>
-        <div className="space-y-2">
-          <h2 className="font-semibold">By day</h2>
-          <TotalsTable rows={report.byDay.map((r) => ({ label: r.day, ...r }))} />
-        </div>
-      </section>
+      </TabCard>
     </div>
   );
 }
 
-function TotalsTable({ rows }: { rows: { label: string; tracked: number; active: number }[] }) {
+function TotalsTable({
+  rows,
+}: {
+  rows: { label: string; tracked: number; active: number }[];
+}) {
   return (
     <DataGrid
       noHeader
       empty="No tracked time yet."
-      headers={["", { label: "", align: "right" }, { label: "", align: "right" }]}
+      headers={[
+        "",
+        { label: "", align: "right" },
+        { label: "", align: "right" },
+      ]}
       rows={rows.map((r) => ({
         key: r.label,
         cells: [
@@ -500,7 +722,15 @@ function TotalsTable({ rows }: { rows: { label: string; tracked: number; active:
 }
 
 /** One fact about the task: a round icon, a small label and the value under it. */
-function InfoItem({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
+function InfoItem({
+  icon,
+  label,
+  children,
+}: {
+  icon: string;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-w-0 items-center gap-3 bg-surface px-4 py-3">
       <span
@@ -517,10 +747,13 @@ function InfoItem({ icon, label, children }: { icon: string; label: string; chil
   );
 }
 
-export default function TaskPage({ params }: PageProps<"/tasks/[id]">) {
+export default function TaskPage({
+  params,
+  searchParams,
+}: PageProps<"/tasks/[id]">) {
   return (
     <Suspense fallback={<p className="text-muted">Loading…</p>}>
-      <TaskDetail params={params} />
+      <TaskDetail params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

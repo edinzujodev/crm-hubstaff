@@ -12,8 +12,9 @@ const SECTIONS: Record<string, string> = {
   leads: "Leads",
   clients: "Clients",
   reports: "Reports",
-  team: "Teams & people",
+  team: "Teams",
   templates: "Templates",
+  config: "Config",
 };
 const DETAIL: Record<string, string> = {
   tasks: "Task",

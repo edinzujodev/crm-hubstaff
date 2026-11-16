@@ -83,6 +83,7 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
       </div>
 
       <DataGrid
+        flush
         headers={["Person", "Team", ...(admin ? ["Role", "Hubstaff user id"] : [])]}
         empty={
           <>

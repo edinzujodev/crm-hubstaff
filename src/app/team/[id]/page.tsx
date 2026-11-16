@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { TeamLevelsForm } from "@/components/team-levels-form";
 import { TeamMembers } from "@/components/team-members";
 import { EditTeamButton } from "@/components/team-popups";
 import { WidgetBody } from "@/components/dashboard/widgets";
@@ -107,11 +106,11 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
         <header className="border-b border-border px-4 py-3">
           <h2 className="font-semibold">Team settings</h2>
         </header>
-        <div className="space-y-2 border-b border-border p-4">
+        <div className="space-y-2 p-4">
           <h3 className="text-sm font-medium">Who reviews the leader&apos;s own tasks</h3>
           <p className="text-xs text-muted">
-            The leader of this team reviews everyone else&apos;s finished tasks. Pick the team whose leader reviews{" "}
-            {leader?.name ?? "this team's leader"}.
+            The leader of this team reviews everyone else&apos;s finished tasks. Pick the team leader who reviews{" "}
+            {leader?.name ?? "this team’s leader"}&apos;s own tasks.
           </p>
           {admin ? (
             <ReportsToSelect
@@ -121,14 +120,9 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
             />
           ) : (
             <p className="text-sm">
-              {allTeams.find((t) => t.id === team.parentTeamId)?.name ?? "Nobody"}
+              {allUsers.find((u) => u.id === allTeams.find((t) => t.id === team.parentTeamId)?.leaderId)?.name ?? "Nobody"}
             </p>
           )}
-        </div>
-        <div className="space-y-2 p-4">
-          <h3 className="text-sm font-medium">Urgency levels</h3>
-          <p className="text-xs text-muted">How many hours before its due date a task becomes Critical or Approaching.</p>
-          <TeamLevelsForm teamId={team.id} approachingHours={team.approachingHours} criticalHours={team.criticalHours} />
         </div>
       </section>
 

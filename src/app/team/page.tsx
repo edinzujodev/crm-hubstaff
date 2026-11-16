@@ -1,5 +1,5 @@
 import { DataGrid } from "@/components/data-grid";
-import { LinkTabs } from "@/components/link-tabs";
+import { TabCard } from "@/components/tab-card";
 import Link from "next/link";
 import { Suspense } from "react";
 import { asc } from "drizzle-orm";
@@ -11,7 +11,17 @@ import { PeopleList, type Person } from "@/components/people-list";
 import { AddMemberButton, NewTeamButton } from "@/components/team-popups";
 import { pageGuard } from "@/lib/auth";
 
-function Tile({ label, value, tone, hint }: { label: string; value: number; tone?: "warn"; hint?: string }) {
+function Tile({
+  label,
+  value,
+  tone,
+  hint,
+}: {
+  label: string;
+  value: number;
+  tone?: "warn";
+  hint?: string;
+}) {
   return (
     <div className="card p-4" title={hint}>
       <p className="text-xs text-muted">{label}</p>
@@ -24,9 +34,17 @@ function Tile({ label, value, tone, hint }: { label: string; value: number; tone
   );
 }
 
-function SectionHead({ title, hint, action }: { title: string; hint?: string; action?: React.ReactNode }) {
+function SectionHead({
+  title,
+  hint,
+  action,
+}: {
+  title: string;
+  hint?: string;
+  action?: React.ReactNode;
+}) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-3 px-4 py-3">
       <div>
         <h2 className="font-semibold">{title}</h2>
         {hint && <p className="max-w-2xl text-sm text-muted">{hint}</p>}
@@ -36,7 +54,7 @@ function SectionHead({ title, hint, action }: { title: string; hint?: string; ac
   );
 }
 
-/** Setting teams up: who is in which team, who leads it, and its urgency levels. Tasks live on each team's own page. */
+/** Setting teams up: who is in which team, and who leads it. Tasks live on each team's own page. */
 async function TeamContent({ show }: { show?: string }) {
   await connection();
   const auth = await pageGuard("super_admin", "leader");
@@ -46,9 +64,15 @@ async function TeamContent({ show }: { show?: string }) {
     db.select().from(schema.teams).orderBy(asc(schema.teams.name)),
   ]);
   // A team leader only sees their own team.
-  const teams = admin ? allTeams : allTeams.filter((t) => t.id === auth.ledTeam?.id);
-  const users = admin ? allUsers : allUsers.filter((u) => u.teamId === auth.ledTeam?.id);
-  const leaderIds = new Set(allTeams.map((t) => t.leaderId).filter((id) => id !== null));
+  const teams = admin
+    ? allTeams
+    : allTeams.filter((t) => t.id === auth.ledTeam?.id);
+  const users = admin
+    ? allUsers
+    : allUsers.filter((u) => u.teamId === auth.ledTeam?.id);
+  const leaderIds = new Set(
+    allTeams.map((t) => t.leaderId).filter((id) => id !== null),
+  );
   const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
   const options = allUsers.map((u) => ({
     id: u.id,
@@ -83,93 +107,120 @@ async function TeamContent({ show }: { show?: string }) {
         )}
       </section>
 
-      <LinkTabs
+      <TabCard
         tabs={[
           { label: "People", href: "/team", count: people.length },
-          { label: admin ? "Teams" : "Your team", href: "/team?show=teams", count: teams.length },
+          {
+            label: admin ? "Teams" : "Your team",
+            href: "/team?show=teams",
+            count: teams.length,
+          },
         ]}
         active={show === "teams" ? 1 : 0}
-      />
+      >
+        {show !== "teams" && (
+          <section>
+            <SectionHead
+              title="People"
+              action={admin ? <AddMemberButton /> : undefined}
+            />
+            <PeopleList people={people} teams={teamOptions} admin={admin} />
+          </section>
+        )}
 
-      {show !== "teams" && (
-        <section className="space-y-3">
-          <SectionHead title="People" action={admin ? <AddMemberButton /> : undefined} />
-          <PeopleList people={people} teams={teamOptions} admin={admin} />
-        </section>
-      )}
-
-      {show === "teams" && (
-        <section className="space-y-3">
-          <SectionHead
-            title={admin ? "Teams" : "Your team"}
-            action={admin ? <NewTeamButton users={options} /> : undefined}
-          />
-          <DataGrid
-            empty={admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
-            headers={["Team", "Leader", "Members"]}
-            rows={teams.map((t) => {
-              const members = allUsers.filter((u) => u.teamId === t.id);
-              const leader = allUsers.find((u) => u.id === t.leaderId);
-              return {
-                key: t.id,
-                cells: [
-                  <Link key="n" href={`/team/${t.id}`} className="font-medium hover:underline" title="Open this team">
-                    {t.name}
-                  </Link>,
-                  leader ? (
-                    <span key="l" className="flex items-center gap-2">
-                      <Avatar name={leader.name} size="sm" />
-                      {leader.name}
-                    </span>
-                  ) : (
-                    <span key="l" className="text-muted">
-                      None yet
-                    </span>
-                  ),
-                  members.length ? (
-                    <span key="m" className="flex items-center gap-2">
-                      <span className="flex -space-x-2">
-                        {members.slice(0, 4).map((m) => (
-                          <span key={m.id} title={m.name} className="rounded-full ring-2 ring-surface">
-                            <Avatar name={m.name} size="sm" />
-                          </span>
-                        ))}
-                      </span>
-                      <span className="text-muted">
-                        {members.length} {members.length === 1 ? "member" : "members"}
-                      </span>
-                    </span>
-                  ) : (
-                    <span key="m" className="text-muted">
-                      No members yet
-                    </span>
-                  ),
-                ],
-                actions: (
-                  <>
+        {show === "teams" && (
+          <section>
+            <SectionHead
+              title={admin ? "Teams" : "Your team"}
+              action={admin ? <NewTeamButton users={options} /> : undefined}
+            />
+            <DataGrid
+              flush
+              empty={
+                admin
+                  ? "No teams yet. Use “New team” to add the first one."
+                  : "You don't lead a team yet."
+              }
+              headers={["Team", "Leader", "Members"]}
+              rows={teams.map((t) => {
+                const members = allUsers.filter((u) => u.teamId === t.id);
+                const leader = allUsers.find((u) => u.id === t.leaderId);
+                return {
+                  key: t.id,
+                  cells: [
                     <Link
+                      key="n"
                       href={`/team/${t.id}`}
-                      className="p-button p-button-icon-only p-button-outlined p-button-secondary"
-                      title="Team details and tasks"
-                      aria-label={`Details for ${t.name}`}
+                      className="font-medium hover:underline"
+                      title="Open this team"
                     >
-                      <i aria-hidden className="pi pi-arrow-up-right" />
-                    </Link>
-                    {admin && (
-                      <TeamMenu
-                        teamId={t.id}
-                        name={t.name}
-                        team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id) }}
-                        users={options}
-                      />
-                    )}
-                  </>
-                ),
-              };
-            })}
-          />
-        </section>
-      )}
+                      {t.name}
+                    </Link>,
+                    leader ? (
+                      <span key="l" className="flex items-center gap-2">
+                        <Avatar name={leader.name} size="sm" />
+                        {leader.name}
+                      </span>
+                    ) : (
+                      <span key="l" className="text-muted">
+                        None yet
+                      </span>
+                    ),
+                    members.length ? (
+                      <span key="m" className="flex items-center gap-2">
+                        <span className="flex -space-x-2">
+                          {members.slice(0, 4).map((m) => (
+                            <span
+                              key={m.id}
+                              title={m.name}
+                              className="rounded-full ring-2 ring-surface"
+                            >
+                              <Avatar name={m.name} size="sm" />
+                            </span>
+                          ))}
+                        </span>
+                        <span className="text-muted">
+                          {members.length}{" "}
+                          {members.length === 1 ? "member" : "members"}
+                        </span>
+                      </span>
+                    ) : (
+                      <span key="m" className="text-muted">
+                        No members yet
+                      </span>
+                    ),
+                  ],
+                  actions: (
+                    <>
+                      <Link
+                        href={`/team/${t.id}`}
+                        className="p-button p-button-icon-only p-button-outlined p-button-secondary"
+                        title="Team details and tasks"
+                        aria-label={`Details for ${t.name}`}
+                      >
+                        <i aria-hidden className="pi pi-arrow-up-right" />
+                      </Link>
+                      {admin && (
+                        <TeamMenu
+                          teamId={t.id}
+                          name={t.name}
+                          team={{
+                            id: t.id,
+                            name: t.name,
+                            leaderId: t.leaderId,
+                            memberIds: members.map((m) => m.id),
+                          }}
+                          users={options}
+                        />
+                      )}
+                    </>
+                  ),
+                };
+              })}
+            />
+          </section>
+        )}
+      </TabCard>
     </div>
   );
 }
@@ -179,10 +230,12 @@ async function TeamLoader({ show }: { show: Promise<string | undefined> }) {
 }
 
 export default function TeamPage({ searchParams }: PageProps<"/team">) {
-  const show = searchParams.then((p) => (typeof p.show === "string" ? p.show : undefined));
+  const show = searchParams.then((p) =>
+    typeof p.show === "string" ? p.show : undefined,
+  );
   return (
     <div className="space-y-6">
-      <h1 className="sr-only">Teams & people</h1>
+      <h1 className="sr-only">Teams</h1>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <TeamLoader show={show} />
       </Suspense>

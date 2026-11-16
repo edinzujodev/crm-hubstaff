@@ -332,3 +332,29 @@ body {
   border-bottom: 2px solid transparent;
 }
 
+
+/* Tabs without lines: no rule under the row, the active tab is a soft filled pill. */
+.p-tabmenu .p-tabmenu-nav {
+  border: 0;
+  gap: 0.5rem;
+}
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem .p-menuitem-link,
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem.p-highlight .p-menuitem-link,
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem:not(.p-highlight) .p-menuitem-link {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  height: auto;
+  padding: 0.625rem 1.25rem;
+}
+.p-tabmenu .p-tabmenu-nav {
+  align-items: center;
+}
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem.p-highlight .p-menuitem-link {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem:not(.p-highlight) .p-menuitem-link:hover {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  color: var(--foreground);
+}
+

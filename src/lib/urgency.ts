@@ -1,6 +1,6 @@
 export type Urgency = "on_track" | "approaching" | "critical";
 
-/** Hours until a task is due below which it is "approaching" / "critical". Set per team by its leader. */
+/** Hours until a task is due below which it is "approaching" / "critical". Set once for everyone by the super admin. */
 export type Levels = { approachingHours: number; criticalHours: number };
 
 export const DEFAULT_LEVELS: Levels = { approachingHours: 72, criticalHours: 24 };

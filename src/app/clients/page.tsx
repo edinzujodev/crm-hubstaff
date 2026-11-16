@@ -1,5 +1,5 @@
 import { DataGrid } from "@/components/data-grid";
-import { LinkTabs } from "@/components/link-tabs";
+import { TabCard } from "@/components/tab-card";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -55,15 +55,15 @@ async function ClientList({ show }: { show?: string }) {
   const inProgress = new Map(taskCounts.map((r) => [r.clientId, r.n]));
 
   return (
-    <>
-      <LinkTabs
-        tabs={tabs.map(([key, label, n]) => ({ label, href: key ? `/clients?show=${key}` : "/clients", count: n }))}
-        active={Math.max(
-          0,
-          tabs.findIndex(([key]) => key === (show ?? "")),
-        )}
-      />
+    <TabCard
+      tabs={tabs.map(([key, label, n]) => ({ label, href: key ? `/clients?show=${key}` : "/clients", count: n }))}
+      active={Math.max(
+        0,
+        tabs.findIndex(([key]) => key === (show ?? "")),
+      )}
+    >
       <DataGrid
+        flush
         empty="No clients here yet."
         headers={[
           "Client",
@@ -114,7 +114,7 @@ async function ClientList({ show }: { show?: string }) {
           ),
         }))}
       />
-    </>
+    </TabCard>
   );
 }
 

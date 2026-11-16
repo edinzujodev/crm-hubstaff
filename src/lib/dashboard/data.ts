@@ -6,7 +6,8 @@ import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
 import { rangePresets } from "@/lib/report-range";
 import { getTimeReport, type TimeReportFilter } from "@/lib/time-report";
-import { DEFAULT_LEVELS, hoursUntilDue, urgencyOf, type Urgency } from "@/lib/urgency";
+import { getLevels } from "@/lib/urgency-settings";
+import { hoursUntilDue, urgencyOf, type Urgency } from "@/lib/urgency";
 import { getDirectory, type Scope } from "@/lib/dashboard/scope";
 import { starterLayout, type RangeKey, type Size } from "@/lib/dashboard/config";
 
@@ -91,6 +92,7 @@ function scopeWhere(auth: Auth, s: Scope): SQL | undefined {
 const cachedOpen = cache(async (userId: number | null, teamId: number | null): Promise<OpenTask[]> => {
   const auth = await getAuth();
   if (!auth) return [];
+  const levels = await getLevels();
   const [rows, dir] = await Promise.all([
     db
       .select({ task: schema.tasks, clientName: schema.clients.name, assigneeName: schema.users.name })
@@ -114,7 +116,7 @@ const cachedOpen = cache(async (userId: number | null, teamId: number | null): P
       clientName,
       assigneeName,
       teamName: team?.name ?? null,
-      urgency: urgencyOf(task, team ?? DEFAULT_LEVELS, tz, now) ?? "on_track",
+      urgency: urgencyOf(task, levels, tz, now) ?? "on_track",
       hours: task.dueDate ? hoursUntilDue(task.dueDate, tz, now) : null,
     });
   }

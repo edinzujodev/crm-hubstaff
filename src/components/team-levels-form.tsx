@@ -2,7 +2,7 @@
 
 import { Button, InputText } from "@/components/ui";
 import { useActionState, useState } from "react";
-import { setTeamLevels } from "@/app/actions";
+import { setUrgencyLevels } from "@/app/actions";
 
 const MAX_HOURS = 24 * 90;
 
@@ -72,17 +72,15 @@ function HoursField({
   );
 }
 
-/** The two urgency levels of a team, in hours until the due date. Saved by the team leader. */
+/** The two urgency levels for everyone, in hours until the due date. Saved by the super admin. */
 export function TeamLevelsForm({
-  teamId,
   approachingHours,
   criticalHours,
 }: {
-  teamId: number;
   approachingHours: number;
   criticalHours: number;
 }) {
-  const [state, action, pending] = useActionState(setTeamLevels.bind(null, teamId), null);
+  const [state, action, pending] = useActionState(setUrgencyLevels, null);
   const [approaching, setApproaching] = useState(String(approachingHours));
   const [critical, setCritical] = useState(String(criticalHours));
 

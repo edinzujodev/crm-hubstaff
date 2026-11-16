@@ -7,7 +7,8 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser } from "@/lib/current-user";
 import { authMode, createSession, destroySession, findApprovedUser } from "@/lib/session";
-import { canManageTask, canManageTeam, requireAuth, requireRole, requireTask } from "@/lib/auth";
+import { APPROACHING_KEY, CRITICAL_KEY } from "@/lib/urgency-settings";
+import { canManageTask, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
 import { canReviewTask, reviewerFor } from "@/lib/review";
 import { defaultLeadDays, hubstaffSummary, topUpSeries } from "@/lib/recurring";
@@ -39,7 +40,7 @@ async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
 export async function mockSignIn(_prev: unknown, formData: FormData): Promise<{ error: string } | null> {
   if (authMode() !== "mock") return { error: "Simulated sign-in is turned off." };
   const user = await findApprovedUser(String(formData.get("email") ?? ""));
-  if (!user) return { error: "That account isn't on the approved list. Ask a super admin to add your email on the Teams & people page." };
+  if (!user) return { error: "That account isn't on the approved list. Ask a super admin to add your email on the Teams page." };
   await createSession(user.id);
   redirect("/");
 }
@@ -1008,13 +1009,20 @@ const levels = z
     message: "Critical must be fewer hours than Approaching",
   });
 
-/** A team leader (or the super admin) sets when the team's tasks turn Approaching and Critical. */
-export async function setTeamLevels(teamId: number, _prev: unknown, formData: FormData): Promise<Result> {
+/** The super admin sets when any task turns Approaching and Critical, for everyone. */
+export async function setUrgencyLevels(_prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
-    const auth = await requireAuth();
-    if (!canManageTeam(auth, teamId)) throw new Error("You don't have permission to do that.");
+    await requireRole("super_admin");
     const input = levels.parse(Object.fromEntries(formData));
-    await db.update(schema.teams).set(input).where(eq(schema.teams.id, teamId));
+    for (const [key, value] of [
+      [CRITICAL_KEY, input.criticalHours],
+      [APPROACHING_KEY, input.approachingHours],
+    ] as const) {
+      await db
+        .insert(schema.appState)
+        .values({ key, value: String(value) })
+        .onConflictDoUpdate({ target: schema.appState.key, set: { value: String(value), updatedAt: new Date() } });
+    }
     return undefined;
   });
 }

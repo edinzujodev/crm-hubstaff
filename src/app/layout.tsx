@@ -66,21 +66,21 @@ async function NavLinks() {
   const auth = await getAuth();
   if (!auth) return null;
   const role = auth.role;
-  const links: [string, string, boolean][] = [
-    ["/dashboard", "Dashboard", true],
-    ["/tasks", "Tasks", true],
-    ["/leads", "Leads", role === "super_admin"],
-    ["/clients", "Clients", role === "super_admin" || role === "leader"],
-    ["/reports", "Reports", role === "super_admin" || role === "leader"],
-    ["/team", "Teams & people", role === "super_admin" || role === "leader"],
-    ["/templates", "Templates", role === "super_admin" || role === "leader"],
+  const links: [string, string, string, boolean][] = [
+    ["/dashboard", "Dashboard", "pi-home", true],
+    ["/tasks", "Tasks", "pi-check-square", true],
+    ["/leads", "Leads", "pi-bullseye", role === "super_admin"],
+    ["/clients", "Clients", "pi-briefcase", role === "super_admin" || role === "leader"],
+    ["/reports", "Reports", "pi-chart-bar", role === "super_admin" || role === "leader"],
+    ["/team", "Teams", "pi-users", role === "super_admin" || role === "leader"],
+    ["/config", "Config", "pi-cog", role === "super_admin" || role === "leader"],
   ];
   return (
     <nav aria-label="Main" className="flex flex-wrap gap-1 md:flex-col">
       {links
-        .filter(([, , show]) => show)
-        .map(([href, label]) => (
-          <NavLink key={href} href={href}>
+        .filter(([, , , show]) => show)
+        .map(([href, label, icon]) => (
+          <NavLink key={href} href={href} icon={icon}>
             {label}
           </NavLink>
         ))}

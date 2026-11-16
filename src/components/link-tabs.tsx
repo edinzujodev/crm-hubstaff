@@ -2,14 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { TabMenu } from "primereact/tabmenu";
-import { ProgressBar } from "primereact/progressbar";
 import { useState, useTransition } from "react";
 
 export type LinkTab = { label: string; href: string; count?: number; alarm?: boolean };
 
 /**
- * Page-level tabs that are links. The tab you pick turns active right away, a thin bar runs under the tabs while
- * the page for it loads.
+ * Page-level tabs that are links. The tab you pick turns active right away, and a small spinner turns in front
+ * of its name while its page loads.
  */
 export function LinkTabs({ tabs, active }: { tabs: LinkTab[]; active: number }) {
   const router = useRouter();
@@ -37,6 +36,9 @@ export function LinkTabs({ tabs, active }: { tabs: LinkTab[]; active: number }) 
                 options.onClick(e);
               }}
             >
+              {loading && tabs[current]?.href === t.href && (
+                <i aria-hidden className="pi pi-spin pi-spinner mr-2 text-xs" />
+              )}
               <span className={options.labelClassName}>{item.label}</span>
               {t.count !== undefined && (
                 <span
@@ -54,14 +56,6 @@ export function LinkTabs({ tabs, active }: { tabs: LinkTab[]; active: number }) 
           startNavigation(() => router.push(tabs[e.index].href));
         }}
       />
-      {loading && (
-        <ProgressBar
-          mode="indeterminate"
-          aria-label="Loading"
-          className="absolute inset-x-0 bottom-0"
-          style={{ height: "3px" }}
-        />
-      )}
     </div>
   );
 }
