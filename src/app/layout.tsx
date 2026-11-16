@@ -105,9 +105,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* PrimeReact theme: green (noir: black on light, white on dark) in light and dark, picked by the system setting. */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-light-noir/theme.css?v=4" media="(prefers-color-scheme: light)" />
+        <link rel="stylesheet" href="/themes/lara-light-noir/theme.css?v=5" media="(prefers-color-scheme: light)" />
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-dark-noir/theme.css?v=4" media="(prefers-color-scheme: dark)" />
+        <link rel="stylesheet" href="/themes/lara-dark-noir/theme.css?v=5" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="min-h-full font-sans">
         <PrimeProvider>

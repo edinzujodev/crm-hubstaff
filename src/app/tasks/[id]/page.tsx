@@ -1,4 +1,6 @@
 import { DataGrid } from "@/components/data-grid";
+import { InlineChecklist } from "@/components/inline-checklist";
+import { getSeries } from "@/lib/series";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -7,7 +9,6 @@ import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
 import { StopRepeatingButton } from "@/components/stop-repeating-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
-import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
@@ -20,7 +21,7 @@ import { NextPeriodButton } from "@/components/next-period-button";
 import { TaskChecklist } from "@/components/task-checklist";
 import { localDay } from "@/lib/format";
 import { getCurrentUser } from "@/lib/current-user";
-import { fmtDateTime, fmtDuration, fmtTime } from "@/lib/format";
+import { fmtDateTime, fmtDay, fmtDuration, fmtTime } from "@/lib/format";
 import { getTaskReport, type SessionFlag } from "@/lib/report";
 
 const endReasonLabel = { finished: "Finished", switched: "Switched task", auto_closed: "Auto-closed" } as const;
@@ -92,6 +93,8 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
     reviewsByTask([id]),
   ]);
   const canReview = canReviewTask(auth, task);
+  const series = task.seriesId ? await getSeries(task.seriesId, auth) : null;
+  const today = localDay(new Date(), tz);
   const waiting = !!task.startDate && task.startDate > localDay(new Date(), tz) && task.status !== "done";
   const next =
     manage && task.repeat && task.seriesId && !task.deletedAt && !waiting
@@ -110,48 +113,12 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           {task.repeat && task.dueDate && (
             <p className="text-sm text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
           )}
-          <p className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted">
-            <span>
-              Client:{" "}
-              {task.clientId ? (
-                <Link href={`/clients/${task.clientId}`} className="underline">
-                  {row.clientName}
-                </Link>
-              ) : (
-                "—"
-              )}
-            </span>
-            <span>Assignee: {row.assigneeName ?? "—"}</span>
-            {task.dueDate && <span>Due: {task.dueDate}</span>}
-            {task.repeat && (
-              <span>
-                Repeats {task.repeat}
-                {manage && (
-                  <>
-                    {" "}
-                    · <StopRepeatingButton taskId={task.id} />
-                  </>
-                )}
-              </span>
-            )}
-            {task.seriesId && (
-              <Link href={`/recurring/${task.seriesId}`} className="underline">
-                See all occurrences →
-              </Link>
-            )}
-            <span>
-              {task.hubstaffTaskId
-                ? `Hubstaff task #${task.hubstaffTaskId}`
-                : "Not in Hubstaff yet (created on first Start)"}
-            </span>
-          </p>
         </div>
         <div className="flex items-start gap-3">
           {task.deletedAt ? (
             <RestoreTaskButton taskId={task.id} />
           ) : (
             <>
-              <TaskStatusSelect taskId={task.id} title={task.title} status={task.status} />
               {manage && <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/tasks" />}
               <TimerControls
                 taskId={task.id}
@@ -165,6 +132,42 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           )}
         </div>
       </div>
+
+      <section className="card grid gap-x-8 gap-y-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <p className="text-xs text-muted">Client</p>
+          <p>
+            {task.clientId ? (
+              <Link href={`/clients/${task.clientId}`} className="underline">
+                {row.clientName}
+              </Link>
+            ) : (
+              "—"
+            )}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted">Assignee</p>
+          <p>{row.assigneeName ?? "—"}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted">Due</p>
+          <p>{task.dueDate ?? "—"}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted">Hubstaff</p>
+          <p>{task.hubstaffTaskId ? `Task #${task.hubstaffTaskId}` : "Not created yet (made on first Start)"}</p>
+        </div>
+        {task.repeat && (
+          <div>
+            <p className="text-xs text-muted">Repeats</p>
+            <p className="flex flex-wrap items-center gap-x-2">
+              <span className="capitalize">{task.repeat}</span>
+              {manage && <StopRepeatingButton taskId={task.id} />}
+            </p>
+          </div>
+        )}
+      </section>
 
       {next && task.repeat && (
         <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
@@ -226,6 +229,57 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             Review history <span className="text-sm font-normal text-muted">{reviewMap.get(id)!.length}</span>
           </h2>
           <ReviewHistory reviews={reviewMap.get(id)!} tz={tz} />
+        </section>
+      )}
+
+      {series && series.occurrences.length > 1 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold">
+            All occurrences <span className="text-sm font-normal text-muted">{series.occurrences.length}</span>
+          </h2>
+          <DataGrid
+            headers={["Period", "Due", "Status", "Assignee", "Finished", { label: "Time", align: "right" }]}
+            rows={[...series.occurrences].reverse().map((o) => ({
+              key: o.id,
+              cells: [
+                <div key="p">
+                  {o.id === id ? (
+                    <span className="font-semibold">
+                      {series.summary.repeat && o.dueDate ? periodLabel(series.summary.repeat, o.dueDate) : o.title}{" "}
+                      <span className="badge ml-1 text-muted">This one</span>
+                    </span>
+                  ) : (
+                    <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
+                      {series.summary.repeat && o.dueDate ? periodLabel(series.summary.repeat, o.dueDate) : o.title}
+                    </Link>
+                  )}
+                  {o.startDate && o.startDate > today && o.status !== "done" && (
+                    <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
+                  )}
+                  {o.checklist.length > 0 && o.status !== "done" && o.id !== id && (
+                    <div className="mt-1">
+                      <InlineChecklist items={o.checklist} canTick />
+                    </div>
+                  )}
+                </div>,
+                <span key="d" className="text-muted">
+                  {o.dueDate ? fmtDay(o.dueDate) : "—"}
+                </span>,
+                <span key="s" className="badge">
+                  {o.status === "done" ? "Done" : o.status === "review" ? "On review" : "Open"}
+                </span>,
+                <span key="a" className="text-muted">
+                  {o.assigneeName ?? "—"}
+                </span>,
+                <span key="f" className="text-muted">
+                  {o.doneAt ? fmtDateTime(o.doneAt, tz) : "—"}
+                </span>,
+                <span key="t" className="font-mono tabular-nums">
+                  {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
+                </span>,
+              ],
+            }))}
+          />
         </section>
       )}
 

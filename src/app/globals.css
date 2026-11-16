@@ -1,3 +1,7 @@
+/* Layer order: PrimeReact's theme sits below Tailwind's components and utilities, so classes such as ml-2 or w-full
+   on a PrimeReact component still win over the theme. */
+@layer theme, base, primereact, components, utilities;
+
 @import "tailwindcss";
 @import "primeicons/primeicons.css";
 
@@ -9,7 +13,7 @@
   --border: #e2e8f0;
   --primary: #18181b;
   --primary-fg: #fafafa;
-  --danger: #b4372f;
+  --danger: #e11d48;
   /* Charts */
   --series-1: #2a78d6;
   --viz-grid: #e1e0d9;
@@ -26,7 +30,7 @@
     --border: #334155;
     --primary: #fafafa;
     --primary-fg: #18181b;
-    --danger: #e0645b;
+    --danger: #fb7185;
     --series-1: #3987e5;
     --viz-grid: #2c2c2a;
     --viz-axis: #383835;
@@ -48,6 +52,20 @@ html:root {
     --highlight-bg: color-mix(in srgb, #fafafa 16%, transparent);
     --highlight-text-color: #fafafa;
   }
+}
+
+@theme {
+  --color-red-50: #fff1f2;
+  --color-red-100: #ffe4e6;
+  --color-red-200: #fecdd3;
+  --color-red-300: #fda4af;
+  --color-red-400: #fb7185;
+  --color-red-500: #f43f5e;
+  --color-red-600: #e11d48;
+  --color-red-700: #be123c;
+  --color-red-800: #9f1239;
+  --color-red-900: #881337;
+  --color-red-950: #4c0519;
 }
 
 @theme inline {
@@ -218,7 +236,7 @@ body {
 }
 .p-button.p-button-outlined.p-button-danger:not(:disabled):hover,
 .p-button.p-button-text.p-button-danger:not(:disabled):hover {
-  background: rgb(239 68 68 / 0.12);
+  background: rgb(244 63 94 / 0.12);
 }
 .p-button.p-button-link:not(:disabled):hover {
   text-decoration: underline;

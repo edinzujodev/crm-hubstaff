@@ -53,7 +53,7 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
             value={team}
             onChange={(e) => setTeam(e.target.value)}
             aria-label="Filter by team"
-            className="w-full "
+            className="w-48"
           >
             <option value="all">All teams</option>
             {teams.map((t) => (

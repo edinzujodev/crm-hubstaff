@@ -65,19 +65,19 @@ export function HoldToDelete({
       onKeyUp={cancel}
       onBlur={cancel}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative select-none overflow-hidden text-red-600 touch-none"
-      severity="secondary"
-      outlined
+      className="relative touch-none select-none overflow-hidden whitespace-nowrap"
+      severity="danger"
+      size="small"
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 bg-red-500/35"
+        className="absolute inset-y-0 left-0 bg-black/30"
         style={{
           width: holding || pending ? "100%" : "0%",
           transition: holding && !pending ? `width ${HOLD_MS}ms linear` : "width 150ms ease-out",
         }}
       />
-      <span className="relative">{pending ? "Deleting…" : holding ? "Keep holding…" : "Hold to delete"}</span>
+      <span className="relative whitespace-nowrap">{pending ? "Deleting…" : holding ? "Keep holding…" : "Hold to delete"}</span>
     </Button>
   );
 }
