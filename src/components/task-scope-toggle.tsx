@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { saveTaskScope } from "@/app/tasks/scope-action";
@@ -26,18 +27,18 @@ export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLa
   }
 
   return (
-    <select
+    <Select
       aria-label="Whose tasks"
       value={scope}
       disabled={pending}
       onChange={(e) => choose(e.target.value as TaskScope)}
-      className="input h-8 w-auto cursor-pointer py-0 text-sm font-medium"
+      className="w-auto text-sm font-medium"
     >
       {TASK_SCOPES.map((key) => (
         <option key={key} value={key}>
           {labels[key]}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

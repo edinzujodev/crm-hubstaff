@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, Select } from "@/components/ui";
 import Link from "next/link";
 import { useState } from "react";
 import { setHubstaffUserId } from "@/app/actions";
@@ -43,16 +44,16 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <InputText
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name or email"
           aria-label="Search people"
-          className="input w-64 max-w-full"
+          className="w-64 max-w-full"
         />
         {teams.length > 1 && (
-          <select value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Filter by team" className="input">
+          <Select value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Filter by team" className="w-full ">
             <option value="all">All teams</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
@@ -60,7 +61,7 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
               </option>
             ))}
             <option value="none">No team</option>
-          </select>
+          </Select>
         )}
         {admin && (
           <button type="button" className={chip(missingId)} aria-pressed={missingId} onClick={() => setMissingId((v) => !v)}>
@@ -115,15 +116,15 @@ export function PeopleList({ people, teams, admin }: { people: Person[]; teams: 
                 {admin && (
                   <td className="px-3 py-2">
                     <form action={setHubstaffUserId.bind(null, p.id)} className="flex items-center gap-2">
-                      <input
+                      <InputText
                         name="hubstaffUserId"
                         defaultValue={p.hubstaffUserId ?? ""}
                         inputMode="numeric"
                         placeholder="Not set"
                         aria-label={`Hubstaff user id for ${p.name}`}
-                        className={`input w-28 font-mono ${p.hubstaffUserId === null ? "border-amber-500/60" : ""}`}
+                        className={`w-28 font-mono ${p.hubstaffUserId === null ?"border-amber-500/60":""}`}
                       />
-                      <button className="btn cursor-pointer">Save</button>
+                      <Button  severity="secondary" outlined>Save</Button>
                     </form>
                   </td>
                 )}

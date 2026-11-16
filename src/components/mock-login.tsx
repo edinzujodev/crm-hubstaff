@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText } from "@/components/ui";
 import { useActionState } from "react";
 import { mockSignIn } from "@/app/actions";
 
@@ -43,11 +44,11 @@ export function MockLogin({ accounts }: { accounts: Account[] }) {
       <form action={action} className="space-y-2">
         <label className="flex flex-col gap-1 text-xs text-muted">
           Or use another email
-          <input name="email" type="email" required placeholder="someone@example.com" className="input text-foreground" />
+          <InputText name="email" type="email" required placeholder="someone@example.com" className="w-full text-foreground" />
         </label>
-        <button className="btn" disabled={pending}>
+        <Button  severity="secondary" outlined disabled={pending}>
           Continue
-        </button>
+        </Button>
       </form>
 
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}

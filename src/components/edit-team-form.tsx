@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, Select } from "@/components/ui";
 import { useActionState, useEffect } from "react";
 import { updateTeam } from "@/app/actions";
 import { MemberPicker, type PickerUser } from "@/components/member-picker";
@@ -25,29 +26,29 @@ export function EditTeamForm({
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Team name
-        <input name="name" required autoFocus defaultValue={team.name} className="input text-foreground" />
+        <InputText name="name" required autoFocus defaultValue={team.name} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Team leader
-        <select name="leaderId" className="input text-foreground" defaultValue={team.leaderId ?? ""}>
+        <Select name="leaderId" className="w-full text-foreground" defaultValue={team.leaderId ?? ""}>
           <option value="">No leader</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
             </option>
           ))}
-        </select>
+        </Select>
         <span>The leader is always a member of the team.</span>
       </label>
       <MemberPicker users={users} selected={team.memberIds} />
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">
-        <button type="button" className="btn" onClick={onDone}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone}>
           Cancel
-        </button>
-        <button className="btn btn-primary" disabled={pending}>
+        </Button>
+        <Button  disabled={pending}>
           {pending ? "Saving…" : "Save"}
-        </button>
+        </Button>
       </div>
     </form>
   );

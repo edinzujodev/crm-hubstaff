@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
 
 type Option = { label: string; href: string; selected: boolean };
@@ -11,8 +12,8 @@ export function RangeSelect({ options }: { options: Option[] }) {
   return (
     <label className="flex items-center gap-2 text-xs text-muted">
       Range
-      <select
-        className="input text-foreground"
+      <Select
+        className="w-full text-foreground"
         value={current?.href ?? ""}
         onChange={(e) => e.target.value && router.push(e.target.value)}
       >
@@ -22,7 +23,7 @@ export function RangeSelect({ options }: { options: Option[] }) {
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

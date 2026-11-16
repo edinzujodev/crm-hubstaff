@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox, InputText } from "@/components/ui";
 import { useState } from "react";
 
 export type PickerUser = { id: number; name: string; teamName: string | null };
@@ -23,13 +24,13 @@ export function MemberPicker({ users, selected = [] }: { users: PickerUser[]; se
         <span>Members</span>
         <span>{checked.size} selected</span>
       </div>
-      <input
+      <InputText
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search people"
         aria-label="Search people"
-        className="input text-foreground"
+        className="w-full text-foreground"
       />
       <div className="max-h-48 overflow-y-auto rounded-md border border-border">
         {users.map((u) => (
@@ -39,7 +40,7 @@ export function MemberPicker({ users, selected = [] }: { users: PickerUser[]; se
               q && !u.name.toLowerCase().includes(q) ? "hidden" : ""
             }`}
           >
-            <input type="checkbox" name="memberIds" value={u.id} checked={checked.has(u.id)} onChange={() => toggle(u.id)} />
+            <Checkbox  name="memberIds" value={u.id} checked={checked.has(u.id)} onChange={() => toggle(u.id)} />
             <span className="flex-1">{u.name}</span>
             {u.teamName && checked.has(u.id) === false && <span className="text-xs text-muted">in {u.teamName}</span>}
           </label>

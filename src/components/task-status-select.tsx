@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useTransition } from "react";
 import { setTaskStatus } from "@/app/actions";
 import { notifyFinished } from "@/lib/toast";
@@ -9,9 +10,9 @@ type Status = "todo" | "in_progress" | "done" | "review";
 export function TaskStatusSelect({ taskId, title, status }: { taskId: number; title: string; status: Status }) {
   const [pending, startTransition] = useTransition();
   return (
-    <select
+    <Select
       aria-label="Status"
-      className="input"
+      className="w-full "
       value={status === "done" ? "done" : status === "review" ? "review" : "todo"}
       disabled={pending}
       onChange={(e) =>
@@ -29,6 +30,6 @@ export function TaskStatusSelect({ taskId, title, status }: { taskId: number; ti
         </option>
       )}
       <option value="done">Done</option>
-    </select>
+    </Select>
   );
 }

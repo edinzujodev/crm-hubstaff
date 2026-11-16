@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -49,7 +50,7 @@ export function HoldToDelete({
   };
 
   return (
-    <button
+    <Button
       type="button"
       title={`Hold to delete "${title}"`}
       aria-label={`Hold to delete ${title}`}
@@ -64,7 +65,7 @@ export function HoldToDelete({
       onKeyUp={cancel}
       onBlur={cancel}
       onContextMenu={(e) => e.preventDefault()}
-      className="btn relative select-none overflow-hidden text-red-600 touch-none"
+      className="relative select-none overflow-hidden text-red-600 touch-none" severity="secondary" outlined
     >
       <span
         aria-hidden
@@ -75,6 +76,6 @@ export function HoldToDelete({
         }}
       />
       <span className="relative">{pending ? "Deleting…" : holding ? "Keep holding…" : "Hold to delete"}</span>
-    </button>
+    </Button>
   );
 }

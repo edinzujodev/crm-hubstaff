@@ -1,5 +1,6 @@
 "use client";
 
+import { InputText, Select } from "@/components/ui";
 import { useState } from "react";
 import { KIND_LABEL, type ProjectKind } from "@/lib/project-kind";
 
@@ -39,12 +40,12 @@ export function ProjectField({
     <div className={`flex flex-col gap-1 text-xs text-muted ${className}`}>
       <label className="flex flex-col gap-1">
         Project
-        <select
+        <Select
           value={selected}
           required={!creating}
           disabled={!clientId}
           onChange={(e) => setChoice(e.target.value)}
-          className="input text-foreground"
+          className="w-full text-foreground"
         >
           <option value="" disabled>
             {clientId ? "Select…" : "Pick a client first"}
@@ -56,14 +57,14 @@ export function ProjectField({
             </option>
           ))}
           <option value={NEW}>+ New project…</option>
-        </select>
+        </Select>
       </label>
       {/* The chosen existing project is what gets submitted; a new one is submitted by name and type. */}
       {selected && !creating && <input type="hidden" name="projectId" value={selected} />}
       {picked && <span>{KIND_LABEL[picked.kind]} project</span>}
       {creating && (
         <div className="flex flex-col gap-2 rounded-md border border-border p-2">
-          <input
+          <InputText
             name="projectName"
             required
             value={name}
@@ -71,18 +72,18 @@ export function ProjectField({
             onChange={(e) => setTyped(e.target.value)}
             placeholder="Project name"
             aria-label="New project name"
-            className="input text-foreground"
+            className="w-full text-foreground"
           />
-          <select
+          <Select
             name="projectKind"
             value={kind}
             onChange={(e) => setKind(e.target.value as ProjectKind)}
             aria-label="Project type"
-            className="input text-foreground"
+            className="w-full text-foreground"
           >
             <option value="one_off">{KIND_LABEL.one_off} (has an end)</option>
             <option value="ongoing">{KIND_LABEL.ongoing} (continuous work)</option>
-          </select>
+          </Select>
         </div>
       )}
     </div>

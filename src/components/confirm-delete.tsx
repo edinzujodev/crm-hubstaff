@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/modal";
 
@@ -32,13 +33,13 @@ export function ConfirmDelete({
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={onClose} disabled={pending}>
+        <Button type="button"  severity="secondary" outlined onClick={onClose} disabled={pending}>
           {error ? "Close" : "Cancel"}
-        </button>
+        </Button>
         {!error && (
-          <button
+          <Button
             type="button"
-            className="btn btn-danger"
+             severity="danger"
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
@@ -49,7 +50,7 @@ export function ConfirmDelete({
             }
           >
             {pending ? "Deleting…" : "Delete"}
-          </button>
+          </Button>
         )}
       </div>
     </Modal>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, InputTextarea } from "@/components/ui";
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { createTemplate, deleteTemplate, updateTemplate } from "@/app/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
@@ -19,9 +20,9 @@ export function TemplateManager({ templates }: { templates: TemplateOption[] }) 
           A template is a description of what needs to be done plus a checklist. Pick one when you add a task, or build
           the checklist right inside the task.
         </p>
-        <button type="button" className="btn btn-primary" onClick={() => setModal({ kind: "new" })}>
+        <Button type="button"  onClick={() => setModal({ kind: "new" })}>
           + New template
-        </button>
+        </Button>
       </div>
 
       <div className="card overflow-x-auto">
@@ -108,43 +109,43 @@ function TemplateForm({
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Name
-        <input
+        <InputText
           name="name"
           required
           autoFocus
           maxLength={120}
           defaultValue={template?.name ?? ""}
           placeholder="e.g. Monthly bank reconciliation"
-          className="input text-foreground"
+          className="w-full text-foreground"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Instructions
-        <textarea
+        <InputTextarea autoResize={false} style={{ width: "100%" }}
           name="description"
           rows={3}
           defaultValue={template?.description ?? ""}
           placeholder="What needs to be done, and how"
-          className="input text-foreground"
+          className="text-foreground"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Checklist, one item per line
-        <textarea
+        <InputTextarea autoResize={false} style={{ width: "100%" }}
           name="items"
           rows={6}
           defaultValue={template?.items.join("\n") ?? ""}
-          className="input text-foreground"
+          className="text-foreground"
         />
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={onDone}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone}>
           Cancel
-        </button>
-        <button className="btn btn-primary" disabled={pending}>
+        </Button>
+        <Button  disabled={pending}>
           {pending ? "Saving…" : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -110,7 +111,7 @@ async function ClientDetail({
           To
           <DateInput name="to" defaultValue={to} />
         </label>
-        <button className="btn">Show</button>
+        <Button  severity="secondary" outlined>Show</Button>
         <Link href={`/reports?client=${id}&from=${from}&to=${to}`} className="btn">
           Full report →
         </Link>

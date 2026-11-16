@@ -1,13 +1,14 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useTransition } from "react";
 import { restoreTask } from "@/app/actions";
 
 export function RestoreTaskButton({ taskId, compact }: { taskId: number; compact?: boolean }) {
   const [pending, startTransition] = useTransition();
   return (
-    <button
-      className={`btn ${compact ? "py-1" : ""}`}
+    <Button
+      className={`${compact ?"py-1":""}`} severity="secondary" outlined
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
@@ -18,6 +19,6 @@ export function RestoreTaskButton({ taskId, compact }: { taskId: number; compact
       }
     >
       {pending ? "Restoring…" : "Restore"}
-    </button>
+    </Button>
   );
 }

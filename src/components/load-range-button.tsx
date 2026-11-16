@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { loadHubstaffRange } from "@/app/actions";
 
@@ -9,9 +10,9 @@ export function LoadRangeButton({ from, to }: { from: string; to: string }) {
   const [message, setMessage] = useState<string | null>(null);
   return (
     <span className="flex items-center gap-2">
-      <button
+      <Button
         type="button"
-        className="btn"
+         severity="secondary" outlined
         disabled={pending}
         title="Reads this date range from Hubstaff and stores it. Use it for days before the CRM was syncing."
         onClick={() =>
@@ -22,7 +23,7 @@ export function LoadRangeButton({ from, to }: { from: string; to: string }) {
         }
       >
         {pending ? "Loading…" : "Load this range from Hubstaff"}
-      </button>
+      </Button>
       {message && <span className="text-xs text-muted">{message}</span>}
     </span>
   );

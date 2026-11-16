@@ -1,3 +1,4 @@
+import { Button, Select } from "@/components/ui";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -167,49 +168,49 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Client
-          <select name="client" defaultValue={filter.clientId ?? ""} className="input text-foreground">
+          <Select name="client" defaultValue={filter.clientId ?? ""} className="w-full text-foreground">
             <option value="">All clients</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Project
-          <select name="project" defaultValue={filter.projectId ?? ""} className="input text-foreground">
+          <Select name="project" defaultValue={filter.projectId ?? ""} className="w-full text-foreground">
             <option value="">All projects</option>
             {allProjects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.clientName} / {p.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Team
-          <select name="team" defaultValue={filter.teamId ?? ""} className="input text-foreground">
+          <Select name="team" defaultValue={filter.teamId ?? ""} className="w-full text-foreground">
             <option value="">All teams</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Person
-          <select name="user" defaultValue={filter.userId ?? ""} className="input text-foreground">
+          <Select name="user" defaultValue={filter.userId ?? ""} className="w-full text-foreground">
             <option value="">Everyone</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <button className="btn btn-primary">Show</button>
+        <Button >Show</Button>
       </form>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, InputTextarea } from "@/components/ui";
 import { useActionState, useEffect, useState } from "react";
 import { createCompany, deleteCompany, updateCompany } from "@/app/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
@@ -17,9 +18,9 @@ export function CompanyList({ clientId, companies }: { clientId: number; compani
     <section className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold">Companies</h2>
-        <button type="button" className="btn" onClick={() => setModal({ kind: "add" })}>
+        <Button type="button"  severity="secondary" outlined onClick={() => setModal({ kind: "add" })}>
           + Add company
-        </button>
+        </Button>
       </div>
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
@@ -102,20 +103,20 @@ function CompanyForm({
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Name
-        <input name="name" required autoFocus maxLength={120} defaultValue={company?.name ?? ""} className="input text-foreground" />
+        <InputText name="name" required autoFocus maxLength={120} defaultValue={company?.name ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Notes
-        <textarea name="notes" rows={2} defaultValue={company?.notes ?? ""} className="input text-foreground" />
+        <InputTextarea autoResize={false} style={{ width: "100%" }} name="notes" rows={2} defaultValue={company?.notes ?? ""} className="text-foreground" />
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={onDone}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone}>
           Cancel
-        </button>
-        <button className="btn btn-primary" disabled={pending}>
+        </Button>
+        <Button  disabled={pending}>
           {pending ? "Saving…" : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

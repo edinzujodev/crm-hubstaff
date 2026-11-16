@@ -1,3 +1,4 @@
+import { Button, Select } from "@/components/ui";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
@@ -10,6 +11,7 @@ import { NavLink } from "@/components/nav-link";
 import { Topbar } from "@/components/topbar";
 import { TopbarStatus } from "@/components/topbar-status";
 import { Toaster } from "@/components/toaster";
+import { PrimeProvider } from "@/components/prime-provider";
 import { ProfileMenu } from "@/components/profile-menu";
 import { SyncButton } from "@/components/sync-button";
 import { hubstaffMode, config } from "@/lib/config";
@@ -49,20 +51,20 @@ async function Account() {
         <section className="space-y-2 border-t border-border pt-3">
           <h2 className="text-xs font-medium text-muted">Development: switch person</h2>
           <form action={switchUser} className="flex items-center gap-2">
-            <select name="userId" defaultValue={auth.user.id} aria-label="Switch to" className="input min-w-0 flex-1 py-1">
+            <Select name="userId" defaultValue={auth.user.id} aria-label="Switch to" className="w-full min-w-0 flex-1">
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
               ))}
-            </select>
-            <button className="btn py-1">Go</button>
+            </Select>
+            <Button className="py-1" severity="secondary" outlined>Go</Button>
           </form>
         </section>
       )}
 
       <form action={signOut} className="border-t border-border pt-3">
-        <button className="btn w-full justify-center">Sign out</button>
+        <Button className="w-full justify-center" severity="secondary" outlined>Sign out</Button>
       </form>
     </ProfileMenu>
   );
@@ -108,7 +110,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   const mode = hubstaffMode();
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <head>
+        {/* PrimeReact theme: green (emerald) in light and dark, picked by the system setting. */}
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        <link rel="stylesheet" href="/themes/lara-light-green/theme.css" media="(prefers-color-scheme: light)" />
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        <link rel="stylesheet" href="/themes/lara-dark-green/theme.css" media="(prefers-color-scheme: dark)" />
+      </head>
       <body className="min-h-full font-sans">
+        <PrimeProvider>
         <div className="flex min-h-screen flex-col md:flex-row">
           <aside className="flex flex-col gap-4 border-b border-border bg-surface px-3 py-3 md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r md:py-5">
             <Link href="/" className="px-3 font-semibold">
@@ -141,6 +151,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
           </div>
         </div>
+        </PrimeProvider>
       </body>
     </html>
   );

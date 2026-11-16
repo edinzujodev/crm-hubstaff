@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { setParentTeam } from "@/app/actions";
 
@@ -17,9 +18,9 @@ export function ReportsToSelect({
   const [error, setError] = useState<string | null>(null);
   return (
     <div className="space-y-1">
-      <select
+      <Select
         aria-label="Leader's tasks are reviewed by"
-        className="input h-8 w-auto cursor-pointer py-0 text-sm"
+        className="w-auto text-sm"
         defaultValue={value ?? ""}
         disabled={pending}
         onChange={(e) =>
@@ -38,7 +39,7 @@ export function ReportsToSelect({
               {t.leaderName ? ` — ${t.leaderName}` : " — no leader"}
             </option>
           ))}
-      </select>
+      </Select>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );

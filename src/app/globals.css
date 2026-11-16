@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "primeicons/primeicons.css";
 
 :root {
   --background: #f7f7f5;
@@ -6,7 +7,7 @@
   --foreground: #1c1c1a;
   --muted: #6b6b66;
   --border: #e4e4df;
-  --primary: #1f6f5c;
+  --primary: #059669;
   --primary-fg: #ffffff;
   --danger: #b4372f;
   /* Charts */
@@ -23,12 +24,29 @@
     --foreground: #ececea;
     --muted: #9b9b94;
     --border: #33332f;
-    --primary: #3fa58b;
+    --primary: #34d399;
     --primary-fg: #0d1f1a;
     --danger: #e0645b;
     --series-1: #3987e5;
     --viz-grid: #2c2c2a;
     --viz-axis: #383835;
+  }
+}
+
+/* PrimeReact's green theme, tuned to emerald so it matches the rest of the app. */
+html:root {
+  --primary-color: #059669;
+  --primary-color-text: #ffffff;
+  --highlight-bg: color-mix(in srgb, #059669 16%, transparent);
+  --highlight-text-color: #047857;
+  --font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  html:root {
+    --primary-color: #34d399;
+    --primary-color-text: #052e22;
+    --highlight-bg: color-mix(in srgb, #34d399 16%, transparent);
+    --highlight-text-color: #6ee7b7;
   }
 }
 

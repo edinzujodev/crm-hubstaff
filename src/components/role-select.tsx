@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useTransition } from "react";
 import { setUserRole } from "@/app/actions";
 
@@ -7,9 +8,9 @@ import { setUserRole } from "@/app/actions";
 export function RoleSelect({ userId, role, name }: { userId: number; role: "super_admin" | "member"; name: string }) {
   const [pending, startTransition] = useTransition();
   return (
-    <select
+    <Select
       aria-label={`Role for ${name}`}
-      className="input py-1"
+      className="w-full "
       value={role}
       disabled={pending}
       onChange={(e) =>
@@ -21,6 +22,6 @@ export function RoleSelect({ userId, role, name }: { userId: number; role: "supe
     >
       <option value="member">Member</option>
       <option value="super_admin">Super admin</option>
-    </select>
+    </Select>
   );
 }

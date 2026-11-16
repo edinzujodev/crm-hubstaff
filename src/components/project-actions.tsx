@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, Select } from "@/components/ui";
 import { useActionState, useEffect, useState } from "react";
 import { createProject, deleteProject, updateProject } from "@/app/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
@@ -64,23 +65,23 @@ function ProjectForm({
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Name
-        <input name="name" required autoFocus maxLength={120} defaultValue={name} className="input text-foreground" />
+        <InputText name="name" required autoFocus maxLength={120} defaultValue={name} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Type
-        <select name="kind" defaultValue={kind} className="input text-foreground">
+        <Select name="kind" defaultValue={kind} className="w-full text-foreground">
           <option value="one_off">{KIND_LABEL.one_off} (has an end)</option>
           <option value="ongoing">{KIND_LABEL.ongoing} (continuous work)</option>
-        </select>
+        </Select>
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={onDone}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone}>
           Cancel
-        </button>
-        <button className="btn btn-primary" disabled={pending}>
+        </Button>
+        <Button  disabled={pending}>
           {pending ? "Saving…" : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -99,9 +100,9 @@ export function NewProjectButton({ clientId }: { clientId: number }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn" onClick={() => setOpen(true)}>
+      <Button type="button"  severity="secondary" outlined onClick={() => setOpen(true)}>
         + New project
-      </button>
+      </Button>
       {open && (
         <Modal title="New project" onClose={() => setOpen(false)}>
           <CreateProject clientId={clientId} onDone={() => setOpen(false)} />

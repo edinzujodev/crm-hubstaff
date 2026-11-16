@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputTextarea } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { approveTask, rejectTask } from "@/app/actions";
 import { Modal } from "@/components/modal";
@@ -29,12 +30,12 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
   return (
     <>
       <div className="flex items-center gap-2">
-        <button type="button" className="btn btn-primary h-8 py-0" disabled={pending} onClick={approve}>
+        <Button type="button" className="h-8" disabled={pending} onClick={approve}>
           Approve
-        </button>
-        <button type="button" className="btn h-8 py-0" disabled={pending} onClick={() => setDeny(true)}>
+        </Button>
+        <Button type="button" className="h-8" severity="secondary" outlined disabled={pending} onClick={() => setDeny(true)}>
           Deny…
-        </button>
+        </Button>
         {error && !deny && <span className="text-xs text-red-600">{error}</span>}
       </div>
       {deny && (
@@ -45,24 +46,24 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
             </p>
             <label className="flex flex-col gap-1 text-xs text-muted">
               Why is it not OK?
-              <textarea
+              <InputTextarea autoResize={false} style={{ width: "100%" }}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={4}
                 autoFocus
                 required
-                className="input text-foreground"
+                className="text-foreground"
                 placeholder="What needs to be fixed"
               />
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" className="btn" onClick={() => setDeny(false)}>
+              <Button type="button"  severity="secondary" outlined onClick={() => setDeny(false)}>
                 Cancel
-              </button>
-              <button type="button" className="btn btn-danger" disabled={pending || !reason.trim()} onClick={submitDeny}>
+              </Button>
+              <Button type="button"  severity="danger" disabled={pending || !reason.trim()} onClick={submitDeny}>
                 {pending ? "Sending…" : "Send back"}
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>

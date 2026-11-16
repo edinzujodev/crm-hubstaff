@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useTransition } from "react";
 import { setLeadStatus } from "@/app/actions";
 
@@ -8,9 +9,9 @@ type Status = "new" | "contacted" | "meeting" | "proposal" | "lost";
 export function LeadStatusSelect({ leadId, status }: { leadId: number; status: Status }) {
   const [pending, startTransition] = useTransition();
   return (
-    <select
+    <Select
       aria-label="Lead status"
-      className="input py-1"
+      className="w-full "
       value={status}
       disabled={pending}
       onChange={(e) =>
@@ -25,6 +26,6 @@ export function LeadStatusSelect({ leadId, status }: { leadId: number; status: S
       <option value="meeting">Meeting</option>
       <option value="proposal">Proposal sent</option>
       <option value="lost">Lost</option>
-    </select>
+    </Select>
   );
 }

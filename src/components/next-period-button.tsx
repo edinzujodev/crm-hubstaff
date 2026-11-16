@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { showTaskNow } from "@/app/actions";
 
@@ -9,9 +10,9 @@ export function NextPeriodButton({ nextTaskId, label, compact }: { nextTaskId: n
   const [error, setError] = useState<string | null>(null);
   return (
     <span className="inline-flex items-center gap-2">
-      <button
+      <Button
         type="button"
-        className={`btn cursor-pointer ${compact ? "h-6 px-2 py-0 text-xs" : ""}`}
+        className={`${compact ?"text-xs":""}`} severity="secondary" outlined size="small"
         disabled={pending}
         onClick={() =>
           start(async () => {
@@ -21,7 +22,7 @@ export function NextPeriodButton({ nextTaskId, label, compact }: { nextTaskId: n
         }
       >
         {pending ? "Starting…" : `Start ${label} now`}
-      </button>
+      </Button>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </span>
   );

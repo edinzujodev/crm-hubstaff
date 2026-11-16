@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, InputTextarea, Select } from "@/components/ui";
 import { useActionState, useEffect } from "react";
 import { updateLead } from "@/app/actions";
 import type { Lead } from "@/db/schema";
@@ -17,78 +18,78 @@ export function LeadEditForm({ lead, users, onDone }: { lead: Lead; users: Optio
     <form action={action} className={`grid gap-3 sm:grid-cols-2 ${onDone ? "" : "card p-4"}`}>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Name
-        <input name="name" required defaultValue={lead.name} className="input text-foreground" />
+        <InputText name="name" required defaultValue={lead.name} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Contact
-        <input name="contactName" defaultValue={lead.contactName ?? ""} className="input text-foreground" />
+        <InputText name="contactName" defaultValue={lead.contactName ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Email
-        <input name="email" type="email" defaultValue={lead.email ?? ""} className="input text-foreground" />
+        <InputText name="email" type="email" defaultValue={lead.email ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Phone
-        <input name="phone" defaultValue={lead.phone ?? ""} className="input text-foreground" />
+        <InputText name="phone" defaultValue={lead.phone ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Source
-        <input name="source" defaultValue={lead.source ?? ""} className="input text-foreground" />
+        <InputText name="source" defaultValue={lead.source ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Est. monthly fee
-        <input
+        <InputText
           name="expectedMonthlyValue"
           inputMode="numeric"
           defaultValue={lead.expectedMonthlyValue ?? ""}
-          className="input font-mono text-foreground"
+          className="w-full font-mono text-foreground"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Owner
-        <select name="ownerId" defaultValue={lead.ownerId ?? ""} className="input text-foreground">
+        <Select name="ownerId" defaultValue={lead.ownerId ?? ""} className="w-full text-foreground">
           <option value="">—</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Status
-        <select
+        <Select
           name={converted ? undefined : "status"}
           defaultValue={lead.status === "won" ? "proposal" : lead.status}
           disabled={converted}
-          className="input text-foreground"
+          className="w-full text-foreground"
         >
           <option value="new">New</option>
           <option value="contacted">Contacted</option>
           <option value="meeting">Meeting</option>
           <option value="proposal">Proposal sent</option>
           <option value="lost">Lost</option>
-        </select>
+        </Select>
         {/* Disabled fields are not submitted; the server ignores status for converted leads. */}
         {converted && <input type="hidden" name="status" value="proposal" />}
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
         Lost reason (only used when status is Lost)
-        <input name="lostReason" defaultValue={lead.lostReason ?? ""} className="input text-foreground" />
+        <InputText name="lostReason" defaultValue={lead.lostReason ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
         Notes
-        <textarea name="notes" rows={4} defaultValue={lead.notes ?? ""} className="input text-foreground" />
+        <InputTextarea autoResize={false} style={{ width: "100%" }} name="notes" rows={4} defaultValue={lead.notes ?? ""} className="text-foreground" />
       </label>
       <div className={`flex items-center gap-3 sm:col-span-2 ${onDone ? "justify-end" : ""}`}>
         {onDone && (
-          <button type="button" className="btn" onClick={onDone}>
+          <Button type="button"  severity="secondary" outlined onClick={onDone}>
             Cancel
-          </button>
+          </Button>
         )}
-        <button className="btn btn-primary" disabled={pending}>
+        <Button  disabled={pending}>
           {pending ? "Saving…" : "Save"}
-        </button>
+        </Button>
         {!onDone && state?.ok && <span className="text-sm text-emerald-700 dark:text-emerald-400">Saved.</span>}
         {state && !state.ok && <span className="text-sm text-red-600">{state.error}</span>}
       </div>

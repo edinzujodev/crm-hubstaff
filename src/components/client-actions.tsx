@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, InputTextarea, Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { deleteClient, updateClient } from "@/app/actions";
@@ -70,51 +71,51 @@ function EditClient({ client, onDone }: { client: ClientFields; onDone: () => vo
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
         Name
-        <input name="name" required autoFocus defaultValue={client.name} className="input text-foreground" />
+        <InputText name="name" required autoFocus defaultValue={client.name} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Type
-        <select name="kind" defaultValue={client.kind} className="input text-foreground">
+        <Select name="kind" defaultValue={client.kind} className="w-full text-foreground">
           <option value="company">Single company</option>
           <option value="group">Group of companies</option>
-        </select>
+        </Select>
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Contact
-        <input name="contactName" defaultValue={client.contactName ?? ""} className="input text-foreground" />
+        <InputText name="contactName" defaultValue={client.contactName ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Email
-        <input name="email" type="email" defaultValue={client.email ?? ""} className="input text-foreground" />
+        <InputText name="email" type="email" defaultValue={client.email ?? ""} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Phone
-        <input name="phone" defaultValue={client.phone ?? ""} className="input text-foreground" />
+        <InputText name="phone" defaultValue={client.phone ?? ""} className="w-full text-foreground" />
       </label>
       <label
         className="flex flex-col gap-1 text-xs text-muted"
         title="Optional. Overrides HUBSTAFF_PROJECT_ID for this client's tasks."
       >
         Hubstaff project id
-        <input
+        <InputText
           name="hubstaffProjectId"
           inputMode="numeric"
           defaultValue={client.hubstaffProjectId ?? ""}
-          className="input font-mono text-foreground"
+          className="w-full font-mono text-foreground"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
         Notes
-        <textarea name="notes" rows={3} defaultValue={client.notes ?? ""} className="input text-foreground" />
+        <InputTextarea autoResize={false} style={{ width: "100%" }} name="notes" rows={3} defaultValue={client.notes ?? ""} className="text-foreground" />
       </label>
       {state && !state.ok && <p className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
       <div className="flex justify-end gap-2 sm:col-span-2">
-        <button type="button" className="btn" onClick={onDone}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone}>
           Cancel
-        </button>
-        <button className="btn btn-primary" disabled={pending}>
+        </Button>
+        <Button  disabled={pending}>
           {pending ? "Saving…" : "Save"}
-        </button>
+        </Button>
       </div>
     </form>
   );

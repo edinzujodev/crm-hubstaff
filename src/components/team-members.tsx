@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { setUserTeam } from "@/app/actions";
 import { Avatar } from "@/components/avatar";
@@ -30,9 +31,9 @@ export function TeamMembers({ members, canEdit }: { members: Member[]; canEdit: 
               <span className="block text-xs text-muted">{m.email}</span>
             </span>
             {canEdit && (
-              <button type="button" className="btn cursor-pointer" disabled={pending} onClick={() => remove(m.id)}>
+              <Button type="button"  severity="secondary" outlined disabled={pending} onClick={() => remove(m.id)}>
                 Remove
-              </button>
+              </Button>
             )}
           </li>
         ))}

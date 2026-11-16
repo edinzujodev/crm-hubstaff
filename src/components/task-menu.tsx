@@ -1,9 +1,11 @@
 "use client";
 
+import { Button, InputText, Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { deleteTask, updateTask } from "@/app/actions";
 import { DateInput } from "@/components/date-input";
+import { RowMenu } from "@/components/row-menu";
 import { Modal } from "@/components/modal";
 import { RepeatShowFields } from "@/components/repeat-show-fields";
 import { defaultLead, type RepeatShow } from "@/lib/repeat-show";
@@ -37,90 +39,23 @@ export function TaskMenu({
   users: Option[];
   projects: ProjectOption[];
 }) {
-  const [menu, setMenu] = useState<{ top: number; right: number } | null>(null);
   const [modal, setModal] = useState<"edit" | "delete" | null>(null);
-  const button = useRef<HTMLButtonElement>(null);
   const router = useRouter();
-
-  // Close the menu on any outside click, scroll, resize or Escape.
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(null);
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    window.addEventListener("pointerdown", close);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("pointerdown", close);
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [menu]);
-
-  const toggle = () => {
-    if (menu) return setMenu(null);
-    const r = button.current!.getBoundingClientRect();
-    setMenu({ top: r.bottom + 4, right: window.innerWidth - r.right });
-  };
-  const choose = (m: "edit" | "delete") => {
-    setMenu(null);
-    setModal(m);
-  };
 
   return (
     <>
-      <button
-        ref={button}
-        type="button"
-        aria-label={`Actions for ${task.title}`}
-        aria-haspopup="menu"
-        aria-expanded={!!menu}
-        className="btn cursor-pointer px-2"
-        // The window's pointerdown closes the menu; stop it so this click can toggle it.
-        onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
-        onClick={toggle}
-      >
-        ⋯
-      </button>
-      {menu && (
-        <div
-          role="menu"
-          style={{ top: menu.top, right: menu.right }}
-          className="card fixed z-40 w-44 py-1 text-sm shadow-lg"
-          onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
-        >
-          <button
-            role="menuitem"
-            className="block w-full cursor-pointer px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10"
-            onClick={() => {
-              setMenu(null);
-              router.push(`/tasks/${task.id}`);
-            }}
-          >
-            Details &amp; sessions
-          </button>
-          {canManage && (
-            <>
-              <button
-                role="menuitem"
-                className="block w-full cursor-pointer px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10"
-                onClick={() => choose("edit")}
-              >
-                Edit
-              </button>
-              <button
-                role="menuitem"
-                className="block w-full cursor-pointer px-3 py-1.5 text-left text-red-600 hover:bg-black/5 dark:hover:bg-white/10"
-                onClick={() => choose("delete")}
-              >
-                Delete
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      <RowMenu
+        label={`Actions for ${task.title}`}
+        items={[
+          { label: "Details & sessions", onSelect: () => router.push(`/tasks/${task.id}`) },
+          ...(canManage
+            ? [
+                { label: "Edit", onSelect: () => setModal("edit" as const) },
+                { label: "Delete", danger: true, onSelect: () => setModal("delete" as const) },
+              ]
+            : []),
+        ]}
+      />
       {modal === "edit" && (
         <Modal title="Edit task" onClose={() => setModal(null)}>
           <EditForm task={task} clients={clients} users={users} projects={projects} onDone={() => setModal(null)} />
@@ -164,17 +99,17 @@ export function EditForm({
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Title
-        <input name="title" required defaultValue={task.title} className="input text-foreground" />
+        <InputText name="title" required defaultValue={task.title} className="w-full text-foreground" />
       </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           Client
-          <select
+          <Select
             name="clientId"
             required
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
-            className="input text-foreground"
+            className="w-full text-foreground"
           >
             <option value="" disabled>
               Select…
@@ -184,7 +119,7 @@ export function EditForm({
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <ProjectField
           key={clientId}
@@ -195,14 +130,14 @@ export function EditForm({
         />
         <label className="flex flex-col gap-1 text-xs text-muted">
           Assignee
-          <select name="assigneeId" defaultValue={task.assigneeId ?? ""} className="input text-foreground">
+          <Select name="assigneeId" defaultValue={task.assigneeId ?? ""} className="w-full text-foreground">
             <option value="">—</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Due
@@ -210,7 +145,7 @@ export function EditForm({
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Repeats
-          <select
+          <Select
             name="repeat"
             value={repeat}
             onChange={(e) => {
@@ -218,12 +153,12 @@ export function EditForm({
               setRepeat(v);
               if (v && !lead) setLead(String(defaultLead(v)));
             }}
-            className="input text-foreground"
+            className="w-full text-foreground"
           >
             <option value="">One-time</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
-          </select>
+          </Select>
         </label>
         {repeat && (
           <div className="col-span-2">
@@ -238,13 +173,13 @@ export function EditForm({
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={onDone}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone}>
           {hubstaffWarning ? "Close" : "Cancel"}
-        </button>
+        </Button>
         {!hubstaffWarning && (
-          <button className="btn btn-primary" disabled={pending}>
+          <Button  disabled={pending}>
             {pending ? "Saving…" : "Save"}
-          </button>
+          </Button>
         )}
       </div>
     </form>
@@ -272,9 +207,9 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
           Deleted in the CRM, but the Hubstaff task could not be marked ({warning}).
         </p>
         <div className="flex justify-end">
-          <button className="btn" onClick={onDone}>
+          <Button  severity="secondary" outlined onClick={onDone}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -290,12 +225,12 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
       </p>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={onDone} disabled={pending}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone} disabled={pending}>
           Cancel
-        </button>
-        <button type="button" className="btn btn-danger" onClick={onDelete} disabled={pending}>
+        </Button>
+        <Button type="button"  severity="danger" onClick={onDelete} disabled={pending}>
           {pending ? "Deleting…" : "Delete"}
-        </button>
+        </Button>
       </div>
     </div>
   );

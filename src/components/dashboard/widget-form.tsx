@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, Select } from "@/components/ui";
 import { useState } from "react";
 import type { Role } from "@/lib/auth";
 import { WIDGETS, parseConfig, type AnyConfig, type WidgetType } from "@/lib/dashboard/config";
@@ -50,12 +51,12 @@ export function WidgetForm({
     >
       <label className={labelClass}>
         Title (optional)
-        <input
+        <InputText
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={80}
           placeholder="Leave empty for an automatic title"
-          className="input text-foreground"
+          className="w-full text-foreground"
         />
       </label>
 
@@ -67,20 +68,20 @@ export function WidgetForm({
             <div key={`who${i}`} className="space-y-3">
               <label className={labelClass}>
                 Whose data
-                <select value={who} onChange={(e) => set("who", e.target.value)} className="input text-foreground">
+                <Select value={who} onChange={(e) => set("who", e.target.value)} className="w-full text-foreground">
                   <option value="me">Me</option>
                   <option value="team">{role === "leader" ? "My team" : "A team"}</option>
                   <option value="person">A person</option>
                   {role === "super_admin" && <option value="everyone">Everyone</option>}
-                </select>
+                </Select>
               </label>
               {who === "person" && (
                 <label className={labelClass}>
                   Person
-                  <select
+                  <Select
                     value={String(values.userId ?? "")}
                     onChange={(e) => set("userId", idOrNull(e.target.value))}
-                    className="input text-foreground"
+                    className="w-full text-foreground"
                     required
                   >
                     <option value="">Pick a person…</option>
@@ -89,16 +90,16 @@ export function WidgetForm({
                         {p.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               )}
               {who === "team" && role === "super_admin" && (
                 <label className={labelClass}>
                   Team
-                  <select
+                  <Select
                     value={String(values.teamId ?? "")}
                     onChange={(e) => set("teamId", idOrNull(e.target.value))}
-                    className="input text-foreground"
+                    className="w-full text-foreground"
                   >
                     <option value="">All teams</option>
                     {lookups.teams.map((t) => (
@@ -106,7 +107,7 @@ export function WidgetForm({
                         {t.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               )}
             </div>
@@ -117,10 +118,10 @@ export function WidgetForm({
           return (
             <label key={`client${i}`} className={labelClass}>
               {f.label}
-              <select
+              <Select
                 value={String(values.clientId ?? "")}
                 onChange={(e) => set("clientId", idOrNull(e.target.value))}
-                className="input text-foreground"
+                className="w-full text-foreground"
               >
                 <option value="">All clients</option>
                 {lookups.clients.map((c) => (
@@ -128,7 +129,7 @@ export function WidgetForm({
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           );
         }
@@ -138,10 +139,10 @@ export function WidgetForm({
           return (
             <label key={`team${i}`} className={labelClass}>
               {f.label}
-              <select
+              <Select
                 value={String(values.teamId ?? "")}
                 onChange={(e) => set("teamId", idOrNull(e.target.value))}
-                className="input text-foreground"
+                className="w-full text-foreground"
               >
                 <option value="">{f.empty}</option>
                 {lookups.teams.map((t) => (
@@ -149,24 +150,24 @@ export function WidgetForm({
                     {t.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           );
         }
         return (
           <label key={f.key} className={labelClass}>
             {f.label}
-            <select
+            <Select
               value={String(values[f.key] ?? "")}
               onChange={(e) => set(f.key, f.number ? Number(e.target.value) : e.target.value)}
-              className="input text-foreground"
+              className="w-full text-foreground"
             >
               {f.options.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         );
       })}
@@ -174,12 +175,12 @@ export function WidgetForm({
       {needsPerson && <p className="text-xs text-amber-700 dark:text-amber-400">Pick a person to show.</p>}
 
       <div className="flex justify-end gap-2 pt-1">
-        <button type="button" className="btn" onClick={onCancel}>
+        <Button type="button"  severity="secondary" outlined onClick={onCancel}>
           Cancel
-        </button>
-        <button className="btn btn-primary" disabled={pending || needsPerson}>
+        </Button>
+        <Button  disabled={pending || needsPerson}>
           {pending ? "Saving…" : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

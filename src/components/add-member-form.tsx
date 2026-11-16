@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText } from "@/components/ui";
 import { useActionState, useEffect } from "react";
 import { addMember } from "@/app/actions";
 
@@ -14,28 +15,28 @@ export function AddMemberForm({ onDone, onCancel }: { onDone?: () => void; onCan
     <form action={action} className="space-y-3">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Name
-        <input name="name" required autoFocus className="input text-foreground" />
+        <InputText name="name" required autoFocus className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Email
-        <input name="email" type="email" required className="input text-foreground" />
+        <InputText name="email" type="email" required className="w-full text-foreground" />
         <span>They sign in with this Google account.</span>
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Hubstaff user id (optional)
-        <input name="hubstaffUserId" inputMode="numeric" className="input font-mono text-foreground" />
+        <InputText name="hubstaffUserId" inputMode="numeric" className="w-full font-mono text-foreground" />
         <span>Matches Hubstaff time to this person. You can add it later.</span>
       </label>
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">
         {onCancel && (
-          <button type="button" className="btn" onClick={onCancel}>
+          <Button type="button"  severity="secondary" outlined onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         )}
-        <button className="btn btn-primary" disabled={pending}>
+        <Button  disabled={pending}>
           {pending ? "Adding…" : "Add member"}
-        </button>
+        </Button>
       </div>
     </form>
   );

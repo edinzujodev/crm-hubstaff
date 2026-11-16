@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Select } from "@/components/ui";
 import { useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import {
   DndContext,
@@ -124,27 +125,27 @@ function Frame({
         </h2>
         {editing && (
           <div className="flex shrink-0 items-center gap-1">
-            <button type="button" className="btn px-2 py-1 text-xs" onClick={onConfigure} aria-label={`Settings for ${item.title}`}>
+            <Button type="button" className="py-1 text-xs" severity="secondary" outlined size="small" onClick={onConfigure} aria-label={`Settings for ${item.title}`}>
               Edit
-            </button>
+            </Button>
             {confirming ? (
               <>
-                <button type="button" className="btn btn-danger px-2 py-1 text-xs" onClick={onRemove} disabled={busy}>
+                <Button type="button" className="py-1 text-xs" severity="danger" size="small" onClick={onRemove} disabled={busy}>
                   Remove
-                </button>
-                <button type="button" className="btn px-2 py-1 text-xs" onClick={() => setConfirming(false)}>
+                </Button>
+                <Button type="button" className="py-1 text-xs" severity="secondary" outlined size="small" onClick={() => setConfirming(false)}>
                   Keep
-                </button>
+                </Button>
               </>
             ) : (
-              <button
+              <Button
                 type="button"
-                className="btn px-2 py-1 text-xs"
+                className="py-1 text-xs" severity="secondary" outlined size="small"
                 onClick={() => setConfirming(true)}
                 aria-label={`Remove ${item.title}`}
               >
                 ✕
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -344,23 +345,23 @@ export function DashboardGrid({
         <h1 className="sr-only">Dashboard</h1>
         {editing && (
           <>
-            <button className="btn" onClick={() => setAdding(true)}>
+            <Button  severity="secondary" outlined onClick={() => setAdding(true)}>
               + Add widget
-            </button>
-            <button
-              className="btn"
+            </Button>
+            <Button
+               severity="secondary" outlined
               disabled={pending}
               onClick={() => {
                 if (window.confirm("Replace your widgets with the default layout for your role?")) act(() => resetDashboard());
               }}
             >
               Reset to default
-            </button>
+            </Button>
           </>
         )}
-        <button className={editing ? "btn btn-primary" : "btn"} onClick={() => setEditing((v) => !v)}>
+        <Button className={editing ?"":""} onClick={() => setEditing((v) => !v)}>
           {editing ? "Done" : "Customize"}
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -376,15 +377,15 @@ export function DashboardGrid({
         <div className="card space-y-3 p-8 text-center">
           <p className="font-medium">Your dashboard is empty.</p>
           <p className="text-sm text-muted">Add the reports and lists you want to see here.</p>
-          <button
-            className="btn btn-primary mx-auto"
+          <Button
+            className="mx-auto"
             onClick={() => {
               setEditing(true);
               setAdding(true);
             }}
           >
             + Add widget
-          </button>
+          </Button>
         </div>
       ) : (
         <DndContext
@@ -404,9 +405,9 @@ export function DashboardGrid({
                   {editing && (
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
                       <span className="font-medium text-foreground">Row {s + 1}</span>
-                      <select
+                      <Select
                         aria-label={`Columns in row ${s + 1}`}
-                        className="input py-1 text-foreground"
+                        className="w-full text-foreground"
                         value={section.layout}
                         disabled={pending}
                         onChange={(e) => changeLayout(s, e.target.value as Layout)}
@@ -416,17 +417,17 @@ export function DashboardGrid({
                             {LAYOUTS[k].label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       {sections.length > 1 && (
-                        <button
+                        <Button
                           type="button"
-                          className="btn px-2 py-1 text-xs"
+                          className="py-1 text-xs" severity="secondary" outlined size="small"
                           disabled={pending}
                           onClick={() => removeSection(s)}
                           title="Remove this row. Its widgets move to the row above."
                         >
                           Remove row
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}
@@ -449,9 +450,9 @@ export function DashboardGrid({
               );
             })}
             {editing && (
-              <button type="button" className="btn w-full justify-center border-dashed" onClick={addSection} disabled={pending}>
+              <Button type="button" className="w-full justify-center border-dashed" severity="secondary" outlined onClick={addSection} disabled={pending}>
                 + Add row
-              </button>
+              </Button>
             )}
           </div>
         </DndContext>
@@ -544,9 +545,9 @@ function AddWidget({
         ))}
       </div>
       <div className="flex justify-end">
-        <button className="btn" onClick={onClose}>
+        <Button  severity="secondary" outlined onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
     </Modal>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/ui";
 import { useTransition } from "react";
 import { setUserTeam } from "@/app/actions";
 
@@ -17,9 +18,9 @@ export function TeamSelect({
 }) {
   const [pending, startTransition] = useTransition();
   return (
-    <select
+    <Select
       aria-label={`Team for ${name}`}
-      className="input py-1"
+      className="w-full "
       value={teamId ?? ""}
       disabled={pending}
       onChange={(e) =>
@@ -35,6 +36,6 @@ export function TeamSelect({
           {t.name}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

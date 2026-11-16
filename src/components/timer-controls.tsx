@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { finishTask, setTaskStatus, startTask } from "@/app/actions";
@@ -97,14 +98,14 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
           </span>
         )}
         {runningSince ? (
-          <button onClick={onFinish} disabled={pending} className="btn btn-danger">
+          <Button onClick={onFinish} disabled={pending}  severity="danger">
             Stop
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             onClick={onStart}
             disabled={pending || done || !!lockedTo}
-            className="btn btn-primary"
+            
             title={
               lockedTo
                 ? `Assigned to ${lockedTo}. Only they can start it. A team leader can reassign it.`
@@ -114,11 +115,11 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
             }
           >
             {otherTask ? "Switch here" : "Start"}
-          </button>
+          </Button>
         )}
-        <button onClick={onFinishTask} disabled={pending || done} className="btn">
+        <Button onClick={onFinishTask} disabled={pending || done}  severity="secondary" outlined>
           Finish
-        </button>
+        </Button>
       </div>
       {message && !compact && (
         <p className={`text-sm ${toneClass[message.tone]}`}>

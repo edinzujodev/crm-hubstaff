@@ -1,5 +1,6 @@
 "use client";
 
+import { InputText, Select } from "@/components/ui";
 import { REPEAT_SHOW_LABEL, REPEAT_SHOW_OPTIONS, type RepeatShow, defaultLead } from "@/lib/repeat-show";
 
 /** "When should each new copy show up in my list?" for a weekly or monthly task. */
@@ -23,22 +24,22 @@ export function RepeatShowFields({
     <div className="space-y-2">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Show each new one in my list
-        <select
+        <Select
           name="repeatShow"
           value={current}
           onChange={(e) => onShow(e.target.value as RepeatShow)}
-          className="input text-foreground"
+          className="w-full text-foreground"
         >
           {options.map((o) => (
             <option key={o} value={o}>
               {REPEAT_SHOW_LABEL[o]}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {current === "days_before" && (
         <label className="flex items-center gap-2 text-sm">
-          <input
+          <InputText
             type="number"
             name="repeatLeadDays"
             min={0}
@@ -46,7 +47,7 @@ export function RepeatShowFields({
             value={lead}
             placeholder={String(defaultLead(repeat))}
             onChange={(e) => onLead(e.target.value)}
-            className="input w-20 text-center"
+            className="w-20 text-center"
             aria-label="Days before it is due"
           />
           <span className="text-muted">days before it is due</span>

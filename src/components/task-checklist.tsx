@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Checkbox, InputText, InputTextarea } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { addChecklistItem, removeChecklistItem, setTaskInstructions, toggleChecklistItem } from "@/app/actions";
 
@@ -52,18 +53,18 @@ export function TaskChecklist({
 
       {editingNotes ? (
         <div className="space-y-2">
-          <textarea
+          <InputTextarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
             autoFocus
             placeholder="What needs to be done, and how"
-            className="input w-full text-foreground"
+            className="w-full text-foreground"
           />
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
-              className="btn btn-primary"
+              
               disabled={pending}
               onClick={() =>
                 run(
@@ -73,10 +74,10 @@ export function TaskChecklist({
               }
             >
               Save
-            </button>
-            <button type="button" className="btn" onClick={() => (setNotes(description ?? ""), setEditingNotes(false))}>
+            </Button>
+            <Button type="button"  severity="secondary" outlined onClick={() => (setNotes(description ?? ""), setEditingNotes(false))}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : description ? (
@@ -109,8 +110,8 @@ export function TaskChecklist({
           {items.map((item) => (
             <li key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
               <label className={`flex flex-1 items-center gap-3 ${canTick ? "cursor-pointer" : ""}`}>
-                <input
-                  type="checkbox"
+                <Checkbox
+                  
                   checked={item.done}
                   disabled={pending || !canTick}
                   className="h-4 w-4 cursor-pointer"
@@ -147,15 +148,15 @@ export function TaskChecklist({
             );
           }}
         >
-          <input
+          <InputText
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Add a checklist item"
-            className="input flex-1 text-foreground"
+            className="w-full flex-1 text-foreground"
           />
-          <button className="btn" disabled={pending || !text.trim()}>
+          <Button  severity="secondary" outlined disabled={pending || !text.trim()}>
             Add
-          </button>
+          </Button>
         </form>
       )}
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -50,9 +51,9 @@ export function SyncButton() {
           Sync failed: {error}
         </span>
       )}
-      <button className="btn" disabled={pending} onClick={() => void sync(true)}>
+      <Button  severity="secondary" outlined disabled={pending} onClick={() => void sync(true)}>
         {pending ? "Syncing…" : "Sync Hubstaff"}
-      </button>
+      </Button>
     </span>
   );
 }

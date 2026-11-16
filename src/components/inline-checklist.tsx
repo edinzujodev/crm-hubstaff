@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { toggleChecklistItem } from "@/app/actions";
 
@@ -19,8 +20,8 @@ export function InlineChecklist({
         {items.map((item) => (
           <li key={item.id} className="text-sm">
             <label className={`flex items-center gap-2 ${canTick ? "cursor-pointer" : ""}`}>
-              <input
-                type="checkbox"
+              <Checkbox
+                
                 checked={item.done}
                 disabled={pending || !canTick}
                 className="h-4 w-4 cursor-pointer"

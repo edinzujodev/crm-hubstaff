@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { convertLead } from "@/app/actions";
@@ -8,8 +9,8 @@ export function ConvertLeadButton({ leadId, name, compact }: { leadId: number; n
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   return (
-    <button
-      className={`btn btn-primary ${compact ? "py-1" : ""}`}
+    <Button
+      className={`${compact ?"py-1":""}`}
       disabled={pending}
       title={`Create a client from ${name}`}
       onClick={() =>
@@ -21,6 +22,6 @@ export function ConvertLeadButton({ leadId, name, compact }: { leadId: number; n
       }
     >
       {pending ? "Converting…" : "Convert to client"}
-    </button>
+    </Button>
   );
 }

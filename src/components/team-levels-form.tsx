@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText } from "@/components/ui";
 import { useActionState, useState } from "react";
 import { setTeamLevels } from "@/app/actions";
 
@@ -37,7 +38,7 @@ function HoursField({
       <label className="flex items-center gap-2 text-sm">
         <span className={`badge w-28 justify-center ${badgeClass}`}>{badge}</span>
         <span className="text-muted">under</span>
-        <input
+        <InputText
           name={name}
           type="number"
           inputMode="numeric"
@@ -46,7 +47,7 @@ function HoursField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={invalid || !valid}
-          className={`input w-24 text-center ${invalid || !valid ? "border-red-500" : ""}`}
+          className={`w-24 text-center ${invalid || !valid ?"border-red-500":""}`}
         />
         <span className="text-muted">hours</span>
         <span className="w-16 text-xs text-muted">{valid && n >= 48 ? `= ${long(n)}` : ""}</span>
@@ -152,9 +153,9 @@ export function TeamLevelsForm({
       )}
 
       <div className="flex items-center gap-3">
-        <button className="btn btn-primary" disabled={!canSave}>
+        <Button  disabled={!canSave}>
           {pending ? "Saving…" : "Save levels"}
-        </button>
+        </Button>
         {!dirty && state?.ok && <span className="text-sm text-emerald-700 dark:text-emerald-400">✓ Saved</span>}
         {dirty && numbersOk && orderOk && <span className="text-xs text-muted">Unsaved changes</span>}
       </div>

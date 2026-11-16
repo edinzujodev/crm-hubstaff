@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, InputText, InputTextarea, Select } from "@/components/ui";
 import { useActionState, useEffect, useState } from "react";
 import { createTask } from "@/app/actions";
 import { DateInput } from "@/components/date-input";
@@ -27,9 +28,9 @@ export function NewTaskForm({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn btn-primary h-8 py-0" onClick={() => setOpen(true)}>
+      <Button type="button" className="h-8" onClick={() => setOpen(true)}>
         + New task
-      </button>
+      </Button>
       {open && (
         <Modal title="New task" wide onClose={() => setOpen(false)}>
           <TaskForm clients={clients} users={users} projects={projects} templates={templates} onDone={() => setOpen(false)} />
@@ -87,26 +88,26 @@ function TaskForm({
     <form action={action} className="space-y-4">
       <label className="flex flex-col gap-1 text-xs text-muted">
         Task
-        <input
+        <InputText
           name="title"
           required
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Monthly bank reconciliation"
-          className="input text-foreground"
+          className="w-full text-foreground"
         />
       </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs text-muted">
           Client
-          <select
+          <Select
             name="clientId"
             required
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
-            className="input text-foreground"
+            className="w-full text-foreground"
           >
             <option value="" disabled>
               Select…
@@ -116,19 +117,19 @@ function TaskForm({
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <ProjectField clientId={clientId} title={title} projects={projects} />
         <label className="flex flex-col gap-1 text-xs text-muted">
           Assignee
-          <select name="assigneeId" defaultValue="" className="input text-foreground">
+          <Select name="assigneeId" defaultValue="" className="w-full text-foreground">
             <option value="">—</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Due
@@ -153,16 +154,16 @@ function TaskForm({
               ["monthly", "Monthly"],
             ] as const
           ).map(([value, label]) => (
-            <button
+            <Button
               key={value}
               type="button"
               disabled={value !== "" && !due}
               onClick={() => chooseRepeat(value)}
               aria-pressed={repeat === value}
-              className={`btn ${repeat === value ? "btn-primary" : ""}`}
+              className={`${repeat === value ?"":""}`}
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
         {!due && <p className="text-xs text-muted">Set a due date to make it repeat.</p>}
@@ -183,10 +184,10 @@ function TaskForm({
         {templates.length > 0 && (
           <label className="flex flex-col gap-1 text-xs text-muted">
             Template
-            <select
+            <Select
               value={templateId}
               onChange={(e) => chooseTemplate(e.target.value)}
-              className="input text-foreground"
+              className="w-full text-foreground"
             >
               <option value="">No template</option>
               {templates.map((t) => (
@@ -194,30 +195,30 @@ function TaskForm({
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
         <input type="hidden" name="templateId" value={templateId} />
         <label className="flex flex-col gap-1 text-xs text-muted">
           Instructions
-          <textarea
+          <InputTextarea autoResize={false} style={{ width: "100%" }}
             name="description"
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="What needs to be done"
-            className="input text-foreground"
+            className="text-foreground"
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Checklist, one item per line
-          <textarea
+          <InputTextarea autoResize={false} style={{ width: "100%" }}
             name="checklist"
             rows={4}
             value={checklist}
             onChange={(e) => setChecklist(e.target.value)}
             placeholder={"Collect the bank statements\nMatch every payment\nSend the report"}
-            className="input text-foreground"
+            className="text-foreground"
           />
         </label>
         <p className="text-xs text-muted">The task can be finished without ticking every item; finishing ticks what is left.</p>
@@ -230,13 +231,13 @@ function TaskForm({
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn" onClick={onDone}>
+        <Button type="button"  severity="secondary" outlined onClick={onDone}>
           {hubstaffWarning ? "Close" : "Cancel"}
-        </button>
+        </Button>
         {!hubstaffWarning && (
-          <button className="btn btn-primary" disabled={pending}>
+          <Button  disabled={pending}>
             {pending ? "Adding…" : "Add task"}
-          </button>
+          </Button>
         )}
       </div>
     </form>

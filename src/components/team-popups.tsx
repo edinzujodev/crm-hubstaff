@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui";
 import { useCallback, useState } from "react";
 import { AddMemberForm } from "@/components/add-member-form";
 import { EditTeamForm, type TeamEditData } from "@/components/edit-team-form";
@@ -12,9 +13,9 @@ export function AddMemberButton() {
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <button className="btn btn-primary cursor-pointer" onClick={() => setOpen(true)}>
+      <Button  onClick={() => setOpen(true)}>
         + Add member
-      </button>
+      </Button>
       {open && (
         <Modal title="Add a member" onClose={close}>
           <AddMemberForm onDone={close} onCancel={close} />
@@ -30,9 +31,9 @@ export function EditTeamButton({ team, users }: { team: TeamEditData; users: Pic
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <button className="btn cursor-pointer" onClick={() => setOpen(true)}>
+      <Button  severity="secondary" outlined onClick={() => setOpen(true)}>
         Edit team
-      </button>
+      </Button>
       {open && (
         <Modal title="Edit team" onClose={close}>
           <EditTeamForm team={team} users={users} onDone={close} />
@@ -47,9 +48,9 @@ export function NewTeamButton({ users }: { users: PickerUser[] }) {
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <button className="btn btn-primary cursor-pointer" onClick={() => setOpen(true)}>
+      <Button  onClick={() => setOpen(true)}>
         + New team
-      </button>
+      </Button>
       {open && (
         <Modal title="New team" onClose={close}>
           <NewTeamForm users={users} onDone={close} onCancel={close} />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { Dialog } from "primereact/dialog";
+import type { ReactNode } from "react";
 
 /** A popup. Render it only while it should be open; it closes on Escape or a click outside. */
 export function Modal({
@@ -14,25 +15,18 @@ export function Modal({
   wide?: boolean;
   children: ReactNode;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const d = ref.current;
-    if (d && !d.open) d.showModal();
-  }, []);
-
   return (
-    <dialog
-      ref={ref}
-      onClose={onClose}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
-      className={`card m-auto ${wide ? "w-[40rem]" : "w-[28rem]"} max-w-[calc(100vw-2rem)] p-0 text-foreground backdrop:bg-black/40`}
+    <Dialog
+      visible
+      modal
+      draggable={false}
+      resizable={false}
+      dismissableMask
+      header={title}
+      onHide={onClose}
+      style={{ width: wide ? "40rem" : "28rem", maxWidth: "calc(100vw - 2rem)" }}
     >
-      <div className="space-y-4 p-5">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {children}
-      </div>
-    </dialog>
+      <div className="space-y-4">{children}</div>
+    </Dialog>
   );
 }
