@@ -18,7 +18,7 @@ export const URGENCY_RANK: Record<Urgency, number> = { on_track: 0, approaching:
 export const URGENCY_CLASS: Record<Urgency, string> = {
   on_track: "border-emerald-500/50 text-emerald-700 dark:text-emerald-400",
   approaching: "border-amber-500/60 text-amber-700 dark:text-amber-400",
-  critical: "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-400",
+  critical: "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-400",
 };
 
 /** The current wall-clock time in `timeZone`, expressed as a UTC timestamp, so it can be compared with a date. */

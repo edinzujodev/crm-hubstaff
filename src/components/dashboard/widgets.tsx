@@ -35,7 +35,7 @@ function Narrowed() {
 
 function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "bad" | "warn" }) {
   const color =
-    tone === "bad" ? "text-red-700 dark:text-red-400" : tone === "warn" ? "text-amber-700 dark:text-amber-400" : "";
+    tone === "bad" ? "text-red-600 dark:text-red-400" : tone === "warn" ? "text-amber-700 dark:text-amber-400" : "";
   return (
     <div className="min-w-0 rounded-md border border-border p-3">
       <p className="truncate text-xs text-muted">{label}</p>
@@ -290,7 +290,7 @@ async function ClientsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
               </span>,
               <span
                 key="l"
-                className={`font-mono tabular-nums ${c.late ? "text-red-700 dark:text-red-400" : "text-muted"}`}
+                className={`font-mono tabular-nums ${c.late ? "text-red-600 dark:text-red-400" : "text-muted"}`}
               >
                 {c.late}
               </span>,
@@ -387,7 +387,7 @@ async function TeamWorkloadWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
                 </span>,
                 <span
                   key="l"
-                  className={`font-mono tabular-nums ${p.late ? "text-red-700 dark:text-red-400" : "text-muted"}`}
+                  className={`font-mono tabular-nums ${p.late ? "text-red-600 dark:text-red-400" : "text-muted"}`}
                 >
                   {p.late}
                 </span>,

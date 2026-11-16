@@ -198,26 +198,28 @@ async function ClientDetail({
             { label: "Tracked in period", align: "right" },
             { label: "Activity", align: "right" },
           ]}
-          rows={report.tasks.map(({ task, tracked, active }) => ({
-            key: task.id,
-            cells: [
-              <div key="n">
-                <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">
-                  {task.title}
-                </Link>
-                {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
-              </div>,
-              <span key="s" className="badge">
-                {statusLabel[task.status]}
-              </span>,
-              <span key="t" className="font-mono tabular-nums">
-                {tracked ? fmtDuration(tracked) : "—"}
-              </span>,
-              <span key="a" className="text-xs text-muted">
-                {tracked ? `${Math.round((active / tracked) * 100)}%` : "—"}
-              </span>,
-            ],
-          }))}
+          rows={report.tasks
+            .filter(({ task }) => !task.deletedAt)
+            .map(({ task, tracked, active }) => ({
+              key: task.id,
+              cells: [
+                <div key="n">
+                  <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">
+                    {task.title}
+                  </Link>
+                  {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
+                </div>,
+                <span key="s" className="badge">
+                  {statusLabel[task.status]}
+                </span>,
+                <span key="t" className="font-mono tabular-nums">
+                  {tracked ? fmtDuration(tracked) : "—"}
+                </span>,
+                <span key="a" className="text-xs text-muted">
+                  {tracked ? `${Math.round((active / tracked) * 100)}%` : "—"}
+                </span>,
+              ],
+            }))}
         />
       </section>
 

@@ -413,7 +413,7 @@ export function DashboardGrid({
       {error && (
         <p
           role="alert"
-          className="card flex items-center justify-between gap-3 border-red-500/50 p-3 text-sm text-red-700 dark:text-red-400"
+          className="card flex items-center justify-between gap-3 border-red-500/50 p-3 text-sm text-red-600 dark:text-red-400"
         >
           {error}
           <Button link size="small" className="p-0" onClick={() => setError(null)}>

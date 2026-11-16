@@ -92,7 +92,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
   const toneClass = {
     ok: "text-emerald-700 dark:text-emerald-400",
     warn: "text-amber-700 dark:text-amber-400",
-    error: "text-red-700 dark:text-red-400",
+    error: "text-red-600 dark:text-red-400",
   };
 
   return (

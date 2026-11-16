@@ -99,7 +99,7 @@ export function TeamLevelsForm({
         <HoursField
           name="criticalHours"
           badge="Critical"
-          badgeClass="border-red-500/60 text-red-700 dark:text-red-400"
+          badgeClass="border-red-500/60 text-red-600 dark:text-red-400"
           value={critical}
           onChange={setCritical}
           presets={[12, 24, 48]}
@@ -125,7 +125,7 @@ export function TeamLevelsForm({
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <span>
-              <b className="text-red-700 dark:text-red-400">Critical</b>
+              <b className="text-red-600 dark:text-red-400">Critical</b>
               <br />
               <span className="text-muted">overdue to {long(c)} left</span>
             </span>

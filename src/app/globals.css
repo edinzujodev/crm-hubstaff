@@ -317,3 +317,17 @@ body {
   background: rgb(245 158 11 / 0.13);
 }
 
+
+/* Tabs: a tighter gap between the label and the line, and a clearly marked active tab. */
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem .p-menuitem-link {
+  padding: 0.5rem 1rem;
+  color: var(--muted);
+}
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem.p-highlight .p-menuitem-link {
+  color: var(--foreground);
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary);
+}
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem:not(.p-highlight) .p-menuitem-link {
+  border-bottom: 2px solid transparent;
+}

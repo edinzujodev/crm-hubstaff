@@ -147,7 +147,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           role="alert"
           className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm ${
             urgency === "critical"
-              ? "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-300"
+              ? "border-red-500/60 bg-red-500/10 text-red-600 dark:text-red-300"
               : "border-amber-500/60 bg-amber-500/10 text-amber-800 dark:text-amber-300"
           }`}
         >
@@ -227,7 +227,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
 
       {task.reviewResult === "rejected" && task.status === "todo" && (
         <div className="card space-y-1 border-red-500/50 p-3 text-sm">
-          <p className="font-medium text-red-700 dark:text-red-400">Checked: not OK</p>
+          <p className="font-medium text-red-600 dark:text-red-400">Checked: not OK</p>
           <p className="whitespace-pre-wrap">{task.reviewNote}</p>
           <p className="text-xs text-muted">Fix it and press Finish again to send it back for review.</p>
         </div>

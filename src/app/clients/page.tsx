@@ -17,7 +17,7 @@ async function ClientList({ show }: { show?: string }) {
   const auth = await pageGuard("super_admin", "leader");
   const scope = taskScope(auth);
   const monthStart = `${localDay(new Date(), config.timeZone).slice(0, 7)}-01`;
-  const [allClients, taskCounts, tracked, projectCounts, companyRows, companyNameRows] = await Promise.all([
+  const [allClients, taskCounts, tracked, projectCounts, companyNameRows] = await Promise.all([
     db.select().from(schema.clients).orderBy(asc(schema.clients.name)),
     db
       .select({ clientId: schema.tasks.clientId, n: count() })
@@ -37,10 +37,6 @@ async function ClientList({ show }: { show?: string }) {
       .from(schema.projects)
       .groupBy(schema.projects.clientId),
     db
-      .select({ clientId: schema.clientCompanies.clientId, n: count() })
-      .from(schema.clientCompanies)
-      .groupBy(schema.clientCompanies.clientId),
-    db
       .select({ clientId: schema.clientCompanies.clientId, name: schema.clientCompanies.name })
       .from(schema.clientCompanies)
       .orderBy(asc(schema.clientCompanies.name)),
@@ -55,7 +51,6 @@ async function ClientList({ show }: { show?: string }) {
   const clients = allClients.filter((c) =>
     show === "groups" ? c.kind === "group" : show === "companies" ? c.kind === "company" : true,
   );
-  const companyCounts = new Map(companyRows.map((r) => [r.clientId, r.n]));
   const projectsOf = new Map(projectCounts.map((r) => [r.clientId, r.n]));
   const inProgress = new Map(taskCounts.map((r) => [r.clientId, r.n]));
 
@@ -85,16 +80,9 @@ async function ClientList({ show }: { show?: string }) {
               <Link href={`/clients/${c.id}`} className="font-medium hover:underline">
                 {c.name}
               </Link>
-              {c.kind === "group" && (
-                <span className="badge ml-2" title="A group with several companies">
-                  Group · {companyCounts.get(c.id) ?? 0}
-                </span>
-              )}
             </div>,
-            <span key="g" className="text-muted" title={(companyNames.get(c.id) ?? []).join(", ")}>
-              {c.kind === "group"
-                ? `${companyCounts.get(c.id) ?? 0} ${companyCounts.get(c.id) === 1 ? "company" : "companies"}${companyNames.get(c.id)?.length ? `: ${companyNames.get(c.id)!.slice(0, 3).join(", ")}${companyNames.get(c.id)!.length > 3 ? "…" : ""}` : ""}`
-                : "—"}
+            <span key="g" className="text-muted">
+              {c.kind === "group" ? (companyNames.get(c.id) ?? []).join(", ") || "No companies yet" : "—"}
             </span>,
             <span key="k" className="text-muted">
               {[c.contactName, c.email].filter(Boolean).join(" · ") || "—"}
