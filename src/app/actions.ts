@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser } from "@/lib/current-user";
 import { authMode, createSession, destroySession, findApprovedUser } from "@/lib/session";
-import { canManageTeam, requireAuth, requireRole, requireTask } from "@/lib/auth";
+import { canManageTask, canManageTeam, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
 import { canReviewTask, reviewerFor } from "@/lib/review";
 import { defaultLeadDays, hubstaffSummary, topUpSeries } from "@/lib/recurring";
@@ -1029,5 +1029,53 @@ export async function setUserRole(userId: number, role: "super_admin" | "member"
     }
     await db.update(schema.users).set({ role }).where(eq(schema.users.id, userId));
     return undefined;
+  });
+}
+
+
+// ---- Moving tracked hours between tasks
+
+const SLOT_MS = 10 * 60 * 1000;
+
+/**
+ * Moves the hours of one finished session to another task of the same person: the session itself and the
+ * Hubstaff slots it covers. A person can do this for their own time; a leader or the super admin for their team's.
+ * The slots are marked as moved, so the next Hubstaff sync does not put them back.
+ */
+export async function moveSessionTime(sessionId: number, toTaskId: number) {
+  return run(async () => {
+    const auth = await requireAuth();
+    const session = await db.query.workSessions.findFirst({ where: eq(schema.workSessions.id, sessionId) });
+    if (!session) throw new Error("Session not found");
+    const from = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, session.taskId) });
+    if (!from) throw new Error("Task not found");
+    if (session.userId !== auth.user.id && !canManageTask(auth, from)) {
+      throw new Error("You can only move your own hours.");
+    }
+    const ended = session.endedAt;
+    if (!ended) throw new Error("Stop this session first, then move its hours.");
+    if (toTaskId === session.taskId) throw new Error("Pick a different task.");
+    const to = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, toTaskId) });
+    if (!to || to.deletedAt) throw new Error("That task doesn't exist.");
+    if (to.assigneeId !== session.userId) throw new Error("Hours can only move to another task of the same person.");
+
+    const user = await db.query.users.findFirst({ where: eq(schema.users.id, session.userId) });
+    await db.transaction(async (tx) => {
+      if (user?.hubstaffUserId) {
+        await tx
+          .update(schema.hubstaffActivities)
+          .set({ taskId: toTaskId, taskMoved: true })
+          .where(
+            and(
+              eq(schema.hubstaffActivities.taskId, session.taskId),
+              eq(schema.hubstaffActivities.hubstaffUserId, user.hubstaffUserId),
+              sql`${schema.hubstaffActivities.startsAt} + make_interval(secs => ${SLOT_MS / 1000}) > ${session.startedAt.toISOString()}::timestamptz`,
+              sql`${schema.hubstaffActivities.startsAt} < ${ended.toISOString()}::timestamptz`,
+            ),
+          );
+      }
+      await tx.update(schema.workSessions).set({ taskId: toTaskId }).where(eq(schema.workSessions.id, sessionId));
+    });
+    return { toTaskId };
   });
 }

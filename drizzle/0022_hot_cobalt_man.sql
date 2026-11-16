@@ -1,0 +1,1 @@
+ALTER TABLE "hubstaff_activities" ADD COLUMN "task_moved" boolean DEFAULT false NOT NULL;

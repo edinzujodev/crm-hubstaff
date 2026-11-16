@@ -312,6 +312,8 @@ export const hubstaffActivities = pgTable(
     hubstaffTaskId: integer("hubstaff_task_id"),
     // CRM task resolved from hubstaffTaskId at sync time (null = not a CRM task).
     taskId: integer("task_id").references(() => tasks.id),
+    // True once a person moved this slot to another task in the CRM; the sync then leaves taskId alone.
+    taskMoved: boolean("task_moved").notNull().default(false),
     trackedSeconds: integer("tracked_seconds").notNull(),
     // Seconds with keyboard/mouse activity (Hubstaff "overall").
     activeSeconds: integer("active_seconds").notNull(),

@@ -1,10 +1,12 @@
 import { DataGrid } from "@/components/data-grid";
+import { KIND_LABEL } from "@/lib/project-kind";
+import { MoveTimeButton } from "@/components/move-time-button";
 import { InlineChecklist } from "@/components/inline-checklist";
 import { getSeries } from "@/lib/series";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
 import { StopRepeatingButton } from "@/components/stop-repeating-button";
@@ -94,6 +96,28 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
     reviewsByTask([id]),
   ]);
   const canReview = canReviewTask(auth, task);
+  // Hours can be moved to another task of the same person, by that person or by someone who manages this task.
+  const movable = (userId: number) => !task.deletedAt && (userId === auth.user.id || manage);
+  const sessionUsers = [...new Set(report.sessions.filter((x) => x.endedAt && movable(x.userId)).map((x) => x.userId))];
+  const targetRows = sessionUsers.length
+    ? await db
+        .select({
+          id: schema.tasks.id,
+          title: schema.tasks.title,
+          assigneeId: schema.tasks.assigneeId,
+          status: schema.tasks.status,
+          repeat: schema.tasks.repeat,
+          dueDate: schema.tasks.dueDate,
+        })
+        .from(schema.tasks)
+        .where(
+          and(inArray(schema.tasks.assigneeId, sessionUsers), isNull(schema.tasks.deletedAt), ne(schema.tasks.id, id)),
+        )
+        .orderBy(asc(schema.tasks.status), desc(schema.tasks.id))
+    : [];
+  const project = task.projectId
+    ? await db.query.projects.findFirst({ where: eq(schema.projects.id, task.projectId) })
+    : null;
   const series = task.seriesId ? await getSeries(task.seriesId, auth) : null;
   const today = localDay(new Date(), tz);
   const team = task.teamId ? await db.query.teams.findFirst({ where: eq(schema.teams.id, task.teamId) }) : null;
@@ -116,19 +140,25 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <section className="card flex flex-wrap items-center justify-between gap-4 p-4">
         <div>
           <h1 className="text-xl font-semibold">{task.title}</h1>
           {task.repeat && task.dueDate && (
             <p className="text-sm text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
           )}
         </div>
-        <div className="flex items-start gap-3">
+        <div className="flex flex-wrap items-center gap-4">
           {task.deletedAt ? (
             <RestoreTaskButton taskId={task.id} />
           ) : (
             <>
-              {manage && <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/tasks" />}
+              {manage && (
+                <div className="flex items-center gap-2">
+                  {task.repeat && <StopRepeatingButton taskId={task.id} />}
+                  <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/tasks" />
+                </div>
+              )}
+              {manage && <span aria-hidden className="hidden h-8 w-px bg-border sm:block" />}
               <TimerControls
                 taskId={task.id}
                 title={task.title}
@@ -140,7 +170,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             </>
           )}
         </div>
-      </div>
+      </section>
 
       {(urgency === "critical" || urgency === "approaching") && task.dueDate && (
         <div
@@ -159,40 +189,66 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       )}
 
-      <section className="card grid gap-x-8 gap-y-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <p className="text-xs text-muted">Client</p>
-          <p>
-            {task.clientId ? (
-              <Link href={`/clients/${task.clientId}`} className="underline">
-                {row.clientName}
-              </Link>
-            ) : (
-              "—"
-            )}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Assignee</p>
-          <p>{row.assigneeName ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Due</p>
-          <p>{task.dueDate ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Hubstaff</p>
-          <p>{task.hubstaffTaskId ? `Task #${task.hubstaffTaskId}` : "Not created yet (made on first Start)"}</p>
-        </div>
-        {task.repeat && (
-          <div>
-            <p className="text-xs text-muted">Repeats</p>
-            <p className="flex flex-wrap items-center gap-x-2">
-              <span className="capitalize">{task.repeat}</span>
-              {manage && <StopRepeatingButton taskId={task.id} />}
-            </p>
-          </div>
-        )}
+      <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3 lg:grid-cols-4">
+        <InfoItem icon="pi-tag" label="Kind of task">
+          {task.repeat ? (task.repeat === "weekly" ? "Weekly, repeats" : "Monthly, repeats") : "One-time"}
+        </InfoItem>
+        <InfoItem icon="pi-briefcase" label="Client">
+          {task.clientId ? (
+            <Link href={`/clients/${task.clientId}`} className="hover:underline">
+              {row.clientName}
+            </Link>
+          ) : (
+            "—"
+          )}
+        </InfoItem>
+        <InfoItem icon="pi-folder" label="Project">
+          {project ? `${project.name} · ${KIND_LABEL[project.kind]}` : "—"}
+        </InfoItem>
+        <InfoItem icon="pi-users" label="Team">
+          {team?.name ?? "—"}
+        </InfoItem>
+        <InfoItem icon="pi-user" label="Assignee">
+          {row.assigneeName ?? "Unassigned"}
+        </InfoItem>
+        <InfoItem icon="pi-calendar" label="Due">
+          {task.dueDate
+            ? fmtDay(task.dueDate) +
+              (task.dueDate.slice(0, 4) !== today.slice(0, 4) ? ` ${task.dueDate.slice(0, 4)}` : "")
+            : "—"}
+        </InfoItem>
+        <InfoItem icon="pi-flag" label="Status">
+          {task.deletedAt
+            ? "Deleted"
+            : task.status === "done"
+              ? "Done"
+              : task.status === "review"
+                ? "On review"
+                : task.status === "in_progress"
+                  ? "In progress"
+                  : "Open"}
+        </InfoItem>
+        <InfoItem icon="pi-check-circle" label="Reviewed by">
+          {reviewer?.name ?? "—"}
+        </InfoItem>
+        <InfoItem icon="pi-plus-circle" label="Created">
+          {fmtDateTime(task.createdAt, tz)}
+        </InfoItem>
+        <InfoItem icon="pi-check" label="Finished">
+          {task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}
+        </InfoItem>
+        <InfoItem icon="pi-stopwatch" label="Time tracked">
+          {report.trackedSeconds ? fmtDuration(report.trackedSeconds) : "—"}
+        </InfoItem>
+        <InfoItem icon="pi-clock" label="Hubstaff">
+          {task.hubstaffTaskId ? (
+            `Task #${task.hubstaffTaskId}`
+          ) : (
+            <span className="text-muted" title="It is created in Hubstaff the first time you press Start">
+              Not created yet
+            </span>
+          )}
+        </InfoItem>
       </section>
 
       {next && task.repeat && (
@@ -272,7 +328,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
                   {o.id === id ? (
                     <span className="font-semibold">
                       {series.summary.repeat && o.dueDate ? periodLabel(series.summary.repeat, o.dueDate) : o.title}{" "}
-                      <span className="badge ml-1 text-muted">This one</span>
+                      <span className="badge ml-1 text-muted">Current</span>
                     </span>
                   ) : (
                     <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
@@ -352,6 +408,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
             { label: "Hubstaff", align: "right" },
             "Notes",
           ]}
+          actionsWidth="9rem"
           rows={report.sessions.map((s) => ({
             key: s.id,
             cells: [
@@ -379,11 +436,30 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
                 ))}
               </div>,
             ],
+            actions:
+              s.endedAt && movable(s.userId) ? (
+                <MoveTimeButton
+                  sessionId={s.id}
+                  summary={`${s.userName} · ${fmtDateTime(s.startedAt, tz)} → ${fmtTime(s.endedAt, tz)} · ${fmtDuration(s.trackedSeconds || s.openSeconds)}`}
+                  targets={targetRows
+                    .filter((t) => t.assigneeId === s.userId)
+                    .map((t) => ({
+                      id: t.id,
+                      title: t.title,
+                      label: [
+                        t.repeat && t.dueDate ? periodLabel(t.repeat, t.dueDate) : "",
+                        t.status === "done" ? "Done" : t.status === "review" ? "On review" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · "),
+                    }))}
+                />
+              ) : null,
           }))}
         />
         <p className="text-xs text-muted">
           Sessions are what was clicked in the CRM. Hours always come from Hubstaff, and several sessions on one task
-          are added up.
+          are added up. Tracked on the wrong task? Use Move hours on the session.
         </p>
       </section>
 
@@ -420,6 +496,24 @@ function TotalsTable({ rows }: { rows: { label: string; tracked: number; active:
         ],
       }))}
     />
+  );
+}
+
+/** One fact about the task: a round icon, a small label and the value under it. */
+function InfoItem({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 bg-surface px-4 py-3">
+      <span
+        aria-hidden
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+      >
+        <i className={`pi ${icon} text-sm`} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs text-muted">{label}</p>
+        <p className="truncate text-sm font-medium">{children}</p>
+      </div>
+    </div>
   );
 }
 

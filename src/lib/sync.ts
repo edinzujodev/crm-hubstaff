@@ -129,7 +129,7 @@ async function upsertActivities(activities: HubstaffActivityDto[], crmTaskByHubs
           hubstaffUserId: sqlExcluded("hubstaff_user_id"),
           hubstaffProjectId: sqlExcluded("hubstaff_project_id"),
           hubstaffTaskId: sqlExcluded("hubstaff_task_id"),
-          taskId: sqlExcluded("task_id"),
+          taskId: sql`CASE WHEN hubstaff_activities.task_moved THEN hubstaff_activities.task_id ELSE excluded.task_id END`,
           trackedSeconds: sqlExcluded("tracked_seconds"),
           activeSeconds: sqlExcluded("active_seconds"),
           billable: sqlExcluded("billable"),

@@ -10,7 +10,8 @@ import { CompanyList } from "@/components/company-list";
 import { DateInput } from "@/components/date-input";
 import { NewProjectButton, ProjectActions } from "@/components/project-actions";
 import { config } from "@/lib/config";
-import { fmtDuration, localDay } from "@/lib/format";
+import { fmtDateTime, fmtDay, fmtDuration, localDay } from "@/lib/format";
+import { periodLabel } from "@/lib/recurring";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { getClientReport } from "@/lib/report";
 import { pageGuard, taskScope } from "@/lib/auth";
@@ -45,7 +46,7 @@ async function ClientDetail({
   let to = pick(sp.to, lastDayOfMonth(month));
   if (from > to) [from, to] = [to, from];
 
-  const [report, projects, taskTotals, companies] = await Promise.all([
+  const [report, projects, taskTotals, companies, people] = await Promise.all([
     getClientReport(id, from, to, tz, taskScope(auth)),
     db.select().from(schema.projects).where(eq(schema.projects.clientId, id)).orderBy(asc(schema.projects.name)),
     // Every task per project, deleted ones too: they still block deleting the project.
@@ -59,6 +60,7 @@ async function ClientDetail({
       .from(schema.clientCompanies)
       .where(eq(schema.clientCompanies.clientId, id))
       .orderBy(asc(schema.clientCompanies.name)),
+    db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users),
   ]);
   const totalByProject = new Map(taskTotals.map((r) => [r.projectId, r.n]));
   // Per project: its tasks and the time tracked on them in the period.
@@ -71,6 +73,9 @@ async function ClientDetail({
       tracked: mine.reduce((sum, t) => sum + t.tracked, 0),
     };
   });
+
+  const projectName = new Map(projects.map((pr) => [pr.id, pr.name]));
+  const personName = new Map(people.map((u) => [u.id, u.name]));
 
   return (
     <div className="space-y-6">
@@ -194,7 +199,12 @@ async function ClientDetail({
           empty={`No tasks for this client yet. Pick ${client.name} when adding a task on the Tasks page.`}
           headers={[
             "Task",
+            "Project",
+            "Assignee",
             "Status",
+            "Created",
+            "Due",
+            "Finished",
             { label: "Tracked in period", align: "right" },
             { label: "Activity", align: "right" },
           ]}
@@ -202,20 +212,58 @@ async function ClientDetail({
             .filter(({ task }) => !task.deletedAt)
             .map(({ task, tracked, active }) => ({
               key: task.id,
+              sort: [
+                task.title,
+                projectName.get(task.projectId ?? -1) ?? "",
+                personName.get(task.assigneeId ?? -1) ?? "",
+                statusLabel[task.status],
+                task.createdAt.toISOString(),
+                task.dueDate ?? "9999-12-31",
+                task.doneAt?.toISOString() ?? "9999-12-31",
+                tracked,
+                tracked ? active / tracked : 0,
+              ],
               cells: [
                 <div key="n">
                   <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">
                     {task.title}
                   </Link>
-                  {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
+                  {task.repeat && task.dueDate && (
+                    <p className="text-xs text-muted">
+                      {task.repeat === "weekly" ? "Weekly" : "Monthly"} · {periodLabel(task.repeat, task.dueDate)}
+                    </p>
+                  )}
                 </div>,
-                <span key="s" className="badge">
-                  {statusLabel[task.status]}
+                <span key="p" className="text-muted">
+                  {projectName.get(task.projectId ?? -1) ?? "—"}
+                </span>,
+                <span key="a" className="text-muted">
+                  {personName.get(task.assigneeId ?? -1) ?? "Unassigned"}
+                </span>,
+                <div key="s" className="flex flex-wrap items-center gap-1">
+                  <span className="badge">{statusLabel[task.status]}</span>
+                  {task.reviewResult === "approved" && task.status === "done" && (
+                    <span className="badge text-emerald-700 dark:text-emerald-400">Checked: OK</span>
+                  )}
+                  {task.reviewResult === "rejected" && task.status !== "done" && (
+                    <span className="badge text-red-600" title={task.reviewNote ?? undefined}>
+                      Checked: not OK
+                    </span>
+                  )}
+                </div>,
+                <span key="c" className="whitespace-nowrap text-muted">
+                  {fmtDay(localDay(task.createdAt, tz))}
+                </span>,
+                <span key="d" className="whitespace-nowrap text-muted">
+                  {task.dueDate ? fmtDay(task.dueDate) : "—"}
+                </span>,
+                <span key="f" className="whitespace-nowrap text-muted">
+                  {task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}
                 </span>,
                 <span key="t" className="font-mono tabular-nums">
                   {tracked ? fmtDuration(tracked) : "—"}
                 </span>,
-                <span key="a" className="text-xs text-muted">
+                <span key="x" className="text-xs text-muted">
                   {tracked ? `${Math.round((active / tracked) * 100)}%` : "—"}
                 </span>,
               ],

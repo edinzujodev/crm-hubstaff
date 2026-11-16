@@ -9,9 +9,9 @@ export function StopRepeatingButton({ taskId }: { taskId: number }) {
   return (
     <Button
       type="button"
-      link
       size="small"
-      className="p-0"
+      severity="secondary"
+      outlined
       disabled={pending}
       onClick={() => startTransition(async () => void (await stopRepeating(taskId)))}
     >

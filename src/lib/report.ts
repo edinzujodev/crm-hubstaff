@@ -15,6 +15,7 @@ export type SessionFlag =
 
 export type SessionRow = {
   id: number;
+  userId: number;
   userName: string;
   startedAt: Date;
   endedAt: Date | null;
@@ -83,6 +84,7 @@ export async function getTaskReport(taskId: number, timeZone: string) {
     for (const o of overlaps.get(s.id) ?? []) flags.push({ kind: "overlaps", ...o });
     return {
       id: s.id,
+      userId: s.userId,
       userName: userById.get(s.userId)?.name ?? `User ${s.userId}`,
       startedAt: s.startedAt,
       endedAt: s.endedAt,
