@@ -216,7 +216,7 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
             ))}
           </Select>
         </label>
-        <Button>Show</Button>
+        <Button className="ml-auto">Show</Button>
       </form>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">

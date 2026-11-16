@@ -274,3 +274,20 @@ body {
     0 0 0 4px #71717a;
 }
 
+
+/* Critical tasks: a red bar on the left of the row and a faint red tint. */
+.p-datatable .p-datatable-tbody > tr.row-critical > td {
+  background: rgb(244 63 94 / 0.07);
+}
+.p-datatable .p-datatable-tbody > tr.row-critical > td:first-child {
+  box-shadow: inset 4px 0 0 #e11d48;
+}
+.p-datatable .p-datatable-tbody > tr.row-critical:hover > td {
+  background: rgb(244 63 94 / 0.12);
+}
+.p-datatable .p-sortable-column .p-column-title {
+  white-space: nowrap;
+}
+.p-tabmenu .p-tabmenu-nav {
+  background: transparent;
+}

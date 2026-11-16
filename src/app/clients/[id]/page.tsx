@@ -121,7 +121,7 @@ async function ClientDetail({
           To
           <DateInput name="to" defaultValue={to} />
         </label>
-        <Button severity="secondary" outlined>
+        <Button severity="secondary" outlined className="ml-auto">
           Show
         </Button>
         <Link href={`/reports?client=${id}&from=${from}&to=${to}`} className="btn">

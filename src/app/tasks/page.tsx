@@ -404,11 +404,31 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
               !!nextPeriod;
             return {
               key: task.id,
+              tone: urgency === "critical" ? ("critical" as const) : undefined,
+              sort: [
+                task.title,
+                task.repeat ?? "",
+                ...(isWorker ? [] : [assigneeName ?? ""]),
+                clientName ?? "",
+                projectName ?? "",
+                projectKind ?? "",
+                task.createdAt.toISOString(),
+                task.dueDate ?? "9999-12-31",
+              ],
               cells: [
                 <div key="title">
                   <Link href={`/tasks/${task.id}`} className="font-medium hover:underline" title={task.title}>
                     {truncate(task.title, TITLE_MAX)}
                   </Link>
+                  {urgency === "critical" && (
+                    <span
+                      className="badge ml-2 gap-1 border-red-500/60 bg-red-500/10 font-semibold text-red-700 dark:text-red-300"
+                      title={task.dueDate ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
+                    >
+                      <i aria-hidden className="pi pi-exclamation-triangle text-[0.7rem]" />
+                      Critical
+                    </span>
+                  )}
                   {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
                   {task.status === "review" && (
                     <span className="badge ml-2 text-amber-700 dark:text-amber-400">On review</span>

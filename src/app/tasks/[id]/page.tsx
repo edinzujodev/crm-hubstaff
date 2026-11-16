@@ -15,6 +15,7 @@ import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
 import { canReviewTask, reviewsByTask } from "@/lib/review";
 import { ReviewHistory } from "@/components/review-history";
 import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
+import { DEFAULT_LEVELS, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 import { asc } from "drizzle-orm";
 import { ReviewActions } from "@/components/review-actions";
 import { NextPeriodButton } from "@/components/next-period-button";
@@ -95,6 +96,14 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const canReview = canReviewTask(auth, task);
   const series = task.seriesId ? await getSeries(task.seriesId, auth) : null;
   const today = localDay(new Date(), tz);
+  const team = task.teamId ? await db.query.teams.findFirst({ where: eq(schema.teams.id, task.teamId) }) : null;
+  const urgency = task.deletedAt
+    ? null
+    : urgencyOf(
+        task,
+        team ? { approachingHours: team.approachingHours, criticalHours: team.criticalHours } : DEFAULT_LEVELS,
+        tz,
+      );
   const waiting = !!task.startDate && task.startDate > localDay(new Date(), tz) && task.status !== "done";
   const next =
     manage && task.repeat && task.seriesId && !task.deletedAt && !waiting
@@ -132,6 +141,18 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           )}
         </div>
       </div>
+
+      {urgency === "critical" && task.dueDate && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+        >
+          <i aria-hidden className="pi pi-exclamation-triangle text-base" />
+          <span>
+            <span className="font-semibold">Critical.</span> {timeLeftLabel(task.dueDate, tz)}
+          </span>
+        </div>
+      )}
 
       <section className="card grid gap-x-8 gap-y-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>

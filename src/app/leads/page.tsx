@@ -1,3 +1,4 @@
+import { LinkTabs } from "@/components/link-tabs";
 import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -69,17 +70,10 @@ async function LeadList({ filter }: { filter: Promise<string | undefined> }) {
 
       <NewLeadForm users={users} />
 
-      <div className="flex gap-3 text-sm">
-        {FILTERS.map(([key, label]) => (
-          <Link
-            key={key}
-            href={key ? `/leads?show=${key}` : "/leads"}
-            className={(show ?? "") === key ? "font-semibold underline" : "text-muted"}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+      <LinkTabs
+        tabs={FILTERS.map(([key, label]) => ({ label, href: key ? `/leads?show=${key}` : "/leads" }))}
+        active={Math.max(0, FILTERS.findIndex(([key]) => key === (show ?? "")))}
+      />
 
       <DataGrid
         empty="No leads here."
