@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Auth } from "@/lib/auth";
+import type { ReviewEntry } from "@/components/review-history";
 
 /**
  * Who reviews a finished task: the leader of the assignee's team. When the assignee is that leader, their own
@@ -32,4 +33,25 @@ export function canReviewTask(
   task: { status: string; reviewerId: number | null; assigneeId: number | null },
 ): boolean {
   return task.status === "review" && task.reviewerId === auth.user.id && task.assigneeId !== auth.user.id;
+}
+
+/** The review history of the given tasks, newest first, grouped by task. */
+export async function reviewsByTask(taskIds: number[]) {
+  const out = new Map<number, ReviewEntry[]>();
+  if (!taskIds.length) return out;
+  const rows = await db
+    .select({
+      id: schema.taskReviews.id,
+      taskId: schema.taskReviews.taskId,
+      result: schema.taskReviews.result,
+      note: schema.taskReviews.note,
+      at: schema.taskReviews.createdAt,
+      reviewerName: schema.users.name,
+    })
+    .from(schema.taskReviews)
+    .leftJoin(schema.users, eq(schema.taskReviews.reviewerId, schema.users.id))
+    .where(inArray(schema.taskReviews.taskId, taskIds))
+    .orderBy(desc(schema.taskReviews.createdAt), desc(schema.taskReviews.id));
+  for (const r of rows) out.set(r.taskId, [...(out.get(r.taskId) ?? []), r]);
+  return out;
 }

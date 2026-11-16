@@ -14,7 +14,8 @@ import { TaskRow } from "@/components/task-row";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
-import { canReviewTask } from "@/lib/review";
+import { canReviewTask, reviewsByTask } from "@/lib/review";
+import { ReviewHistory } from "@/components/review-history";
 import { ReviewActions } from "@/components/review-actions";
 import { NextPeriodButton } from "@/components/next-period-button";
 import { fmtDateTime, fmtDay, fmtDuration, localDay, truncate } from "@/lib/format";
@@ -304,6 +305,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
     [...new Set(visible.map((v) => v.task.seriesId).filter((id): id is number => id !== null))],
     today,
   );
+  const reviews = await reviewsByTask(visible.map((v) => v.task.id));
   const checklists = new Map<number, { id: number; text: string; done: boolean }[]>();
   if (visible.length) {
     const rows = await db
@@ -599,10 +601,11 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                           ))}
                         </dl>
 
-                        {task.status === "todo" && task.reviewResult === "rejected" && task.reviewNote && (
-                          <p className="rounded-md border border-red-500/40 p-2">
-                            <span className="font-medium text-red-600">Checked: not OK</span> — {task.reviewNote}
-                          </p>
+                        {(reviews.get(task.id)?.length ?? 0) > 0 && (
+                          <div>
+                            <p className="mb-1 text-xs text-muted">Review history · {reviews.get(task.id)!.length}</p>
+                            <ReviewHistory reviews={reviews.get(task.id)!} tz={config.timeZone} />
+                          </div>
                         )}
 
                         {task.description && (

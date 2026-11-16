@@ -549,17 +549,24 @@ async function requireReviewer(taskId: number) {
   if (!task) throw new Error("Task not found");
   if (task.status !== "review") throw new Error("This task isn't waiting for review.");
   if (!canReviewTask(auth, task)) throw new Error("Only the team leader of the person who has this task can review it.");
-  return task;
+  return { auth, task };
 }
 
 export async function approveTask(taskId: number, note?: string) {
   return run(async () => {
-    const task = await requireReviewer(taskId);
+    const { auth, task } = await requireReviewer(taskId);
     const now = new Date();
     await db
       .update(schema.tasks)
       .set({ status: "done", doneAt: now, reviewResult: "approved", reviewedAt: now, reviewNote: note?.trim() || null })
       .where(eq(schema.tasks.id, taskId));
+    await db.insert(schema.taskReviews).values({
+      taskId,
+      reviewerId: auth.user.id,
+      result: "approved",
+      note: note?.trim() || null,
+      createdAt: now,
+    });
     await topUpSeries(task.seriesId);
     return undefined;
   });
@@ -568,12 +575,20 @@ export async function approveTask(taskId: number, note?: string) {
 /** Sends the task back to its assignee as "checked, not OK" with the reason. */
 export async function rejectTask(taskId: number, reason: string) {
   return run(async () => {
-    await requireReviewer(taskId);
+    const { auth } = await requireReviewer(taskId);
     const why = z.string().trim().min(1, "Write why it is not OK").max(2000).parse(reason);
+    const now = new Date();
     await db
       .update(schema.tasks)
-      .set({ status: "todo", doneAt: null, reviewResult: "rejected", reviewedAt: new Date(), reviewNote: why })
+      .set({ status: "todo", doneAt: null, reviewResult: "rejected", reviewedAt: now, reviewNote: why })
       .where(eq(schema.tasks.id, taskId));
+    await db.insert(schema.taskReviews).values({
+      taskId,
+      reviewerId: auth.user.id,
+      result: "rejected",
+      note: why,
+      createdAt: now,
+    });
     return undefined;
   });
 }

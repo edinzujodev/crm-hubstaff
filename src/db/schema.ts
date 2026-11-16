@@ -260,6 +260,22 @@ export const taskChecklistItems = pgTable(
   (t) => [index("task_checklist_items_task_idx").on(t.taskId)],
 );
 
+// Every review a task went through, so earlier "Checked: not OK" answers are not lost when it is reviewed again.
+export const taskReviews = pgTable(
+  "task_reviews",
+  {
+    id: serial("id").primaryKey(),
+    taskId: integer("task_id")
+      .notNull()
+      .references(() => tasks.id),
+    reviewerId: integer("reviewer_id").references(() => users.id),
+    result: reviewResult("result").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("task_reviews_task_idx").on(t.taskId)],
+);
+
 export const sessionEndReason = pgEnum("session_end_reason", [
   "finished", // user clicked Finish
   "switched", // user started another task

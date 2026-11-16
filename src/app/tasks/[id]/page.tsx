@@ -10,7 +10,8 @@ import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
-import { canReviewTask } from "@/lib/review";
+import { canReviewTask, reviewsByTask } from "@/lib/review";
+import { ReviewHistory } from "@/components/review-history";
 import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
 import { asc } from "drizzle-orm";
 import { ReviewActions } from "@/components/review-actions";
@@ -68,7 +69,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const manage = canManageTask(auth, task);
 
   const tz = config.timeZone;
-  const [report, mine, checklist, reviewer] = await Promise.all([
+  const [report, mine, checklist, reviewer, reviewMap] = await Promise.all([
     getTaskReport(id, tz),
     me
       ? db.query.workSessions.findFirst({
@@ -77,6 +78,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
       : undefined,
     db.select().from(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.taskId, id)).orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id)),
     task.reviewerId ? db.query.users.findFirst({ where: eq(schema.users.id, task.reviewerId), columns: { name: true } }) : null,
+    reviewsByTask([id]),
   ]);
   const canReview = canReviewTask(auth, task);
   const waiting = !!task.startDate && task.startDate > localDay(new Date(), tz) && task.status !== "done";
@@ -189,6 +191,15 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           started. Its Hubstaff task is marked [SOFT-DELETED], and the hours below still count in reports. Restore it to
           use it again.
         </p>
+      )}
+
+      {(reviewMap.get(id)?.length ?? 0) > 0 && (
+        <section className="card space-y-3 p-4">
+          <h2 className="font-semibold">
+            Review history <span className="text-sm font-normal text-muted">{reviewMap.get(id)!.length}</span>
+          </h2>
+          <ReviewHistory reviews={reviewMap.get(id)!} tz={tz} />
+        </section>
       )}
 
       <TaskChecklist
