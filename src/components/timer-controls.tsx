@@ -107,14 +107,14 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
           </span>
         )}
         {runningSince ? (
-          <Button onClick={onFinish} disabled={pending} severity="danger">
+          <Button size="small" onClick={onFinish} disabled={pending} severity="danger">
             Stop
           </Button>
         ) : (
           <Button
+            size="small"
             onClick={onStart}
             disabled={pending || done || !!lockedTo}
-
             title={
               lockedTo
                 ? `Assigned to ${lockedTo}. Only they can start it. A team leader can reassign it.`
@@ -126,7 +126,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
             {otherTask ? "Switch here" : "Start"}
           </Button>
         )}
-        <Button onClick={onFinishTask} disabled={pending || done} severity="secondary" outlined>
+        <Button size="small" onClick={onFinishTask} disabled={pending || done} severity="secondary" outlined>
           Finish
         </Button>
       </div>

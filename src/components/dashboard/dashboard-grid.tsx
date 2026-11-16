@@ -140,10 +140,10 @@ function Frame({
           <div className="flex shrink-0 items-center gap-1">
             <Button
               type="button"
-              className="py-1 text-xs"
+              size="small"
               severity="secondary"
               outlined
-              size="small"
+
               onClick={onConfigure}
               aria-label={`Settings for ${item.title}`}
             >
@@ -153,9 +153,9 @@ function Frame({
               <>
                 <Button
                   type="button"
-                  className="py-1 text-xs"
-                  severity="danger"
                   size="small"
+                  severity="danger"
+
                   onClick={onRemove}
                   disabled={busy}
                 >
@@ -163,10 +163,10 @@ function Frame({
                 </Button>
                 <Button
                   type="button"
-                  className="py-1 text-xs"
+                  size="small"
                   severity="secondary"
                   outlined
-                  size="small"
+
                   onClick={() => setConfirming(false)}
                 >
                   Keep
@@ -175,10 +175,10 @@ function Frame({
             ) : (
               <Button
                 type="button"
-                className="py-1 text-xs"
+                size="small"
                 severity="secondary"
                 outlined
-                size="small"
+
                 onClick={() => setConfirming(true)}
                 aria-label={`Remove ${item.title}`}
               >
@@ -470,10 +470,10 @@ export function DashboardGrid({
                       {sections.length > 1 && (
                         <Button
                           type="button"
-                          className="py-1 text-xs"
+                          size="small"
                           severity="secondary"
                           outlined
-                          size="small"
+
                           disabled={pending}
                           onClick={() => removeSection(s)}
                           title="Remove this row. Its widgets move to the row above."
@@ -574,7 +574,7 @@ function AddWidget({
   if (picked) {
     return (
       <Modal title={picked.preset.label} onClose={onClose}>
-        <p className="-mt-2 text-sm text-muted">{picked.preset.description}</p>
+        <p className="text-sm text-muted">{picked.preset.description}</p>
         <WidgetForm
           type={picked.type}
           role={role}

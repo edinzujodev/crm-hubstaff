@@ -1,4 +1,4 @@
-import { Button, Select } from "@/components/ui";
+import { Button } from "@/components/ui";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
@@ -6,10 +6,11 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { signOut, switchUser } from "@/app/actions";
+import { signOut } from "@/app/actions";
 import { NavLink } from "@/components/nav-link";
 import { Topbar } from "@/components/topbar";
 import { TopbarStatus } from "@/components/topbar-status";
+import { UserSwitcher } from "@/components/user-switcher";
 import { Toaster } from "@/components/toaster";
 import { PrimeProvider } from "@/components/prime-provider";
 import { ProfileMenu } from "@/components/profile-menu";
@@ -50,16 +51,7 @@ async function Account() {
       {quickSwitch && (
         <section className="space-y-2 border-t border-border pt-3">
           <h2 className="text-xs font-medium text-muted">Development: switch person</h2>
-          <form action={switchUser} className="flex items-center gap-2">
-            <Select name="userId" defaultValue={auth.user.id} aria-label="Switch to" className="w-full min-w-0 flex-1">
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </Select>
-            <Button className="py-1" severity="secondary" outlined>Go</Button>
-          </form>
+          <UserSwitcher users={users.map((u) => ({ id: u.id, name: u.name }))} currentId={auth.user.id} />
         </section>
       )}
 
@@ -113,9 +105,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* PrimeReact theme: green (noir: black on light, white on dark) in light and dark, picked by the system setting. */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-light-noir/theme.css" media="(prefers-color-scheme: light)" />
+        <link rel="stylesheet" href="/themes/lara-light-noir/theme.css?v=3" media="(prefers-color-scheme: light)" />
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-dark-noir/theme.css" media="(prefers-color-scheme: dark)" />
+        <link rel="stylesheet" href="/themes/lara-dark-noir/theme.css?v=3" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="min-h-full font-sans">
         <PrimeProvider>

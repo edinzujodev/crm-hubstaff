@@ -28,7 +28,7 @@ export function NewTaskForm({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button type="button" className="h-8" onClick={() => setOpen(true)}>
+      <Button type="button" onClick={() => setOpen(true)}>
         + New task
       </Button>
       {open && (
