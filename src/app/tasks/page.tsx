@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { TaskScopeToggle } from "@/components/task-scope-toggle";
 import { TASK_SCOPE_COOKIE, TASK_SCOPES, type TaskScope } from "@/lib/task-scope";
-import { Suspense } from "react";
-import { asc, desc, eq, isNull } from "drizzle-orm";
+import { Fragment, Suspense } from "react";
+import { asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
@@ -14,11 +14,16 @@ import { TaskRow } from "@/components/task-row";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
+import { canReviewTask } from "@/lib/review";
+import { ReviewActions } from "@/components/review-actions";
+import { NextPeriodButton } from "@/components/next-period-button";
 import { fmtDateTime, fmtDay, fmtDuration, localDay, truncate } from "@/lib/format";
 import { isSessionStale, trackedByTask } from "@/lib/report";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { listSeries } from "@/lib/series";
-import { periodLabel } from "@/lib/recurring";
+import { listTemplates } from "@/lib/templates";
+import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
+import { InlineChecklist } from "@/components/inline-checklist";
 import { SeriesRow } from "@/components/series-row";
 import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
@@ -130,7 +135,8 @@ function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listS
                       </thead>
                       <tbody>
                         {rows.map((o) => (
-                          <tr key={o.id} className="border-t border-border">
+                          <Fragment key={o.id}>
+                          <tr className="border-t border-border">
                             <td className="py-1.5 pr-3">
                               <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
                                 {s.repeat && o.dueDate ? periodLabel(s.repeat, o.dueDate) : o.title}
@@ -141,7 +147,7 @@ function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listS
                             </td>
                             <td className="py-1.5 pr-3 text-muted">{o.dueDate ? fmtDay(o.dueDate) : "—"}</td>
                             <td className="py-1.5 pr-3">
-                              <span className="badge">{o.status === "done" ? "Done" : "Open"}</span>
+                              <span className="badge">{o.status === "done" ? "Done" : o.status === "review" ? "On review" : "Open"}</span>
                             </td>
                             <td className="py-1.5 pr-3 text-muted">{o.assigneeName ?? "—"}</td>
                             <td className="py-1.5 pr-3 text-muted">{o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}</td>
@@ -149,6 +155,14 @@ function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listS
                               {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
                             </td>
                           </tr>
+                          {o.checklist.length > 0 && o.status !== "done" && (
+                            <tr>
+                              <td colSpan={6} className="pb-2 pl-4">
+                                <InlineChecklist items={o.checklist} canTick />
+                              </td>
+                            </tr>
+                          )}
+                          </Fragment>
                         ))}
                       </tbody>
                     </table>
@@ -174,7 +188,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const [auth, { show, scope: scopeParam }] = await Promise.all([getAuth(), filter]);
   if (!auth) redirect("/login");
   const me = auth.user;
-  const [tasks, clients, users, tracked, openSessions, teams, projects, series] = await Promise.all([
+  const [tasks, clients, users, tracked, openSessions, teams, projects, series, templates] = await Promise.all([
     db
       .select({
         task: schema.tasks,
@@ -200,6 +214,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
       .orderBy(asc(schema.projects.name)),
     // Critical and Recurring are for people who manage tasks, not workers.
     auth.role === "worker" ? Promise.resolve([]) : listSeries(auth),
+    auth.role === "worker" ? Promise.resolve([]) : listTemplates(),
   ]);
   const teamLevels = new Map(teams.map((t) => [t.id, { approachingHours: t.approachingHours, criticalHours: t.criticalHours }]));
   const isWorker = auth.role === "worker";
@@ -211,8 +226,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const saved = (await cookies()).get(TASK_SCOPE_COOKIE)?.value;
   const wanted = scopeParam ?? saved;
   const scope: TaskScope = !isWorker && TASK_SCOPES.find((s) => s === wanted) ? (wanted as TaskScope) : "mine";
+  // Tasks waiting for your review always show, whichever list you picked.
   const inScope = tasks.filter(({ task }) =>
-    scope === "team" ? true : scope === "unassigned" ? !task.assigneeId : !me || task.assigneeId === me.id,
+    scope === "team" || (task.status === "review" && task.reviewerId === me.id) ? true : scope === "unassigned" ? !task.assigneeId : !me || task.assigneeId === me.id,
   );
   const now = new Date();
   type Row = (typeof tasks)[number];
@@ -223,19 +239,21 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
     const level = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone, now);
     return level === "critical";
   };
-  const tabs = ["open", "critical", "recurring", "finished", "deleted"] as const;
+  const tabs = ["open", "review", "critical", "recurring", "finished", "deleted"] as const;
   type Tab = (typeof tabs)[number];
   const managerOnly: Tab[] = ["critical", "recurring", "deleted"];
   const asked = tabs.find((t) => t === show);
   const tab: Tab = asked && !(isWorker && managerOnly.includes(asked)) ? asked : "open";
   const matches = {
-    open: ({ task }: Row) => !task.deletedAt && task.status !== "done",
-    critical: (row: Row) => !row.task.deletedAt && row.task.status !== "done" && urgent(row),
+    open: ({ task }: Row) => !task.deletedAt && task.status !== "done" && task.status !== "review",
+    review: ({ task }: Row) => !task.deletedAt && task.status === "review",
+    critical: (row: Row) => !row.task.deletedAt && row.task.status !== "done" && row.task.status !== "review" && urgent(row),
     finished: ({ task }: Row) => !task.deletedAt && task.status === "done",
     deleted: ({ task }: Row) => task.deletedAt !== null,
   };
   const counts: Record<Tab, number> = {
     open: inScope.filter(matches.open).length,
+    review: inScope.filter(matches.review).length,
     critical: inScope.filter(matches.critical).length,
     recurring: series.length,
     finished: inScope.filter(matches.finished).length,
@@ -244,6 +262,24 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const hoursLeft = (r: Row) => hoursUntilDue(r.task.dueDate!, config.timeZone, now);
   const visible =
     tab === "recurring" ? [] : inScope.filter(matches[tab]).sort((a, b) => (tab === "critical" ? hoursLeft(a) - hoursLeft(b) : 0));
+
+  const upcoming = await upcomingCopies(
+    [...new Set(visible.map((v) => v.task.seriesId).filter((id): id is number => id !== null))],
+    today,
+  );
+  const checklists = new Map<number, { id: number; text: string; done: boolean }[]>();
+  if (visible.length) {
+    const rows = await db
+      .select()
+      .from(schema.taskChecklistItems)
+      .where(inArray(schema.taskChecklistItems.taskId, visible.map((v) => v.task.id)))
+      .orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id));
+    for (const r of rows) {
+      const list = checklists.get(r.taskId) ?? [];
+      list.push({ id: r.id, text: r.text, done: r.doneAt !== null });
+      checklists.set(r.taskId, list);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -267,6 +303,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
           {(
             [
               ["open", "Open"],
+              ["review", "On review"],
               ["critical", "Critical"],
               ["recurring", "Recurring"],
               ["finished", "Finished"],
@@ -301,7 +338,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
             {tab !== "recurring" && (
               <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
             )}
-            <NewTaskForm clients={clients} users={users} projects={projects} />
+            <NewTaskForm clients={clients} users={users} projects={projects} templates={templates} />
           </div>
         )}
       </div>
@@ -364,6 +401,15 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                         {truncate(task.title, TITLE_MAX)}
                       </Link>
                       {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
+                      {task.status === "review" && <span className="badge ml-2 text-amber-700 dark:text-amber-400">On review</span>}
+                      {task.status === "todo" && task.reviewResult === "rejected" && (
+                        <span className="badge ml-2 text-red-600" title={task.reviewNote ?? undefined}>
+                          Checked: not OK
+                        </span>
+                      )}
+                      {task.status === "done" && task.reviewResult === "approved" && (
+                        <span className="badge ml-2 text-emerald-700 dark:text-emerald-400">Checked: OK</span>
+                      )}
                       {task.startDate && task.startDate > today && task.status !== "done" && (
                         <span className="badge ml-2 text-muted" title="Shows in your open tasks from this day">
                           Starts {fmtDay(task.startDate)}
@@ -431,12 +477,13 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                           taskId={task.id}
                           title={task.title}
                           lockedTo={task.assigneeId && task.assigneeId !== me.id ? (assigneeName ?? "someone else") : null}
-                          done={task.status === "done"}
+                          done={task.status === "done" || task.status === "review"}
                           runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
                           otherTask={
                             mine && mineTask && mine.taskId !== task.id ? { id: mineTask.id, title: mineTask.title } : null
                           }
                         />
+                        {canReviewTask(auth, task) && <ReviewActions taskId={task.id} title={task.title} />}
                         {manage && (
                           <TaskMenu
                             task={{
@@ -475,6 +522,20 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                         <p className="text-xs text-muted">Hubstaff</p>
                         <p>{task.hubstaffTaskId ? `Task #${task.hubstaffTaskId}` : "Not created yet"}</p>
                       </div>
+                      {(checklists.get(task.id)?.length ?? 0) > 0 && (
+                        <div className="min-w-full">
+                          <p className="mb-1 text-xs text-muted">Checklist</p>
+                          <InlineChecklist items={checklists.get(task.id)!} canTick={!task.deletedAt && task.status !== "done"} />
+                        </div>
+                      )}
+                      {(() => {
+                        const next = manage && task.repeat && !task.deletedAt ? nextHidden(upcoming.get(task.seriesId ?? -1), task.dueDate) : null;
+                        return next && task.repeat ? (
+                          <div className="min-w-full">
+                            <NextPeriodButton nextTaskId={next.id} label={periodLabel(task.repeat, next.dueDate)} />
+                          </div>
+                        ) : null;
+                      })()}
                       <Link href={`/tasks/${task.id}`} className="self-end underline">
                         Full details &amp; sessions →
                       </Link>

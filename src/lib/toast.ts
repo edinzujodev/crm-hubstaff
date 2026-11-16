@@ -3,6 +3,8 @@ export type FinishedNotice = {
   title: string;
   nextTaskId: number | null;
   nextDueDate: string | null;
+  /** True when the task went to the team leader for review instead of being done. */
+  inReview?: boolean;
 };
 
 export const FINISHED_EVENT = "crm:task-finished";

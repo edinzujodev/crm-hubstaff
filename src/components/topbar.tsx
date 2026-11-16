@@ -13,6 +13,7 @@ const SECTIONS: Record<string, string> = {
   clients: "Clients",
   reports: "Reports",
   team: "Teams & people",
+  templates: "Templates",
 };
 const DETAIL: Record<string, string> = { tasks: "Task", clients: "Client", leads: "Lead", recurring: "Series", team: "Team" };
 

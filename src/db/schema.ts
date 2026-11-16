@@ -75,6 +75,8 @@ export const teams = pgTable("teams", {
   name: text("name").notNull().unique(),
   // The team leader; also a member of the team.
   leaderId: integer("leader_id").references((): AnyPgColumn => users.id),
+  // The team whose leader reviews this team leader's own tasks.
+  parentTeamId: integer("parent_team_id").references((): AnyPgColumn => teams.id),
   // Urgency levels, set by the team leader: a task due in fewer hours than this is "approaching" / "critical".
   approachingHours: integer("approaching_hours").notNull().default(72),
   criticalHours: integer("critical_hours").notNull().default(24),
@@ -159,7 +161,30 @@ export const projects = pgTable(
   (t) => [uniqueIndex("projects_client_name_idx").on(t.clientId, t.name)],
 );
 
-export const taskStatus = pgEnum("task_status", ["todo", "in_progress", "done"]);
+// "review": finished by the assignee, waiting for the team leader to approve or deny it.
+export const taskStatus = pgEnum("task_status", ["todo", "in_progress", "done", "review"]);
+export const reviewResult = pgEnum("review_result", ["approved", "rejected"]);
+
+// A reusable "how to do this" for tasks: instructions plus a checklist. Attaching it copies both into the task.
+export const checklistTemplates = pgTable("checklist_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const checklistTemplateItems = pgTable(
+  "checklist_template_items",
+  {
+    id: serial("id").primaryKey(),
+    templateId: integer("template_id")
+      .notNull()
+      .references(() => checklistTemplates.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    text: text("text").notNull(),
+  },
+  (t) => [index("checklist_template_items_template_idx").on(t.templateId)],
+);
 export const taskRepeat = pgEnum("task_repeat", ["weekly", "monthly"]);
 // When a copy made by a repeat appears in the open lists (see src/lib/repeat-show.ts).
 export const repeatShow = pgEnum("repeat_show", ["days_before", "week_start", "month_start", "due_day"]);
@@ -197,6 +222,14 @@ export const tasks = pgTable(
     repeatShow: repeatShow("repeat_show"),
     // Hidden from the open-task lists until this day (set on copies made by a repeat).
     startDate: date("start_date"),
+    // The template whose instructions and checklist were copied into this task (kept for reference only).
+    templateId: integer("template_id").references((): AnyPgColumn => checklistTemplates.id, { onDelete: "set null" }),
+    // Review: when the assignee finishes, the team leader (reviewer) approves or denies with a reason.
+    reviewerId: integer("reviewer_id").references((): AnyPgColumn => users.id),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    reviewResult: reviewResult("review_result"),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     // Id of the first task of a repeating series. Every copy keeps it, so the series can be shown as one.
     seriesId: integer("series_id").references((): AnyPgColumn => tasks.id),
     repeatedFromId: integer("repeated_from_id")
@@ -209,6 +242,22 @@ export const tasks = pgTable(
     index("tasks_team_idx").on(t.teamId),
     index("tasks_project_idx").on(t.projectId),
   ],
+);
+
+// The checklist of one task. Items can be ticked, but the task can be finished without ticking them all;
+// finishing ticks whatever is left.
+export const taskChecklistItems = pgTable(
+  "task_checklist_items",
+  {
+    id: serial("id").primaryKey(),
+    taskId: integer("task_id")
+      .notNull()
+      .references(() => tasks.id),
+    position: integer("position").notNull().default(0),
+    text: text("text").notNull(),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+  },
+  (t) => [index("task_checklist_items_task_idx").on(t.taskId)],
 );
 
 export const sessionEndReason = pgEnum("session_end_reason", [

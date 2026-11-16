@@ -1,6 +1,6 @@
 "use server";
 
-import { and, count, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { z } from "zod";
@@ -9,7 +9,8 @@ import { requireCurrentUser } from "@/lib/current-user";
 import { authMode, createSession, destroySession, findApprovedUser } from "@/lib/session";
 import { canManageTeam, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
-import { defaultLeadDays, hubstaffSummary, spawnNextRepeat } from "@/lib/recurring";
+import { canReviewTask, reviewerFor } from "@/lib/review";
+import { defaultLeadDays, hubstaffSummary, topUpSeries } from "@/lib/recurring";
 import { showFrom } from "@/lib/repeat-show";
 import { localDay } from "@/lib/format";
 import { config } from "@/lib/config";
@@ -72,7 +73,20 @@ const newTask = z.object({
   projectId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
   projectName: z.string().trim().max(120).optional(),
   projectKind: z.enum(["one_off", "ongoing"]).optional().or(z.literal("").transform(() => undefined)),
+  // Instructions and a checklist (one item per line), usually copied from a template.
+  description: z.string().trim().max(5000).optional().transform((v) => v || undefined),
+  checklist: z.string().max(5000).optional(),
+  templateId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
 });
+
+/** One checklist item per non-empty line. */
+function checklistLines(text: string | undefined): string[] {
+  return (text ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 100);
+}
 
 /** The chosen project of the client, or a new one when only a name was given. */
 async function pickProject(
@@ -92,7 +106,7 @@ async function pickProject(
 export async function createTask(_prev: unknown, formData: FormData): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
     const auth = await requireRole("super_admin", "leader");
-    const { projectId, projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
+    const { projectId, projectName, projectKind, checklist, ...input } = newTask.parse(Object.fromEntries(formData));
     // The next due date is calculated from this one, so a repeating task needs it.
     if (input.repeat && !input.dueDate) throw new Error("A repeating task needs a due date");
     const repeatDay = input.repeat === "monthly" && input.dueDate ? Number(input.dueDate.slice(8, 10)) : undefined;
@@ -110,6 +124,10 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
       .insert(schema.tasks)
       .values({ ...input, projectId: project.id, repeatDay, repeatLeadDays, repeatShow, teamId })
       .returning();
+    const lines = checklistLines(checklist);
+    if (lines.length) {
+      await db.insert(schema.taskChecklistItems).values(lines.map((text, position) => ({ taskId: created.id, position, text })));
+    }
     // The first task of a repeating series is the series' id; every copy keeps it.
     const [task] = input.repeat
       ? await db.update(schema.tasks).set({ seriesId: created.id }).where(eq(schema.tasks.id, created.id)).returning()
@@ -486,16 +504,236 @@ export async function finishTask(): Promise<Result<{ sync: SyncResult | null; sy
   });
 }
 
+/** Ticks whatever is left on a task's checklist. */
+async function completeChecklist(taskId: number) {
+  await db
+    .update(schema.taskChecklistItems)
+    .set({ doneAt: new Date() })
+    .where(and(eq(schema.taskChecklistItems.taskId, taskId), isNull(schema.taskChecklistItems.doneAt)));
+}
+
+const clearReview = { reviewerId: null, submittedAt: null, reviewResult: null, reviewNote: null, reviewedAt: null } as const;
+
+/**
+ * "done" finishes the task: its checklist is completed, and if the team has a leader (who isn't the person
+ * finishing) it goes to that leader for review instead of straight to Done. "todo" reopens it.
+ */
 export async function setTaskStatus(taskId: number, status: "todo" | "in_progress" | "done") {
   return run(async () => {
-    await requireTask(taskId, "view");
+    const { auth, task } = await requireTask(taskId, "view");
+    if (status !== "done") {
+      await db.update(schema.tasks).set({ status, doneAt: null, ...clearReview }).where(eq(schema.tasks.id, taskId));
+      return { nextTaskId: null, nextDueDate: null, inReview: false };
+    }
+    await completeChecklist(taskId);
+    const reviewerId = await reviewerFor(task);
+    const inReview = reviewerId !== null && reviewerId !== auth.user.id;
+    const now = new Date();
     await db
       .update(schema.tasks)
-      .set({ status, doneAt: status === "done" ? new Date() : null })
+      .set(
+        inReview
+          ? { status: "review", doneAt: null, ...clearReview, reviewerId, submittedAt: now }
+          : { status: "done", doneAt: now, ...clearReview },
+      )
       .where(eq(schema.tasks.id, taskId));
-    // A repeating task creates its next copy when it is marked done.
-    const next = status === "done" ? await spawnNextRepeat(taskId) : null;
-    return { nextTaskId: next?.id ?? null, nextDueDate: next?.dueDate ?? null };
+    await topUpSeries(task.seriesId);
+    return { nextTaskId: null, nextDueDate: null, inReview };
+  });
+}
+
+/** The reviewer (team leader or super admin) of a task that is waiting for review. */
+async function requireReviewer(taskId: number) {
+  const auth = await requireAuth();
+  const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
+  if (!task) throw new Error("Task not found");
+  if (task.status !== "review") throw new Error("This task isn't waiting for review.");
+  if (!canReviewTask(auth, task)) throw new Error("Only the team leader of the person who has this task can review it.");
+  return task;
+}
+
+export async function approveTask(taskId: number, note?: string) {
+  return run(async () => {
+    const task = await requireReviewer(taskId);
+    const now = new Date();
+    await db
+      .update(schema.tasks)
+      .set({ status: "done", doneAt: now, reviewResult: "approved", reviewedAt: now, reviewNote: note?.trim() || null })
+      .where(eq(schema.tasks.id, taskId));
+    await topUpSeries(task.seriesId);
+    return undefined;
+  });
+}
+
+/** Sends the task back to its assignee as "checked, not OK" with the reason. */
+export async function rejectTask(taskId: number, reason: string) {
+  return run(async () => {
+    await requireReviewer(taskId);
+    const why = z.string().trim().min(1, "Write why it is not OK").max(2000).parse(reason);
+    await db
+      .update(schema.tasks)
+      .set({ status: "todo", doneAt: null, reviewResult: "rejected", reviewedAt: new Date(), reviewNote: why })
+      .where(eq(schema.tasks.id, taskId));
+    return undefined;
+  });
+}
+
+/** A copy that is waiting for its start date is brought into the open lists now; the next period is made after it. */
+export async function showTaskNow(taskId: number) {
+  return run(async () => {
+    const { task } = await requireTask(taskId, "manage");
+    await db.update(schema.tasks).set({ startDate: null }).where(eq(schema.tasks.id, taskId));
+    await topUpSeries(task.seriesId);
+    return undefined;
+  });
+}
+
+// ---- Checklists and templates
+
+/** Ticking is for anyone who can see the task; changing the list itself is for managers. */
+async function itemTask(itemId: number, access: "view" | "manage") {
+  const item = await db.query.taskChecklistItems.findFirst({ where: eq(schema.taskChecklistItems.id, itemId) });
+  if (!item) throw new Error("Checklist item not found");
+  await requireTask(item.taskId, access);
+  return item;
+}
+
+export async function toggleChecklistItem(itemId: number, done: boolean) {
+  return run(async () => {
+    await itemTask(itemId, "view");
+    await db
+      .update(schema.taskChecklistItems)
+      .set({ doneAt: done ? new Date() : null })
+      .where(eq(schema.taskChecklistItems.id, itemId));
+    return undefined;
+  });
+}
+
+export async function addChecklistItem(taskId: number, text: string) {
+  return run(async () => {
+    await requireTask(taskId, "manage");
+    const clean = z.string().trim().min(1, "Write the item").max(300).parse(text);
+    const [{ n }] = await db
+      .select({ n: count() })
+      .from(schema.taskChecklistItems)
+      .where(eq(schema.taskChecklistItems.taskId, taskId));
+    await db.insert(schema.taskChecklistItems).values({ taskId, text: clean, position: n });
+    return undefined;
+  });
+}
+
+export async function removeChecklistItem(itemId: number) {
+  return run(async () => {
+    await itemTask(itemId, "manage");
+    await db.delete(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.id, itemId));
+    return undefined;
+  });
+}
+
+export async function setTaskInstructions(taskId: number, text: string) {
+  return run(async () => {
+    await requireTask(taskId, "manage");
+    await db
+      .update(schema.tasks)
+      .set({ description: text.trim().slice(0, 5000) || null })
+      .where(eq(schema.tasks.id, taskId));
+    return undefined;
+  });
+}
+
+/** Copies a template's instructions (when the task has none) and checklist into the task. */
+export async function applyTemplate(taskId: number, templateId: number) {
+  return run(async () => {
+    const { task } = await requireTask(taskId, "manage");
+    const template = await db.query.checklistTemplates.findFirst({ where: eq(schema.checklistTemplates.id, templateId) });
+    if (!template) throw new Error("Template not found");
+    const items = await db
+      .select()
+      .from(schema.checklistTemplateItems)
+      .where(eq(schema.checklistTemplateItems.templateId, templateId))
+      .orderBy(asc(schema.checklistTemplateItems.position));
+    const [{ n }] = await db
+      .select({ n: count() })
+      .from(schema.taskChecklistItems)
+      .where(eq(schema.taskChecklistItems.taskId, taskId));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.tasks)
+        .set({ templateId, description: task.description?.trim() ? task.description : template.description })
+        .where(eq(schema.tasks.id, taskId));
+      if (items.length) {
+        await tx.insert(schema.taskChecklistItems).values(items.map((i, k) => ({ taskId, text: i.text, position: n + k })));
+      }
+    });
+    return undefined;
+  });
+}
+
+const templateInput = z.object({
+  name: z.string().trim().min(1, "Give the template a name").max(120),
+  description: z
+    .string()
+    .trim()
+    .max(5000)
+    .optional()
+    .transform((v) => v || null),
+  items: z.string().max(5000).optional(),
+});
+
+async function saveTemplate(id: number | null, formData: FormData) {
+  await requireRole("super_admin", "leader");
+  const input = templateInput.parse(Object.fromEntries(formData));
+  const lines = checklistLines(input.items);
+  try {
+    await db.transaction(async (tx) => {
+      let templateId = id;
+      if (id) {
+        await tx
+          .update(schema.checklistTemplates)
+          .set({ name: input.name, description: input.description })
+          .where(eq(schema.checklistTemplates.id, id));
+        await tx.delete(schema.checklistTemplateItems).where(eq(schema.checklistTemplateItems.templateId, id));
+      } else {
+        const [t] = await tx
+          .insert(schema.checklistTemplates)
+          .values({ name: input.name, description: input.description })
+          .returning({ id: schema.checklistTemplates.id });
+        templateId = t.id;
+      }
+      if (lines.length) {
+        await tx
+          .insert(schema.checklistTemplateItems)
+          .values(lines.map((text, position) => ({ templateId: templateId!, position, text })));
+      }
+    });
+  } catch (e) {
+    if (String(e instanceof Error ? (e.cause ?? e) : e).includes("checklist_templates_name_unique")) {
+      throw new Error(`A template called "${input.name}" already exists.`);
+    }
+    throw e;
+  }
+}
+
+export async function createTemplate(_prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await saveTemplate(null, formData);
+    return undefined;
+  });
+}
+
+export async function updateTemplate(id: number, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await saveTemplate(id, formData);
+    return undefined;
+  });
+}
+
+/** Tasks that already copied the template keep their own copy. */
+export async function deleteTemplate(id: number): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin", "leader");
+    await db.delete(schema.checklistTemplates).where(eq(schema.checklistTemplates.id, id));
+    return undefined;
   });
 }
 
@@ -508,7 +746,9 @@ export async function updateTask(
   return run(async () => {
     const { auth, task } = await requireTask(taskId, "manage");
     if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
-    const { projectId, projectName, projectKind, ...input } = newTask.parse(Object.fromEntries(formData));
+    const { projectId, projectName, projectKind, ...input } = newTask
+      .omit({ checklist: true, description: true, templateId: true })
+      .parse(Object.fromEntries(formData));
     // Leaving the project blank keeps the current one while the client is the same.
     const keep = !projectId && !projectName && task.projectId && task.clientId === input.clientId;
     const project = keep ? { id: task.projectId! } : await pickProject(input.clientId, projectId, projectName, projectKind, input.title);
@@ -559,11 +799,22 @@ export async function updateTask(
   });
 }
 
-/** Stops a task from repeating (future copies only; existing ones are untouched). */
+/**
+ * Stops a task from repeating. If the next copy was already made and hasn't started yet, it is removed
+ * (soft-deleted) so it doesn't show up later.
+ */
 export async function stopRepeating(taskId: number) {
   return run(async () => {
-    await requireTask(taskId, "manage");
-    await db.update(schema.tasks).set({ repeat: null, repeatDay: null }).where(eq(schema.tasks.id, taskId));
+    const { task } = await requireTask(taskId, "manage");
+    const today = localDay(new Date(), config.timeZone);
+    const waiting = task.startDate && task.startDate > today && task.status === "todo" && task.repeatedFromId;
+    await db.transaction(async (tx) => {
+      await tx.update(schema.tasks).set({ repeat: null, repeatDay: null }).where(eq(schema.tasks.id, taskId));
+      if (waiting) {
+        await tx.update(schema.tasks).set({ deletedAt: new Date() }).where(eq(schema.tasks.id, taskId));
+        await tx.update(schema.tasks).set({ repeat: null, repeatDay: null }).where(eq(schema.tasks.id, task.repeatedFromId!));
+      }
+    });
     return undefined;
   });
 }
@@ -673,6 +924,20 @@ export async function updateTeam(teamId: number, _prev: unknown, formData: FormD
     } catch (e) {
       teamNameError(e, input.name);
     }
+    return undefined;
+  });
+}
+
+/** Sets the team whose leader reviews this team's leader's own tasks. */
+export async function setParentTeam(teamId: number, parentTeamId: number | null) {
+  return run(async () => {
+    await requireRole("super_admin");
+    // Walk up from the chosen team: a team may not end up reporting to itself, directly or through others.
+    for (let id = parentTeamId, hops = 0; id !== null && hops < 50; hops++) {
+      if (id === teamId) throw new Error("A team can't report to itself or to a team below it.");
+      id = (await db.query.teams.findFirst({ where: eq(schema.teams.id, id), columns: { parentTeamId: true } }))?.parentTeamId ?? null;
+    }
+    await db.update(schema.teams).set({ parentTeamId }).where(eq(schema.teams.id, teamId));
     return undefined;
   });
 }

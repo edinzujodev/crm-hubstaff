@@ -16,6 +16,7 @@ import { doneTasks, openTasks, resolveRange, timeReport } from "@/lib/dashboard/
 import { getDirectory, resolveScope, resolveTeam, type Scope } from "@/lib/dashboard/scope";
 import { fmtDateTime, fmtDay, fmtDuration, truncate } from "@/lib/format";
 import { isSessionStale } from "@/lib/report";
+import { listTemplates } from "@/lib/templates";
 import { dailySeries } from "@/lib/time-report";
 import { URGENCY_CLASS, timeLeftLabel, type Urgency } from "@/lib/urgency";
 
@@ -286,8 +287,8 @@ async function ClientsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
 }
 
 async function NewTaskWidget({ auth }: { auth: Auth }) {
-  const [dir, users] = await Promise.all([getDirectory(), assignableUsers(auth)]);
-  return <NewTaskForm clients={dir.clients} users={users} projects={dir.projects} />;
+  const [dir, users, templates] = await Promise.all([getDirectory(), assignableUsers(auth), listTemplates()]);
+  return <NewTaskForm clients={dir.clients} users={users} projects={dir.projects} templates={templates} />;
 }
 
 async function openSessions() {

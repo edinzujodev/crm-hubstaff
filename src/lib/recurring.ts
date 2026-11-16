@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
@@ -91,10 +91,81 @@ export async function spawnNextRepeat(taskId: number) {
       repeatLeadDays: task.repeatLeadDays,
       repeatShow: task.repeatShow,
       teamId: task.teamId,
+      templateId: task.templateId,
       seriesId,
       repeatedFromId: task.id,
     })
     .onConflictDoNothing({ target: schema.tasks.repeatedFromId })
     .returning({ id: schema.tasks.id, dueDate: schema.tasks.dueDate });
-  return next ?? null;
+  if (!next) return null;
+  // The new copy starts with the same checklist, nothing ticked.
+  const items = await db.select().from(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.taskId, task.id));
+  if (items.length) {
+    await db
+      .insert(schema.taskChecklistItems)
+      .values(items.map((i) => ({ taskId: next.id, position: i.position, text: i.text })));
+  }
+  return next;
+}
+
+/**
+ * Keeps every repeating series one copy ahead, whether or not the current copy is finished. The next copy is
+ * created as soon as the newest one is active (its start date has come), and stays hidden until its own start
+ * date. So January can still be open while February is created, and "Show now" can bring February forward.
+ */
+export async function topUpSeries(onlySeriesId?: number | null) {
+  const today = localDay(new Date(), config.timeZone);
+  const rows = await db
+    .select()
+    .from(schema.tasks)
+    .where(
+      and(
+        isNull(schema.tasks.deletedAt),
+        isNotNull(schema.tasks.seriesId),
+        onlySeriesId ? eq(schema.tasks.seriesId, onlySeriesId) : undefined,
+      ),
+    )
+    .orderBy(asc(schema.tasks.dueDate), asc(schema.tasks.id));
+  const newest = new Map<number, (typeof rows)[number]>();
+  for (const t of rows) newest.set(t.seriesId!, t);
+
+  for (let cur of newest.values()) {
+    for (let i = 0; i < 6; i++) {
+      if (!cur.repeat || !cur.dueDate) break;
+      if (cur.startDate && cur.startDate > today) break;
+      const made = await spawnNextRepeat(cur.id);
+      if (!made) break;
+      const row = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, made.id) });
+      if (!row) break;
+      cur = row;
+    }
+  }
+}
+
+/** The next period of a repeating task that exists but is not shown yet, if any. */
+export async function upcomingCopies(seriesIds: number[], today: string) {
+  if (!seriesIds.length) return new Map<number, { id: number; dueDate: string }[]>();
+  const rows = await db
+    .select({ id: schema.tasks.id, seriesId: schema.tasks.seriesId, dueDate: schema.tasks.dueDate })
+    .from(schema.tasks)
+    .where(
+      and(
+        inArray(schema.tasks.seriesId, seriesIds),
+        isNull(schema.tasks.deletedAt),
+        ne(schema.tasks.status, "done"),
+        gt(schema.tasks.startDate, today),
+      ),
+    )
+    .orderBy(asc(schema.tasks.dueDate));
+  const bySeries = new Map<number, { id: number; dueDate: string }[]>();
+  for (const r of rows) {
+    if (!r.seriesId || !r.dueDate) continue;
+    bySeries.set(r.seriesId, [...(bySeries.get(r.seriesId) ?? []), { id: r.id, dueDate: r.dueDate }]);
+  }
+  return bySeries;
+}
+
+/** The first hidden copy due after this task, if it has one. */
+export function nextHidden(list: { id: number; dueDate: string }[] | undefined, dueDate: string | null) {
+  return list?.find((c) => !dueDate || c.dueDate > dueDate) ?? null;
 }

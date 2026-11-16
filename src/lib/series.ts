@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { taskScope, type Auth } from "@/lib/auth";
 import { trackedByTask } from "@/lib/report";
@@ -14,6 +14,7 @@ export type Occurrence = {
   assigneeName: string | null;
   repeat: Repeat | null;
   trackedSeconds: number;
+  checklist: { id: number; text: string; done: boolean }[];
 };
 
 export type SeriesSummary = {
@@ -56,6 +57,14 @@ async function occurrencesBySeries(scope: SQL | undefined, onlySeriesId?: number
     trackedByTask(),
   ]);
 
+  const items = rows.length
+    ? await db
+        .select()
+        .from(schema.taskChecklistItems)
+        .where(inArray(schema.taskChecklistItems.taskId, rows.map((r) => r.task.id)))
+        .orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id))
+    : [];
+
   const bySeries = new Map<number, { occurrences: Occurrence[]; clientId: number | null; clientName: string | null }>();
   for (const { task, clientName, assigneeName } of rows) {
     const group = bySeries.get(task.seriesId!) ?? { occurrences: [], clientId: task.clientId, clientName };
@@ -69,6 +78,7 @@ async function occurrencesBySeries(scope: SQL | undefined, onlySeriesId?: number
       assigneeName,
       repeat: task.repeat,
       trackedSeconds: tracked.get(task.id) ?? 0,
+      checklist: items.filter((i) => i.taskId === task.id).map((i) => ({ id: i.id, text: i.text, done: i.doneAt !== null })),
     });
     group.clientId = task.clientId;
     group.clientName = clientName;

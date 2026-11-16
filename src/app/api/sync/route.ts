@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { getAuth } from "@/lib/auth";
+import { topUpSeries } from "@/lib/recurring";
 import { lastSyncAt, syncHubstaff } from "@/lib/sync";
 
 // For a scheduler (cron, Task Scheduler, Vercel Cron): pulls Hubstaff activities
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
   try {
+    await topUpSeries();
     return Response.json(await syncHubstaff());
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
@@ -30,6 +32,8 @@ export async function POST(request: Request) {
   if (!(await getAuth())) return Response.json({ error: "Sign in first." }, { status: 401 });
   const force = new URL(request.url).searchParams.get("force") === "1";
   try {
+    // Repeating tasks stay one copy ahead of the calendar (cheap when there is nothing to do).
+    await topUpSeries();
     if (!force && !running) {
       const last = await lastSyncAt();
       if (last && Date.now() - last.getTime() < 2 * 60 * 1000) return Response.json({ ran: false });

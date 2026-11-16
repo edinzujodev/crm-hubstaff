@@ -52,12 +52,13 @@ export function hoursUntilDue(dueDate: string, timeZone: string, now = new Date(
  * a task without a due date is on track.
  */
 export function urgencyOf(
-  task: { status: "todo" | "in_progress" | "done"; dueDate: string | null },
+  task: { status: "todo" | "in_progress" | "done" | "review"; dueDate: string | null },
   levels: Levels,
   timeZone: string,
   now = new Date(),
 ): Urgency | null {
-  if (task.status === "done") return null;
+  // Done, or waiting for the reviewer: nothing is left for the assignee to hurry.
+  if (task.status === "done" || task.status === "review") return null;
   if (!task.dueDate) return "on_track";
   const hours = hoursUntilDue(task.dueDate, timeZone, now);
   if (hours < levels.criticalHours) return "critical";

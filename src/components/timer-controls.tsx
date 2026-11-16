@@ -78,7 +78,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
       const res = await setTaskStatus(taskId, "done");
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
       setNextId(res.data.nextTaskId);
-      setMessage({ tone: "ok", text: res.data.nextTaskId ? "Task finished. The next one was created." : "Task finished." });
+      setMessage({ tone: "ok", text: res.data.inReview ? "Sent to your team leader for review." : "Task finished." });
       notifyFinished({ taskId, title, ...res.data });
     });
 

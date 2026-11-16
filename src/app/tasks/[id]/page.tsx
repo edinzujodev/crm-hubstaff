@@ -10,6 +10,13 @@ import { TaskStatusSelect } from "@/components/task-status-select";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
+import { canReviewTask } from "@/lib/review";
+import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
+import { asc } from "drizzle-orm";
+import { ReviewActions } from "@/components/review-actions";
+import { NextPeriodButton } from "@/components/next-period-button";
+import { TaskChecklist } from "@/components/task-checklist";
+import { localDay } from "@/lib/format";
 import { getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime, fmtDuration, fmtTime } from "@/lib/format";
 import { getTaskReport, type SessionFlag } from "@/lib/report";
@@ -61,14 +68,22 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const manage = canManageTask(auth, task);
 
   const tz = config.timeZone;
-  const [report, mine] = await Promise.all([
+  const [report, mine, checklist, reviewer] = await Promise.all([
     getTaskReport(id, tz),
     me
       ? db.query.workSessions.findFirst({
           where: and(eq(schema.workSessions.userId, me.id), isNull(schema.workSessions.endedAt)),
         })
       : undefined,
+    db.select().from(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.taskId, id)).orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id)),
+    task.reviewerId ? db.query.users.findFirst({ where: eq(schema.users.id, task.reviewerId), columns: { name: true } }) : null,
   ]);
+  const canReview = canReviewTask(auth, task);
+  const waiting = !!task.startDate && task.startDate > localDay(new Date(), tz) && task.status !== "done";
+  const next =
+    manage && task.repeat && task.seriesId && !task.deletedAt && !waiting
+      ? nextHidden((await upcomingCopies([task.seriesId], localDay(new Date(), tz))).get(task.seriesId), task.dueDate)
+      : null;
   const otherTask =
     mine && mine.taskId !== id
       ? await db.query.tasks.findFirst({ where: eq(schema.tasks.id, mine.taskId), columns: { id: true, title: true } })
@@ -116,7 +131,7 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
                 taskId={task.id}
                 title={task.title}
                 lockedTo={task.assigneeId && task.assigneeId !== me?.id ? (row.assigneeName ?? "someone else") : null}
-                done={task.status === "done"}
+                done={task.status === "done" || task.status === "review"}
                 runningSince={mine?.taskId === id ? mine.startedAt.toISOString() : null}
                 otherTask={otherTask ?? null}
               />
@@ -125,6 +140,48 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
+      {next && task.repeat && (
+        <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+          <span>
+            The next one ({periodLabel(task.repeat, next.dueDate)}) shows up on its own when its time comes. Need it
+            earlier?
+          </span>
+          <NextPeriodButton nextTaskId={next.id} label={periodLabel(task.repeat, next.dueDate)} />
+        </div>
+      )}
+
+      {waiting && (
+        <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+          <span>This copy is waiting for its start date ({task.startDate}); it is hidden from the open lists until then.</span>
+        </div>
+      )}
+
+      {task.status === "review" && (
+        <div className="card flex flex-wrap items-center justify-between gap-3 border-amber-500/50 p-3 text-sm">
+          <span>
+            <span className="font-medium">On review.</span>{" "}
+            {reviewer ? `${reviewer.name} will approve it or send it back with a reason.` : "Waiting for the team leader."}
+          </span>
+          {canReview && <ReviewActions taskId={task.id} title={task.title} />}
+        </div>
+      )}
+
+      {task.reviewResult === "rejected" && task.status === "todo" && (
+        <div className="card space-y-1 border-red-500/50 p-3 text-sm">
+          <p className="font-medium text-red-700 dark:text-red-400">Checked: not OK</p>
+          <p className="whitespace-pre-wrap">{task.reviewNote}</p>
+          <p className="text-xs text-muted">Fix it and press Finish again to send it back for review.</p>
+        </div>
+      )}
+
+      {task.reviewResult === "approved" && task.status === "done" && (
+        <p className="card border-emerald-500/50 p-3 text-sm">
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">Checked: OK</span>
+          {task.reviewedAt && <span className="text-muted"> · {fmtDateTime(task.reviewedAt, tz)}</span>}
+          {task.reviewNote && <span> — {task.reviewNote}</span>}
+        </p>
+      )}
+
       {task.deletedAt && (
         <p className="card border-red-500/40 p-3 text-sm">
           This task was deleted on {fmtDateTime(task.deletedAt, tz)}. It is hidden from the task list and can&apos;t be
@@ -132,6 +189,14 @@ async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
           use it again.
         </p>
       )}
+
+      <TaskChecklist
+        taskId={task.id}
+        description={task.description}
+        items={checklist.map((c) => ({ id: c.id, text: c.text, done: c.doneAt !== null }))}
+        canEdit={manage && !task.deletedAt}
+        canTick={!task.deletedAt && task.status !== "done"}
+      />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="card p-4">

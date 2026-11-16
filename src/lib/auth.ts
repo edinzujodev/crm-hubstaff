@@ -47,12 +47,12 @@ export async function pageGuard(...roles: Role[]): Promise<Auth> {
   return auth;
 }
 
-type TaskScope = { assigneeId: number | null; teamId: number | null };
+type TaskScope = { assigneeId: number | null; teamId: number | null; reviewerId?: number | null };
 
 /** A worker sees their own tasks; a leader their team's (and their own); the super admin everything. */
 export function canViewTask(a: Auth, t: TaskScope): boolean {
   if (a.role === "super_admin") return true;
-  if (t.assigneeId === a.user.id) return true;
+  if (t.assigneeId === a.user.id || t.reviewerId === a.user.id) return true;
   return a.role === "leader" && t.teamId !== null && t.teamId === a.ledTeam?.id;
 }
 
@@ -65,7 +65,8 @@ export function canManageTask(a: Auth, t: TaskScope): boolean {
 /** SQL filter for the tasks a person may see; undefined means all. */
 export function taskScope(a: Auth): SQL | undefined {
   if (a.role === "super_admin") return undefined;
-  const own = eq(schema.tasks.assigneeId, a.user.id);
+  // Tasks sent to you for review are yours to see too.
+  const own = or(eq(schema.tasks.assigneeId, a.user.id), eq(schema.tasks.reviewerId, a.user.id));
   if (a.role === "leader" && a.ledTeam) return or(own, eq(schema.tasks.teamId, a.ledTeam.id));
   return own;
 }

@@ -27,17 +27,23 @@ export function Toaster() {
     <div role="status" className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]">
       <div className="card space-y-3 border-emerald-500/60 p-4 text-sm shadow-lg">
         <div className="flex items-start justify-between gap-3">
-          <p className="font-medium text-emerald-700 dark:text-emerald-400">✓ Task finished</p>
+          <p className="font-medium text-emerald-700 dark:text-emerald-400">{notice.inReview ? "✓ Sent for review" : "✓ Task finished"}</p>
           <button type="button" aria-label="Dismiss" className="text-muted" onClick={() => setNotice(null)}>
             ✕
           </button>
         </div>
         <p>
           <span className="font-medium">{truncate(notice.title, 50)}</span> was moved to{" "}
-          <Link className="underline" href="/tasks?show=finished">
-            Done
-          </Link>
-          .
+          {notice.inReview ? (
+            <Link className="underline" href="/tasks?show=review">
+              On review
+            </Link>
+          ) : (
+            <Link className="underline" href="/tasks?show=finished">
+              Done
+            </Link>
+          )}
+          .{notice.inReview ? " Your team leader will approve it or send it back with a reason." : ""}
         </p>
         {notice.nextTaskId ? (
           <p className="rounded-md bg-emerald-500/10 p-2">

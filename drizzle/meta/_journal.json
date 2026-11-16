@@ -134,6 +134,20 @@
       "when": 1794410190384,
       "tag": "0018_eager_smiling_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794821810266,
+      "tag": "0019_fearless_daimon_hellstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794835876334,
+      "tag": "0020_supreme_hannibal_king",
+      "breakpoints": true
     }
   ]
 }
