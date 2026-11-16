@@ -83,7 +83,7 @@
   --green-200:#a0e6ba;
   --green-300:#76db9b;
   --green-400:#4cd07d;
-  --green-500:#22c55e;
+  --green-500:#10b981;
   --green-600:#1da750;
   --green-700:#188a42;
   --green-800:#136c34;
@@ -2519,52 +2519,52 @@
     color: #38bdf8;
   }
   .p-button.p-button-success, .p-button-group.p-button-success > .p-button, .p-splitbutton.p-button-success > .p-button, .p-fileupload-choose.p-button-success {
-    color: #052e16;
-    background: #4ade80;
-    border: 1px solid #4ade80;
+    color: #022c22;
+    background: #34d399;
+    border: 1px solid #34d399;
   }
   .p-button.p-button-success:not(:disabled):hover, .p-button-group.p-button-success > .p-button:not(:disabled):hover, .p-splitbutton.p-button-success > .p-button:not(:disabled):hover, .p-fileupload-choose.p-button-success:not(:disabled):hover {
-    background: #86efac;
-    color: #052e16;
-    border-color: #86efac;
+    background: #6ee7b7;
+    color: #022c22;
+    border-color: #6ee7b7;
   }
   .p-button.p-button-success:not(:disabled):focus, .p-button-group.p-button-success > .p-button:not(:disabled):focus, .p-splitbutton.p-button-success > .p-button:not(:disabled):focus, .p-fileupload-choose.p-button-success:not(:disabled):focus {
     box-shadow: 0 0 0 1px #80e8a6;
   }
   .p-button.p-button-success:not(:disabled):active, .p-button-group.p-button-success > .p-button:not(:disabled):active, .p-splitbutton.p-button-success > .p-button:not(:disabled):active, .p-fileupload-choose.p-button-success:not(:disabled):active {
-    background: #bbf7d0;
-    color: #052e16;
-    border-color: #bbf7d0;
+    background: #a7f3d0;
+    color: #022c22;
+    border-color: #a7f3d0;
   }
   .p-button.p-button-success.p-button-outlined, .p-button-group.p-button-success > .p-button.p-button-outlined, .p-splitbutton.p-button-success > .p-button.p-button-outlined, .p-fileupload-choose.p-button-success.p-button-outlined {
     background-color: transparent;
-    color: #4ade80;
+    color: #34d399;
     border: 1px solid;
   }
   .p-button.p-button-success.p-button-outlined:not(:disabled):hover, .p-button-group.p-button-success > .p-button.p-button-outlined:not(:disabled):hover, .p-splitbutton.p-button-success > .p-button.p-button-outlined:not(:disabled):hover, .p-fileupload-choose.p-button-success.p-button-outlined:not(:disabled):hover {
     background: rgba(74, 222, 128, 0.04);
-    color: #4ade80;
+    color: #34d399;
     border: 1px solid;
   }
   .p-button.p-button-success.p-button-outlined:not(:disabled):active, .p-button-group.p-button-success > .p-button.p-button-outlined:not(:disabled):active, .p-splitbutton.p-button-success > .p-button.p-button-outlined:not(:disabled):active, .p-fileupload-choose.p-button-success.p-button-outlined:not(:disabled):active {
     background: rgba(74, 222, 128, 0.16);
-    color: #4ade80;
+    color: #34d399;
     border: 1px solid;
   }
   .p-button.p-button-success.p-button-text, .p-button-group.p-button-success > .p-button.p-button-text, .p-splitbutton.p-button-success > .p-button.p-button-text, .p-fileupload-choose.p-button-success.p-button-text {
     background-color: transparent;
-    color: #4ade80;
+    color: #34d399;
     border-color: transparent;
   }
   .p-button.p-button-success.p-button-text:not(:disabled):hover, .p-button-group.p-button-success > .p-button.p-button-text:not(:disabled):hover, .p-splitbutton.p-button-success > .p-button.p-button-text:not(:disabled):hover, .p-fileupload-choose.p-button-success.p-button-text:not(:disabled):hover {
     background: rgba(74, 222, 128, 0.04);
     border-color: transparent;
-    color: #4ade80;
+    color: #34d399;
   }
   .p-button.p-button-success.p-button-text:not(:disabled):active, .p-button-group.p-button-success > .p-button.p-button-text:not(:disabled):active, .p-splitbutton.p-button-success > .p-button.p-button-text:not(:disabled):active, .p-fileupload-choose.p-button-success.p-button-text:not(:disabled):active {
     background: rgba(74, 222, 128, 0.16);
     border-color: transparent;
-    color: #4ade80;
+    color: #34d399;
   }
   .p-button.p-button-warning, .p-button-group.p-button-warning > .p-button, .p-splitbutton.p-button-warning > .p-button, .p-fileupload-choose.p-button-warning {
     color: #431407;
@@ -2925,31 +2925,31 @@
   }
   .p-splitbutton.p-button-success.p-button-outlined > .p-button {
     background-color: transparent;
-    color: #4ade80;
+    color: #34d399;
     border: 1px solid;
   }
   .p-splitbutton.p-button-success.p-button-outlined > .p-button:not(:disabled):hover {
     background: rgba(74, 222, 128, 0.04);
-    color: #4ade80;
+    color: #34d399;
   }
   .p-splitbutton.p-button-success.p-button-outlined > .p-button:not(:disabled):active {
     background: rgba(74, 222, 128, 0.16);
-    color: #4ade80;
+    color: #34d399;
   }
   .p-splitbutton.p-button-success.p-button-text > .p-button {
     background-color: transparent;
-    color: #4ade80;
+    color: #34d399;
     border-color: transparent;
   }
   .p-splitbutton.p-button-success.p-button-text > .p-button:not(:disabled):hover {
     background: rgba(74, 222, 128, 0.04);
     border-color: transparent;
-    color: #4ade80;
+    color: #34d399;
   }
   .p-splitbutton.p-button-success.p-button-text > .p-button:not(:disabled):active {
     background: rgba(74, 222, 128, 0.16);
     border-color: transparent;
-    color: #4ade80;
+    color: #34d399;
   }
   .p-splitbutton.p-button-warning.p-button-outlined > .p-button {
     background-color: transparent;
@@ -6807,8 +6807,8 @@
     border-radius: 6px;
   }
   .p-tag.p-tag-success {
-    background-color: #4ade80;
-    color: #052e16;
+    background-color: #34d399;
+    color: #022c22;
   }
   .p-tag.p-tag-info {
     background-color: #38bdf8;
@@ -6942,8 +6942,8 @@
     color: #020617;
   }
   .p-badge.p-badge-success {
-    background-color: #4ade80;
-    color: #052e16;
+    background-color: #34d399;
+    color: #022c22;
   }
   .p-badge.p-badge-info {
     background-color: #38bdf8;
@@ -6978,8 +6978,8 @@
     border-radius: 6px;
   }
   .p-tag.p-tag-success {
-    background-color: #4ade80;
-    color: #052e16;
+    background-color: #34d399;
+    color: #022c22;
   }
   .p-tag.p-tag-info {
     background-color: #38bdf8;

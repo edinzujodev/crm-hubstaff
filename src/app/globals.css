@@ -191,3 +191,68 @@ body {
   min-width: 6rem;
   flex: 1 1 auto;
 }
+
+/* Button hover states. The noir theme's own hover is almost the same colour as the resting button, so it was
+   barely visible. */
+.p-button {
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    filter 0.15s;
+}
+.p-button:not(:disabled):not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(
+    .p-button-danger
+  ):not(.p-button-success):hover {
+  background: #3f3f46;
+  border-color: #3f3f46;
+  color: #ffffff;
+}
+.p-button.p-button-danger:not(:disabled):not(.p-button-outlined):not(.p-button-text):hover,
+.p-button.p-button-success:not(:disabled):not(.p-button-outlined):not(.p-button-text):hover {
+  filter: brightness(0.88);
+}
+.p-button.p-button-outlined:not(:disabled):hover,
+.p-button.p-button-text:not(:disabled):hover {
+  background: rgb(24 24 27 / 0.08);
+}
+.p-button.p-button-outlined.p-button-danger:not(:disabled):hover,
+.p-button.p-button-text.p-button-danger:not(:disabled):hover {
+  background: rgb(239 68 68 / 0.12);
+}
+.p-button.p-button-link:not(:disabled):hover {
+  text-decoration: underline;
+  background: transparent;
+}
+@media (prefers-color-scheme: dark) {
+  .p-button:not(:disabled):not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(
+      .p-button-danger
+    ):not(.p-button-success):hover {
+    background: #d4d4d8;
+    border-color: #d4d4d8;
+    color: #09090b;
+  }
+  .p-button.p-button-outlined:not(:disabled):hover,
+  .p-button.p-button-text:not(:disabled):hover {
+    background: rgb(250 250 250 / 0.12);
+  }
+}
+
+/* Green outline buttons (Finish) get a soft green fill on hover instead of grey. */
+.p-button.p-button-outlined.p-button-success:not(:disabled):hover {
+  background: rgb(16 185 129 / 0.12);
+}
+
+/* Focus ring on buttons: none after a mouse click, a neutral grey ring for keyboard focus (the theme used a
+   coloured one, which was green on the green buttons). */
+.p-button:focus,
+.p-button:enabled:focus {
+  box-shadow: none;
+}
+.p-button:focus-visible,
+.p-button:enabled:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px #71717a;
+}
+

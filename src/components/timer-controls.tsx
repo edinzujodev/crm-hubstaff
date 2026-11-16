@@ -103,7 +103,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
             suppressHydrationWarning
             className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400"
           >
-            ● {elapsed(runningSince)}
+            {elapsed(runningSince)}
           </span>
         )}
         {runningSince ? (
@@ -113,6 +113,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
         ) : (
           <Button
             size="small"
+            severity="success"
             onClick={onStart}
             disabled={pending || done || !!lockedTo}
             title={
@@ -126,7 +127,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
             {otherTask ? "Switch here" : "Start"}
           </Button>
         )}
-        <Button size="small" onClick={onFinishTask} disabled={pending || done} severity="secondary" outlined>
+        <Button size="small" onClick={onFinishTask} disabled={pending || done} severity="success" outlined>
           Finish
         </Button>
       </div>
