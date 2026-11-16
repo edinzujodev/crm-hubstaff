@@ -422,6 +422,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                           ● {others.length} working now
                         </span>
                       )}
+                      {task.repeat && task.dueDate && (
+                        <p className="text-xs text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
+                      )}
                     </div>,
                     <TypeChip key="type" repeat={task.repeat} />,
                     assigneeName ? (
