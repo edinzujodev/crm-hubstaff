@@ -34,26 +34,6 @@ function Tile({
   );
 }
 
-function SectionHead({
-  title,
-  hint,
-  action,
-}: {
-  title: string;
-  hint?: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-3 px-4 py-3">
-      <div>
-        <h2 className="font-semibold">{title}</h2>
-        {hint && <p className="max-w-2xl text-sm text-muted">{hint}</p>}
-      </div>
-      {action}
-    </div>
-  );
-}
-
 /** Setting teams up: who is in which team, and who leads it. Tasks live on each team's own page. */
 async function TeamContent({ show }: { show?: string }) {
   await connection();
@@ -117,23 +97,24 @@ async function TeamContent({ show }: { show?: string }) {
           },
         ]}
         active={show === "teams" ? 1 : 0}
+        actions={
+          admin ? (
+            show === "teams" ? (
+              <NewTeamButton users={options} />
+            ) : (
+              <AddMemberButton />
+            )
+          ) : undefined
+        }
       >
         {show !== "teams" && (
           <section>
-            <SectionHead
-              title="People"
-              action={admin ? <AddMemberButton /> : undefined}
-            />
             <PeopleList people={people} teams={teamOptions} admin={admin} />
           </section>
         )}
 
         {show === "teams" && (
           <section>
-            <SectionHead
-              title={admin ? "Teams" : "Your team"}
-              action={admin ? <NewTeamButton users={options} /> : undefined}
-            />
             <DataGrid
               flush
               empty={

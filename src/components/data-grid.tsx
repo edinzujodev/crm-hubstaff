@@ -95,7 +95,7 @@ export function DataGrid({
     });
 
   return (
-    <div className={`${flush ? "border-t border-border" : plain ? "" : "card overflow-hidden"} ${noHeader ? "[&_thead]:hidden" : ""}`}>
+    <div className={`${flush ? "" : plain ? "" : "card overflow-hidden"} ${noHeader ? "[&_thead]:hidden" : ""}`}>
       {searchable && (
         <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
           <InputText

@@ -48,7 +48,7 @@ export function TaskMenu({
       <RowMenu
         label={`Actions for ${task.title}`}
         items={[
-          { label: "Details & sessions", onSelect: () => router.push(`/tasks/${task.id}`) },
+          { label: "View", onSelect: () => router.push(`/tasks/${task.id}`) },
           ...(canManage
             ? [
                 { label: "Edit", onSelect: () => setModal("edit" as const) },

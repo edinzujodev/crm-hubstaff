@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { LinkTabs } from "@/components/link-tabs";
+import { TabCard } from "@/components/tab-card";
 import { TeamLevelsForm } from "@/components/team-levels-form";
 import { TemplateManager } from "@/components/template-manager";
 import { pageGuard } from "@/lib/auth";
@@ -19,18 +19,14 @@ async function ConfigContent({ searchParams }: { searchParams: Promise<{ tab?: s
   const active = Math.max(0, TABS.findIndex((t) => t.key === wanted));
 
   return (
-    <div className="card">
-      <div className="px-4 pb-5 pt-4">
-        <LinkTabs
-          active={active}
-          tabs={TABS.map((t) => ({ label: t.label, href: t.key === "templates" ? "/config" : `/config?tab=${t.key}` }))}
-        />
-      </div>
-      <div className="p-4">
-        {TABS[active].key === "templates" && <TemplateManager templates={await listTemplates()} />}
-        {TABS[active].key === "urgency" && <UrgencyTab admin={auth.role === "super_admin"} />}
-      </div>
-    </div>
+    <TabCard
+      padded
+      active={active}
+      tabs={TABS.map((t) => ({ label: t.label, href: t.key === "templates" ? "/config" : `/config?tab=${t.key}` }))}
+    >
+      {TABS[active].key === "templates" && <TemplateManager templates={await listTemplates()} />}
+      {TABS[active].key === "urgency" && <UrgencyTab admin={auth.role === "super_admin"} />}
+    </TabCard>
   );
 }
 

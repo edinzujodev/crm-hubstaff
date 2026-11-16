@@ -20,11 +20,13 @@ export function TabCard({
 }) {
   return (
     <div className="card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pb-5 pt-4">
-        <LinkTabs tabs={tabs} active={active} />
-        {actions}
+      <div className="mx-4 flex flex-wrap items-end justify-between gap-x-4 border-b border-border pt-3">
+        <div className="min-w-0 flex-1">
+          <LinkTabs tabs={tabs} active={active} />
+        </div>
+        {actions && <div className="pb-2">{actions}</div>}
       </div>
-      <div className={padded ? "p-4" : ""}>{children}</div>
+      <div className={padded ? "p-4" : "pt-4"}>{children}</div>
     </div>
   );
 }
