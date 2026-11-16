@@ -28,15 +28,22 @@ import { SeriesRow } from "@/components/series-row";
 import { DEFAULT_LEVELS, URGENCY_CLASS, URGENCY_LABEL, hoursUntilDue, timeLeftLabel, urgencyOf } from "@/lib/urgency";
 
 const TITLE_MAX = 50;
+const STATUS_LABEL = {
+  todo: "To do",
+  in_progress: "In progress",
+  review: "On review",
+  done: "Done",
+} as const;
 const repeatLabel = { weekly: "Weekly", monthly: "Monthly" } as const;
 
 /** W weekly, M monthly, O one-time: a small coloured letter, with the full word on hover. */
 function TypeChip({ repeat }: { repeat: "weekly" | "monthly" | null }) {
-  const [letter, word, tone] = repeat === "weekly"
-    ? ["W", "Weekly", "bg-sky-500/15 text-sky-700 dark:text-sky-300"]
-    : repeat === "monthly"
-      ? ["M", "Monthly", "bg-violet-500/15 text-violet-700 dark:text-violet-300"]
-      : ["O", "One-time", "bg-black/5 text-muted dark:bg-white/10"];
+  const [letter, word, tone] =
+    repeat === "weekly"
+      ? ["W", "Weekly", "bg-sky-500/15 text-sky-700 dark:text-sky-300"]
+      : repeat === "monthly"
+        ? ["M", "Monthly", "bg-violet-500/15 text-violet-700 dark:text-violet-300"]
+        : ["O", "One-time", "bg-black/5 text-muted dark:bg-white/10"];
   return (
     <span
       title={word}
@@ -94,7 +101,11 @@ function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listS
                       )}
                     </td>
                     <td className="px-3 py-2">
-                      {s.repeat ? <span className="badge">{repeatLabel[s.repeat]}</span> : <span className="badge text-muted">Stopped</span>}
+                      {s.repeat ? (
+                        <span className="badge">{repeatLabel[s.repeat]}</span>
+                      ) : (
+                        <span className="badge text-muted">Stopped</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right font-mono tabular-nums">
                       {s.done} / {s.occurrences}
@@ -136,32 +147,36 @@ function SeriesTable({ series, edit }: { series: Awaited<ReturnType<typeof listS
                       <tbody>
                         {rows.map((o) => (
                           <Fragment key={o.id}>
-                          <tr className="border-t border-border">
-                            <td className="py-1.5 pr-3">
-                              <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
-                                {s.repeat && o.dueDate ? periodLabel(s.repeat, o.dueDate) : o.title}
-                              </Link>
-                              {o.startDate && o.startDate > today && o.status !== "done" && (
-                                <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
-                              )}
-                            </td>
-                            <td className="py-1.5 pr-3 text-muted">{o.dueDate ? fmtDay(o.dueDate) : "—"}</td>
-                            <td className="py-1.5 pr-3">
-                              <span className="badge">{o.status === "done" ? "Done" : o.status === "review" ? "On review" : "Open"}</span>
-                            </td>
-                            <td className="py-1.5 pr-3 text-muted">{o.assigneeName ?? "—"}</td>
-                            <td className="py-1.5 pr-3 text-muted">{o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}</td>
-                            <td className="py-1.5 text-right font-mono tabular-nums">
-                              {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
-                            </td>
-                          </tr>
-                          {o.checklist.length > 0 && o.status !== "done" && (
-                            <tr>
-                              <td colSpan={6} className="pb-2 pl-4">
-                                <InlineChecklist items={o.checklist} canTick />
+                            <tr className="border-t border-border">
+                              <td className="py-1.5 pr-3">
+                                <Link href={`/tasks/${o.id}`} className="font-medium hover:underline">
+                                  {s.repeat && o.dueDate ? periodLabel(s.repeat, o.dueDate) : o.title}
+                                </Link>
+                                {o.startDate && o.startDate > today && o.status !== "done" && (
+                                  <span className="badge ml-2 text-muted">Starts {fmtDay(o.startDate)}</span>
+                                )}
+                              </td>
+                              <td className="py-1.5 pr-3 text-muted">{o.dueDate ? fmtDay(o.dueDate) : "—"}</td>
+                              <td className="py-1.5 pr-3">
+                                <span className="badge">
+                                  {o.status === "done" ? "Done" : o.status === "review" ? "On review" : "Open"}
+                                </span>
+                              </td>
+                              <td className="py-1.5 pr-3 text-muted">{o.assigneeName ?? "—"}</td>
+                              <td className="py-1.5 pr-3 text-muted">
+                                {o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}
+                              </td>
+                              <td className="py-1.5 text-right font-mono tabular-nums">
+                                {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
                               </td>
                             </tr>
-                          )}
+                            {o.checklist.length > 0 && o.status !== "done" && (
+                              <tr>
+                                <td colSpan={6} className="pb-2 pl-4">
+                                  <InlineChecklist items={o.checklist} canTick />
+                                </td>
+                              </tr>
+                            )}
                           </Fragment>
                         ))}
                       </tbody>
@@ -209,15 +224,25 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
     db.select().from(schema.workSessions).where(isNull(schema.workSessions.endedAt)),
     db.select().from(schema.teams),
     db
-      .select({ id: schema.projects.id, name: schema.projects.name, clientId: schema.projects.clientId, kind: schema.projects.kind })
+      .select({
+        id: schema.projects.id,
+        name: schema.projects.name,
+        clientId: schema.projects.clientId,
+        kind: schema.projects.kind,
+      })
       .from(schema.projects)
       .orderBy(asc(schema.projects.name)),
     // Critical and Recurring are for people who manage tasks, not workers.
     auth.role === "worker" ? Promise.resolve([]) : listSeries(auth),
     auth.role === "worker" ? Promise.resolve([]) : listTemplates(),
   ]);
-  const teamLevels = new Map(teams.map((t) => [t.id, { approachingHours: t.approachingHours, criticalHours: t.criticalHours }]));
+  const teamLevels = new Map(
+    teams.map((t) => [t.id, { approachingHours: t.approachingHours, criticalHours: t.criticalHours }]),
+  );
   const isWorker = auth.role === "worker";
+  const allUserNames = await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users);
+  const teamNames = new Map(teams.map((t) => [t.id, t.name]));
+  const userNames = new Map(allUserNames.map((u) => [u.id, u.name]));
 
   const today = localDay(new Date(), config.timeZone);
   const mine = openSessions.find((s) => s.userId === me?.id);
@@ -228,7 +253,11 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const scope: TaskScope = !isWorker && TASK_SCOPES.find((s) => s === wanted) ? (wanted as TaskScope) : "mine";
   // Tasks waiting for your review always show, whichever list you picked.
   const inScope = tasks.filter(({ task }) =>
-    scope === "team" || (task.status === "review" && task.reviewerId === me.id) ? true : scope === "unassigned" ? !task.assigneeId : !me || task.assigneeId === me.id,
+    scope === "team" || (task.status === "review" && task.reviewerId === me.id)
+      ? true
+      : scope === "unassigned"
+        ? !task.assigneeId
+        : !me || task.assigneeId === me.id,
   );
   const now = new Date();
   type Row = (typeof tasks)[number];
@@ -247,9 +276,13 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const matches = {
     // A repeat copy waiting for its start date stays out of the open lists until then.
     open: ({ task }: Row) =>
-      !task.deletedAt && task.status !== "done" && task.status !== "review" && !(task.startDate && task.startDate > today),
+      !task.deletedAt &&
+      task.status !== "done" &&
+      task.status !== "review" &&
+      !(task.startDate && task.startDate > today),
     review: ({ task }: Row) => !task.deletedAt && task.status === "review",
-    critical: (row: Row) => !row.task.deletedAt && row.task.status !== "done" && row.task.status !== "review" && urgent(row),
+    critical: (row: Row) =>
+      !row.task.deletedAt && row.task.status !== "done" && row.task.status !== "review" && urgent(row),
     finished: ({ task }: Row) => !task.deletedAt && task.status === "done",
     deleted: ({ task }: Row) => task.deletedAt !== null,
   };
@@ -263,7 +296,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   };
   const hoursLeft = (r: Row) => hoursUntilDue(r.task.dueDate!, config.timeZone, now);
   const visible =
-    tab === "recurring" ? [] : inScope.filter(matches[tab]).sort((a, b) => (tab === "critical" ? hoursLeft(a) - hoursLeft(b) : 0));
+    tab === "recurring"
+      ? []
+      : inScope.filter(matches[tab]).sort((a, b) => (tab === "critical" ? hoursLeft(a) - hoursLeft(b) : 0));
 
   const upcoming = await upcomingCopies(
     [...new Set(visible.map((v) => v.task.seriesId).filter((id): id is number => id !== null))],
@@ -274,7 +309,12 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
     const rows = await db
       .select()
       .from(schema.taskChecklistItems)
-      .where(inArray(schema.taskChecklistItems.taskId, visible.map((v) => v.task.id)))
+      .where(
+        inArray(
+          schema.taskChecklistItems.taskId,
+          visible.map((v) => v.task.id),
+        ),
+      )
       .orderBy(asc(schema.taskChecklistItems.position), asc(schema.taskChecklistItems.id));
     for (const r of rows) {
       const list = checklists.get(r.taskId) ?? [];
@@ -322,7 +362,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                   href={key === "open" ? "/tasks" : `/tasks?show=${key}`}
                   aria-current={active ? "page" : undefined}
                   className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 transition-colors ${
-                    active ? "bg-primary/10 font-semibold text-foreground" : "text-muted hover:bg-primary/5 hover:text-foreground"
+                    active
+                      ? "bg-primary/10 font-semibold text-foreground"
+                      : "text-muted hover:bg-primary/5 hover:text-foreground"
                   }`}
                 >
                   {label}
@@ -338,7 +380,10 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
         {!isWorker && (
           <div className="flex flex-wrap items-center gap-2">
             {tab !== "recurring" && (
-              <TaskScopeToggle scope={scope} teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"} />
+              <TaskScopeToggle
+                scope={scope}
+                teamLabel={auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"}
+              />
             )}
             <NewTaskForm clients={clients} users={users} projects={projects} templates={templates} />
           </div>
@@ -371,194 +416,239 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
           }}
         />
       ) : (
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs text-muted">
-            <tr>
-              <th className="w-8" />
-              <th className="px-3 py-2 font-medium">Task</th>
-              <th className="px-3 py-2 font-medium" title="W weekly · M monthly · O one-time">
-                Repeat
-              </th>
-              <th className="px-3 py-2 font-medium">Assignee</th>
-              <th className="px-3 py-2 font-medium">Client</th>
-              <th className="px-3 py-2 font-medium">Project</th>
-              <th className="px-3 py-2 font-medium">Project type</th>
-              <th className="px-3 py-2 font-medium">Due</th>
-              <th className="px-3 py-2 font-medium" />
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(({ task, clientName, assigneeName, projectName, projectKind }) => {
-              const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
-              const trackedSeconds = tracked.get(task.id);
-              const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
-              const manage = canManageTask(auth, task);
-              return (
-                <TaskRow
-                  key={task.id}
-                  cells={[
-                    <div key="title">
-                      <Link href={`/tasks/${task.id}`} className="font-medium hover:underline" title={task.title}>
-                        {truncate(task.title, TITLE_MAX)}
-                      </Link>
-                      {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
-                      {task.status === "review" && <span className="badge ml-2 text-amber-700 dark:text-amber-400">On review</span>}
-                      {task.status === "todo" && task.reviewResult === "rejected" && (
-                        <span className="badge ml-2 text-red-600" title={task.reviewNote ?? undefined}>
-                          Checked: not OK
-                        </span>
-                      )}
-                      {task.status === "done" && task.reviewResult === "approved" && (
-                        <span className="badge ml-2 text-emerald-700 dark:text-emerald-400">Checked: OK</span>
-                      )}
-                      {task.startDate && task.startDate > today && task.status !== "done" && (
-                        <span className="badge ml-2 text-muted" title="Shows in your open tasks from this day">
-                          Starts {fmtDay(task.startDate)}
-                        </span>
-                      )}
-                      {others.length > 0 && (
-                        <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400">
-                          ● {others.length} working now
-                        </span>
-                      )}
-                      {task.repeat && task.dueDate && (
-                        <p className="text-xs text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
-                      )}
-                    </div>,
-                    <TypeChip key="type" repeat={task.repeat} />,
-                    assigneeName ? (
-                      <span key="assignee" className="whitespace-nowrap">
-                        {assigneeName}
-                      </span>
-                    ) : (
-                      <span key="assignee" className="text-muted">Unassigned</span>
-                    ),
-                    task.clientId ? (
-                      <Link key="client" href={`/clients/${task.clientId}`} className="text-muted hover:underline">
-                        {clientName}
-                      </Link>
-                    ) : (
-                      <span key="client" className="text-muted">—</span>
-                    ),
-                    projectName ? <span key="project">{projectName}</span> : <span key="project" className="text-muted">—</span>,
-                    projectName ? (
-                      <span key="kind" className="whitespace-nowrap text-muted">
-                        {KIND_LABEL[projectKind ?? "one_off"]}
-                      </span>
-                    ) : (
-                      <span key="kind" className="text-muted">—</span>
-                    ),
-                    task.dueDate ? (
-                      <span key="due" className="flex items-center gap-2 whitespace-nowrap">
-                        <span
-                          className={urgency === "critical" ? "font-medium text-red-600 dark:text-red-400" : undefined}
-                          title={urgency === "critical" ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
-                        >
-                          {fmtDay(task.dueDate)}
-                        </span>
-                        {urgency && urgency !== "on_track" && urgency !== "critical" && (
-                          <span
-                            className={`badge ${URGENCY_CLASS[urgency]}`}
-                            title={timeLeftLabel(task.dueDate, config.timeZone)}
-                          >
-                            {URGENCY_LABEL[urgency]}
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border text-left text-xs text-muted">
+              <tr>
+                <th className="w-8" />
+                <th className="px-3 py-2 font-medium">Task</th>
+                <th className="px-3 py-2 font-medium" title="W weekly · M monthly · O one-time">
+                  Repeat
+                </th>
+                <th className="px-3 py-2 font-medium">Assignee</th>
+                <th className="px-3 py-2 font-medium">Client</th>
+                <th className="px-3 py-2 font-medium">Project</th>
+                <th className="px-3 py-2 font-medium">Project type</th>
+                <th className="px-3 py-2 font-medium">Due</th>
+                <th className="px-3 py-2 font-medium" />
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map(({ task, clientName, assigneeName, projectName, projectKind }) => {
+                const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
+                const trackedSeconds = tracked.get(task.id);
+                const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
+                const manage = canManageTask(auth, task);
+                return (
+                  <TaskRow
+                    key={task.id}
+                    cells={[
+                      <div key="title">
+                        <Link href={`/tasks/${task.id}`} className="font-medium hover:underline" title={task.title}>
+                          {truncate(task.title, TITLE_MAX)}
+                        </Link>
+                        {task.deletedAt && <span className="badge ml-2 text-red-600">Deleted</span>}
+                        {task.status === "review" && (
+                          <span className="badge ml-2 text-amber-700 dark:text-amber-400">On review</span>
+                        )}
+                        {task.status === "todo" && task.reviewResult === "rejected" && (
+                          <span className="badge ml-2 text-red-600" title={task.reviewNote ?? undefined}>
+                            Checked: not OK
                           </span>
                         )}
-                      </span>
-                    ) : (
-                      <span key="due" className="text-muted">
-                        —
-                      </span>
-                    ),
-                  ]}
-                  actions={
-                    task.deletedAt ? (
-                      manage ? <RestoreTaskButton compact taskId={task.id} /> : null
-                    ) : (
-                      <>
-                        <TimerControls
-                          compact
-                          taskId={task.id}
-                          title={task.title}
-                          lockedTo={task.assigneeId && task.assigneeId !== me.id ? (assigneeName ?? "someone else") : null}
-                          done={task.status === "done" || task.status === "review"}
-                          runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
-                          otherTask={
-                            mine && mineTask && mine.taskId !== task.id ? { id: mineTask.id, title: mineTask.title } : null
+                        {task.status === "done" && task.reviewResult === "approved" && (
+                          <span className="badge ml-2 text-emerald-700 dark:text-emerald-400">Checked: OK</span>
+                        )}
+                        {task.startDate && task.startDate > today && task.status !== "done" && (
+                          <span className="badge ml-2 text-muted" title="Shows in your open tasks from this day">
+                            Starts {fmtDay(task.startDate)}
+                          </span>
+                        )}
+                        {others.length > 0 && (
+                          <span className="ml-2 text-xs text-emerald-700 dark:text-emerald-400">
+                            ● {others.length} working now
+                          </span>
+                        )}
+                        {task.repeat && task.dueDate && (
+                          <p className="text-xs text-muted">{periodLabel(task.repeat, task.dueDate)}</p>
+                        )}
+                      </div>,
+                      <TypeChip key="type" repeat={task.repeat} />,
+                      assigneeName ? (
+                        <span key="assignee" className="whitespace-nowrap">
+                          {assigneeName}
+                        </span>
+                      ) : (
+                        <span key="assignee" className="text-muted">
+                          Unassigned
+                        </span>
+                      ),
+                      task.clientId ? (
+                        <Link key="client" href={`/clients/${task.clientId}`} className="text-muted hover:underline">
+                          {clientName}
+                        </Link>
+                      ) : (
+                        <span key="client" className="text-muted">
+                          —
+                        </span>
+                      ),
+                      projectName ? (
+                        <span key="project">{projectName}</span>
+                      ) : (
+                        <span key="project" className="text-muted">
+                          —
+                        </span>
+                      ),
+                      projectName ? (
+                        <span key="kind" className="whitespace-nowrap text-muted">
+                          {KIND_LABEL[projectKind ?? "one_off"]}
+                        </span>
+                      ) : (
+                        <span key="kind" className="text-muted">
+                          —
+                        </span>
+                      ),
+                      task.dueDate ? (
+                        <span key="due" className="flex items-center gap-2 whitespace-nowrap">
+                          <span
+                            className={
+                              urgency === "critical" ? "font-medium text-red-600 dark:text-red-400" : undefined
+                            }
+                            title={urgency === "critical" ? timeLeftLabel(task.dueDate, config.timeZone) : undefined}
+                          >
+                            {fmtDay(task.dueDate)}
+                          </span>
+                          {urgency && urgency !== "on_track" && urgency !== "critical" && (
+                            <span
+                              className={`badge ${URGENCY_CLASS[urgency]}`}
+                              title={timeLeftLabel(task.dueDate, config.timeZone)}
+                            >
+                              {URGENCY_LABEL[urgency]}
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span key="due" className="text-muted">
+                          —
+                        </span>
+                      ),
+                    ]}
+                    actions={
+                      task.deletedAt ? (
+                        manage ? (
+                          <RestoreTaskButton compact taskId={task.id} />
+                        ) : null
+                      ) : (
+                        <>
+                          <TimerControls
+                            compact
+                            taskId={task.id}
+                            title={task.title}
+                            lockedTo={
+                              task.assigneeId && task.assigneeId !== me.id ? (assigneeName ?? "someone else") : null
+                            }
+                            done={task.status === "done" || task.status === "review"}
+                            runningSince={mine?.taskId === task.id ? mine.startedAt.toISOString() : null}
+                            otherTask={
+                              mine && mineTask && mine.taskId !== task.id
+                                ? { id: mineTask.id, title: mineTask.title }
+                                : null
+                            }
+                          />
+                          {canReviewTask(auth, task) && <ReviewActions taskId={task.id} title={task.title} />}
+                          {
+                            <TaskMenu
+                              canManage={manage}
+                              task={{
+                                id: task.id,
+                                title: task.title,
+                                clientId: task.clientId,
+                                projectId: task.projectId,
+                                assigneeId: task.assigneeId,
+                                dueDate: task.dueDate,
+                                repeat: task.repeat,
+                                repeatLeadDays: task.repeatLeadDays,
+                                repeatShow: task.repeatShow,
+                              }}
+                              clients={clients}
+                              users={users}
+                              projects={projects}
+                            />
                           }
-                        />
-                        {canReviewTask(auth, task) && <ReviewActions taskId={task.id} title={task.title} />}
-                        {manage && (
-                          <TaskMenu
-                            task={{
-                              id: task.id,
-                              title: task.title,
-                              clientId: task.clientId,
-                              projectId: task.projectId,
-                              assigneeId: task.assigneeId,
-                              dueDate: task.dueDate,
-                              repeat: task.repeat,
-                              repeatLeadDays: task.repeatLeadDays,
-                              repeatShow: task.repeatShow,
-                            }}
-                            clients={clients}
-                            users={users}
-                            projects={projects}
-                          />)}
-                      </>
-                    )
-                  }
-                  details={
-                    <div className="flex flex-wrap items-start gap-x-8 gap-y-2 text-sm">
-                      <div className="min-w-full">
-                        <p className="text-xs text-muted">Task</p>
-                        <p>{task.title}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted">Assignee</p>
-                        <p>{assigneeName ?? "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted">Tracked in Hubstaff</p>
-                        <p className="font-mono tabular-nums">{trackedSeconds ? fmtDuration(trackedSeconds) : "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted">Hubstaff</p>
-                        <p>{task.hubstaffTaskId ? `Task #${task.hubstaffTaskId}` : "Not created yet"}</p>
-                      </div>
-                      {(checklists.get(task.id)?.length ?? 0) > 0 && (
-                        <div className="min-w-full">
-                          <p className="mb-1 text-xs text-muted">Checklist</p>
-                          <InlineChecklist items={checklists.get(task.id)!} canTick={!task.deletedAt && task.status !== "done"} />
-                        </div>
-                      )}
-                      {(() => {
-                        const next = manage && task.repeat && !task.deletedAt ? nextHidden(upcoming.get(task.seriesId ?? -1), task.dueDate) : null;
-                        return next && task.repeat ? (
-                          <div className="min-w-full">
-                            <NextPeriodButton nextTaskId={next.id} label={periodLabel(task.repeat, next.dueDate)} />
+                        </>
+                      )
+                    }
+                    details={
+                      <div className="space-y-4 text-sm">
+                        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+                          {(
+                            [
+                              ["Status", STATUS_LABEL[task.status]],
+                              ["Team", task.teamId ? (teamNames.get(task.teamId) ?? "—") : "—"],
+                              ["Created", fmtDateTime(task.createdAt, config.timeZone)],
+                              ["Finished", task.doneAt ? fmtDateTime(task.doneAt, config.timeZone) : "—"],
+                              ["Tracked in Hubstaff", trackedSeconds ? fmtDuration(trackedSeconds) : "—"],
+                              ["Hubstaff", task.hubstaffTaskId ? `Task #${task.hubstaffTaskId}` : "Not created yet"],
+                              ["Reviewer", task.reviewerId ? (userNames.get(task.reviewerId) ?? "—") : "—"],
+                            ] as const
+                          ).map(([label, value]) => (
+                            <div key={label}>
+                              <dt className="text-xs text-muted">{label}</dt>
+                              <dd>{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+
+                        {task.status === "todo" && task.reviewResult === "rejected" && task.reviewNote && (
+                          <p className="rounded-md border border-red-500/40 p-2">
+                            <span className="font-medium text-red-600">Checked: not OK</span> — {task.reviewNote}
+                          </p>
+                        )}
+
+                        {task.description && (
+                          <div>
+                            <p className="text-xs text-muted">Instructions</p>
+                            <p className="whitespace-pre-wrap">{task.description}</p>
                           </div>
-                        ) : null;
-                      })()}
-                      <Link href={`/tasks/${task.id}`} className="self-end underline">
-                        Full details &amp; sessions →
-                      </Link>
-                    </div>
-                  }
-                />
-              );
-            })}
-            {visible.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-muted">
-                  No tasks here.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                        )}
+
+                        {(checklists.get(task.id)?.length ?? 0) > 0 && (
+                          <div>
+                            <p className="mb-1 text-xs text-muted">
+                              Checklist · {checklists.get(task.id)!.filter((i) => i.done).length} of{" "}
+                              {checklists.get(task.id)!.length} checked
+                            </p>
+                            <InlineChecklist
+                              items={checklists.get(task.id)!}
+                              canTick={!task.deletedAt && task.status !== "done"}
+                            />
+                          </div>
+                        )}
+
+                        {(() => {
+                          const next =
+                            manage && task.repeat && !task.deletedAt
+                              ? nextHidden(upcoming.get(task.seriesId ?? -1), task.dueDate)
+                              : null;
+                          return next && task.repeat ? (
+                            <NextPeriodButton nextTaskId={next.id} label={periodLabel(task.repeat, next.dueDate)} />
+                          ) : null;
+                        })()}
+                      </div>
+                    }
+                  />
+                );
+              })}
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-3 py-6 text-center text-muted">
+                    No tasks here.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

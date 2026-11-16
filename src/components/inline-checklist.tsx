@@ -18,9 +18,7 @@ export function InlineChecklist({
       <ul className="space-y-1">
         {items.map((item) => (
           <li key={item.id} className="text-sm">
-            <label
-              className={`flex items-center gap-2 ${canTick ? "cursor-pointer" : ""}`}
-            >
+            <label className={`flex items-center gap-2 ${canTick ? "cursor-pointer" : ""}`}>
               <input
                 type="checkbox"
                 checked={item.done}
@@ -29,19 +27,12 @@ export function InlineChecklist({
                 aria-label={item.text}
                 onChange={(e) =>
                   start(async () => {
-                    const res = await toggleChecklistItem(
-                      item.id,
-                      e.target.checked,
-                    );
-                    setError(
-                      res.ok ? null : (res.error ?? "Something went wrong"),
-                    );
+                    const res = await toggleChecklistItem(item.id, e.target.checked);
+                    setError(res.ok ? null : (res.error ?? "Something went wrong"));
                   })
                 }
               />
-              <span className={item.done ? "text-muted line-through" : ""}>
-                {item.text}
-              </span>
+              <span className={item.done ? "text-muted line-through" : ""}>{item.text}</span>
             </label>
           </li>
         ))}

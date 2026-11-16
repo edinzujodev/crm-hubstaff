@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { deleteTask, updateTask } from "@/app/actions";
 import { DateInput } from "@/components/date-input";
@@ -28,7 +29,9 @@ export function TaskMenu({
   clients,
   users,
   projects,
+  canManage = true,
 }: {
+  canManage?: boolean;
   task: TaskFields;
   clients: Option[];
   users: Option[];
@@ -37,6 +40,7 @@ export function TaskMenu({
   const [menu, setMenu] = useState<{ top: number; right: number } | null>(null);
   const [modal, setModal] = useState<"edit" | "delete" | null>(null);
   const button = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
 
   // Close the menu on any outside click, scroll, resize or Escape.
   useEffect(() => {
@@ -84,23 +88,37 @@ export function TaskMenu({
         <div
           role="menu"
           style={{ top: menu.top, right: menu.right }}
-          className="card fixed z-40 w-36 py-1 text-sm shadow-lg"
+          className="card fixed z-40 w-44 py-1 text-sm shadow-lg"
           onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
         >
           <button
             role="menuitem"
             className="block w-full cursor-pointer px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10"
-            onClick={() => choose("edit")}
+            onClick={() => {
+              setMenu(null);
+              router.push(`/tasks/${task.id}`);
+            }}
           >
-            Edit
+            Details &amp; sessions
           </button>
-          <button
-            role="menuitem"
-            className="block w-full cursor-pointer px-3 py-1.5 text-left text-red-600 hover:bg-black/5 dark:hover:bg-white/10"
-            onClick={() => choose("delete")}
-          >
-            Delete
-          </button>
+          {canManage && (
+            <>
+              <button
+                role="menuitem"
+                className="block w-full cursor-pointer px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/10"
+                onClick={() => choose("edit")}
+              >
+                Edit
+              </button>
+              <button
+                role="menuitem"
+                className="block w-full cursor-pointer px-3 py-1.5 text-left text-red-600 hover:bg-black/5 dark:hover:bg-white/10"
+                onClick={() => choose("delete")}
+              >
+                Delete
+              </button>
+            </>
+          )}
         </div>
       )}
       {modal === "edit" && (

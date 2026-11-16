@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  addChecklistItem,
-  removeChecklistItem,
-  setTaskInstructions,
-  toggleChecklistItem,
-} from "@/app/actions";
+import { addChecklistItem, removeChecklistItem, setTaskInstructions, toggleChecklistItem } from "@/app/actions";
 
 export type ChecklistItem = { id: number; text: string; done: boolean };
 
@@ -35,10 +30,7 @@ export function TaskChecklist({
   const [editingNotes, setEditingNotes] = useState(false);
   const doneCount = items.filter((i) => i.done).length;
 
-  const run = (
-    fn: () => Promise<{ ok: boolean; error?: string }>,
-    after?: () => void,
-  ) =>
+  const run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) =>
     start(async () => {
       const res = await fn();
       setError(res.ok ? null : (res.error ?? "Something went wrong"));
@@ -82,14 +74,7 @@ export function TaskChecklist({
             >
               Save
             </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => (
-                setNotes(description ?? ""),
-                setEditingNotes(false)
-              )}
-            >
+            <button type="button" className="btn" onClick={() => (setNotes(description ?? ""), setEditingNotes(false))}>
               Cancel
             </button>
           </div>
@@ -122,26 +107,17 @@ export function TaskChecklist({
       {items.length > 0 && (
         <ul className="divide-y divide-border rounded-md border border-border">
           {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-3 px-3 py-2 text-sm"
-            >
-              <label
-                className={`flex flex-1 items-center gap-3 ${canTick ? "cursor-pointer" : ""}`}
-              >
+            <li key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+              <label className={`flex flex-1 items-center gap-3 ${canTick ? "cursor-pointer" : ""}`}>
                 <input
                   type="checkbox"
                   checked={item.done}
                   disabled={pending || !canTick}
                   className="h-4 w-4 cursor-pointer"
                   aria-label={item.text}
-                  onChange={(e) =>
-                    run(() => toggleChecklistItem(item.id, e.target.checked))
-                  }
+                  onChange={(e) => run(() => toggleChecklistItem(item.id, e.target.checked))}
                 />
-                <span className={item.done ? "text-muted line-through" : ""}>
-                  {item.text}
-                </span>
+                <span className={item.done ? "text-muted line-through" : ""}>{item.text}</span>
               </label>
               {canEdit && (
                 <button
