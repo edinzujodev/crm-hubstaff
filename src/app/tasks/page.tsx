@@ -245,7 +245,9 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
   const asked = tabs.find((t) => t === show);
   const tab: Tab = asked && !(isWorker && managerOnly.includes(asked)) ? asked : "open";
   const matches = {
-    open: ({ task }: Row) => !task.deletedAt && task.status !== "done" && task.status !== "review",
+    // A repeat copy waiting for its start date stays out of the open lists until then.
+    open: ({ task }: Row) =>
+      !task.deletedAt && task.status !== "done" && task.status !== "review" && !(task.startDate && task.startDate > today),
     review: ({ task }: Row) => !task.deletedAt && task.status === "review",
     critical: (row: Row) => !row.task.deletedAt && row.task.status !== "done" && row.task.status !== "review" && urgent(row),
     finished: ({ task }: Row) => !task.deletedAt && task.status === "done",

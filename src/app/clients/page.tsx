@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { and, asc, count, isNull, ne } from "drizzle-orm";
+import { and, asc, count, isNull, lte, ne, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ClientActions } from "@/components/client-actions";
 import { NewClientForm } from "@/components/new-client-form";
@@ -20,7 +20,14 @@ async function ClientList() {
     db
       .select({ clientId: schema.tasks.clientId, n: count() })
       .from(schema.tasks)
-      .where(and(ne(schema.tasks.status, "done"), isNull(schema.tasks.deletedAt), scope))
+      .where(
+        and(
+          ne(schema.tasks.status, "done"),
+          isNull(schema.tasks.deletedAt),
+          or(isNull(schema.tasks.startDate), lte(schema.tasks.startDate, localDay(new Date(), config.timeZone))),
+          scope,
+        ),
+      )
       .groupBy(schema.tasks.clientId),
     trackedByClient(new Date(Date.parse(monthStart)), scope),
     db.select({ clientId: schema.projects.clientId, n: count() }).from(schema.projects).groupBy(schema.projects.clientId),
