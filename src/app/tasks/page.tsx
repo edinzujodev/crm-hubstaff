@@ -393,6 +393,15 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
             const others = openSessions.filter((s) => s.taskId === task.id && s.userId !== me?.id);
             const urgency = urgencyOf(task, teamLevels.get(task.teamId ?? -1) ?? DEFAULT_LEVELS, config.timeZone);
             const manage = canManageTask(auth, task);
+            const nextPeriod =
+              manage && task.repeat && !task.deletedAt
+                ? nextHidden(upcoming.get(task.seriesId ?? -1), task.dueDate)
+                : null;
+            const hasDetails =
+              (reviews.get(task.id)?.length ?? 0) > 0 ||
+              !!task.description ||
+              (checklists.get(task.id)?.length ?? 0) > 0 ||
+              !!nextPeriod;
             return {
               key: task.id,
               cells: [
@@ -531,7 +540,8 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                   }
                 </>
               ),
-              details: (
+              // Nothing to show means no arrow: only tasks with history, instructions, a checklist or a next period open.
+              details: hasDetails ? (
                 <div className="space-y-4 text-sm">
                   {(reviews.get(task.id)?.length ?? 0) > 0 && (
                     <div>
@@ -570,7 +580,7 @@ async function TaskList({ filter }: { filter: Promise<{ show?: string; scope?: s
                     ) : null;
                   })()}
                 </div>
-              ),
+              ) : undefined,
             };
           })}
         />
