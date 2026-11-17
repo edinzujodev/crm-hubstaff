@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { TabCard } from "@/components/tab-card";
-import { TeamLevelsForm } from "@/components/team-levels-form";
+import { UrgencyLevelsForm } from "@/components/urgency-levels-form";
 import { TemplateManager } from "@/components/template-manager";
 import { pageGuard } from "@/lib/auth";
 import { listTemplates } from "@/lib/templates";
@@ -33,13 +33,12 @@ async function ConfigContent({ searchParams }: { searchParams: Promise<{ tab?: s
 async function UrgencyTab({ admin }: { admin: boolean }) {
   const levels = await getLevels();
   return (
-    <section className="space-y-2">
-      <h2 className="font-semibold">Urgency levels</h2>
+    <section className="space-y-5">
       <p className="text-xs text-muted">
         How many hours before its due date a task becomes Critical or Approaching. The same for every team.
       </p>
       {admin ? (
-        <TeamLevelsForm approachingHours={levels.approachingHours} criticalHours={levels.criticalHours} />
+        <UrgencyLevelsForm approachingHours={levels.approachingHours} criticalHours={levels.criticalHours} />
       ) : (
         <p className="text-sm">
           Critical under {levels.criticalHours} hours, Approaching under {levels.approachingHours} hours. Only the super

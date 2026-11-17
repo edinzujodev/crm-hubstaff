@@ -10,6 +10,7 @@ import { signOut } from "@/app/actions";
 import { NavLink } from "@/components/nav-link";
 import { Topbar } from "@/components/topbar";
 import { TopbarStatus } from "@/components/topbar-status";
+import { SidebarToggle, ThemeToggle } from "@/components/sidebar-toggle";
 import { UserSwitcher } from "@/components/user-switcher";
 import { Toaster } from "@/components/toaster";
 import { PrimeProvider } from "@/components/prime-provider";
@@ -76,7 +77,7 @@ async function NavLinks() {
     ["/config", "Config", "pi-cog", role === "super_admin" || role === "leader"],
   ];
   return (
-    <nav aria-label="Main" className="flex flex-wrap gap-1 md:flex-col">
+    <nav aria-label="Main" className="flex flex-wrap gap-1.5 md:flex-col">
       {links
         .filter(([, , , show]) => show)
         .map(([href, label, icon]) => (
@@ -101,27 +102,39 @@ async function SyncStatus() {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   const mode = hubstaffMode();
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
-        {/* PrimeReact theme: green (noir: black on light, white on dark) in light and dark, picked by the system setting. */}
+        {/* PrimeReact theme: noir (black on light, white on dark). The script below picks light or dark from the saved choice, or the system setting. */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-light-noir/theme.css?v=5" media="(prefers-color-scheme: light)" />
+        <link id="theme-light" suppressHydrationWarning rel="stylesheet" href="/themes/lara-light-noir/theme.css?v=5" />
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/themes/lara-dark-noir/theme.css?v=5" media="(prefers-color-scheme: dark)" />
+        <link id="theme-dark" suppressHydrationWarning rel="stylesheet" href="/themes/lara-dark-noir/theme.css?v=5" media="not all" />
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `try{var d=document.documentElement,t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark"&&t!=="blue")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";d.dataset.theme=t;var dk=t!=="light";d.style.colorScheme=dk?"dark":"light";document.getElementById("theme-light").media=dk?"not all":"all";document.getElementById("theme-dark").media=dk?"all":"not all";if(localStorage.getItem("sidebar")==="collapsed")d.dataset.sidebar="collapsed"}catch(e){}`,
+          }}
+        />
       </head>
       <body className="min-h-full font-sans">
         <PrimeProvider>
         <div className="flex min-h-screen flex-col md:flex-row">
-          <aside className="relative z-40 flex flex-col gap-4 border-b border-border bg-surface px-3 py-3 md:sticky md:top-0 md:h-screen md:w-56 md:shrink-0 md:border-b-0 md:border-r md:py-5">
-            <Link href="/" className="px-3 font-semibold">
-              Client tracker
-            </Link>
+          <aside className="sidebar relative z-40 flex flex-col gap-5 border-b border-border bg-surface px-3 py-3 text-foreground md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r md:pb-5 md:pt-0">
+            <div className="sb-head -mx-3 flex items-center justify-between gap-2 border-b border-border px-6 py-4">
+              <Link href="/" className="sb-label py-1 text-base font-semibold">
+                Client tracker
+              </Link>
+              <span className="flex items-center gap-1">
+                <ThemeToggle />
+                <SidebarToggle />
+              </span>
+            </div>
             <Suspense>
               <NavLinks />
             </Suspense>
             <div className="flex flex-col items-start gap-3 md:mt-auto">
               <span
-                className={`badge ${mode === "mock" ? "border-amber-400 text-amber-700 dark:text-amber-400" : "border-emerald-500 text-emerald-700 dark:text-emerald-400"}`}
+                className={`sb-label badge ${mode === "mock" ? "border-amber-400 text-amber-400" : "border-emerald-500 text-emerald-400"}`}
                 title={mode === "mock" ? "Hours are generated from CRM sessions. Set HUBSTAFF_* in .env for live data." : "Using the Hubstaff API"}
               >
                 Hubstaff: {mode}

@@ -437,24 +437,22 @@ async function TaskList({
         )}
         actions={
           !isWorker ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {tab !== "recurring" && (
-                <TaskScopeToggle
-                  scope={scope}
-                  teamLabel={
-                    auth.role === "super_admin"
-                      ? "Everyone's tasks"
-                      : "Team tasks"
-                  }
-                />
-              )}
-              <NewTaskForm
-                clients={clients}
-                users={users}
-                projects={projects}
-                templates={templates}
-              />
-            </div>
+            <NewTaskForm
+              clients={clients}
+              users={users}
+              projects={projects}
+              templates={templates}
+            />
+          ) : undefined
+        }
+        toolbar={
+          !isWorker && tab !== "recurring" ? (
+            <TaskScopeToggle
+              scope={scope}
+              teamLabel={
+                auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"
+              }
+            />
           ) : undefined
         }
       >

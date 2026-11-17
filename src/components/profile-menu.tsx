@@ -48,13 +48,13 @@ export function ProfileMenu({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full cursor-pointer items-center gap-2 rounded-full border border-border py-1 pl-1 pr-3 text-sm transition-colors duration-200 hover:bg-primary/10"
+        className="sb-profile flex w-full cursor-pointer items-center gap-2 rounded-full border border-border py-1 pl-1 pr-3 text-sm transition-colors duration-200 hover:bg-primary/10"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-(--primary-fg)">
           {initials}
         </span>
-        <span className="min-w-0 flex-1 truncate text-left font-medium">{name}</span>
-        <span aria-hidden className="text-xs text-muted">
+        <span className="sb-label min-w-0 flex-1 truncate text-left font-medium">{name}</span>
+        <span aria-hidden className="sb-label text-xs text-muted">
           {open ? "▴" : "▾"}
         </span>
       </button>

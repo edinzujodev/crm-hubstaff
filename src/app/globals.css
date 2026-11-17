@@ -5,6 +5,8 @@
 @import "tailwindcss";
 @import "primeicons/primeicons.css";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, [data-theme="blue"], [data-theme="blue"] *));
+
 :root {
   --background: #f1f5f9;
   --surface: #ffffff;
@@ -21,8 +23,8 @@
   --viz-muted: #898781;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+html[data-theme="dark"],
+html[data-theme="blue"] {
     --background: #0f172a;
     --surface: #1e293b;
     --foreground: #e2e8f0;
@@ -35,7 +37,6 @@
     --viz-grid: #2c2c2a;
     --viz-axis: #383835;
   }
-}
 
 /* PrimeReact's green theme, tuned to noir so it matches the rest of the app. */
 html:root {
@@ -45,13 +46,12 @@ html:root {
   --highlight-text-color: #09090b;
   --font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
-@media (prefers-color-scheme: dark) {
-  html:root {
+html[data-theme="dark"]:root,
+html[data-theme="blue"]:root {
     --primary-color: #fafafa;
     --primary-color-text: #18181b;
     --highlight-bg: color-mix(in srgb, #fafafa 16%, transparent);
     --highlight-text-color: #fafafa;
-  }
 }
 
 @theme {
@@ -200,6 +200,32 @@ body {
 }
 .p-datepicker {
   font-size: 0.8125rem;
+  padding: 0.25rem;
+  min-width: 0;
+}
+.p-datepicker .p-datepicker-header {
+  padding: 0.25rem 0.25rem 0.5rem;
+}
+.p-datepicker table {
+  font-size: 0.8125rem;
+  margin: 0.25rem 0 0;
+}
+.p-datepicker table th {
+  padding: 0.25rem;
+}
+.p-datepicker table th > span,
+.p-datepicker table td {
+  padding: 0.125rem;
+}
+.p-datepicker table td > span {
+  width: 2rem;
+  height: 2rem;
+}
+.p-datepicker .p-datepicker-buttonbar {
+  padding: 0.5rem 0 0.25rem;
+}
+.p-datepicker .p-datepicker-buttonbar .p-button {
+  padding: 0.3rem 0.6rem;
 }
 
 /* The theme gives the dropdown label width: 1%, so a dropdown that is not full width (w-auto) shrinks to
@@ -242,19 +268,22 @@ body {
   text-decoration: underline;
   background: transparent;
 }
-@media (prefers-color-scheme: dark) {
-  .p-button:not(:disabled):not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(
+html[data-theme="dark"] .p-button:not(:disabled):not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(
+      .p-button-danger
+    ):not(.p-button-success):hover,
+html[data-theme="blue"] .p-button:not(:disabled):not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(
       .p-button-danger
     ):not(.p-button-success):hover {
     background: #d4d4d8;
     border-color: #d4d4d8;
     color: #09090b;
   }
-  .p-button.p-button-outlined:not(:disabled):hover,
-  .p-button.p-button-text:not(:disabled):hover {
+html[data-theme="dark"] .p-button.p-button-outlined:not(:disabled):hover,
+html[data-theme="blue"] .p-button.p-button-outlined:not(:disabled):hover,
+html[data-theme="dark"] .p-button.p-button-text:not(:disabled):hover,
+html[data-theme="blue"] .p-button.p-button-text:not(:disabled):hover {
     background: rgb(250 250 250 / 0.12);
   }
-}
 
 /* Green outline buttons (Finish) get a soft green fill on hover instead of grey. */
 .p-button.p-button-outlined.p-button-success:not(:disabled):hover {
@@ -361,4 +390,147 @@ body {
   border-bottom-color: var(--border);
 }
 
+
+
+/* Urgency levels slider: the colours of the three zones are the track, the handles mark the two levels. */
+.urgency-slider.p-slider {
+  height: 0.75rem;
+  border-radius: 9999px;
+}
+.urgency-slider.p-slider .p-slider-range {
+  background: transparent;
+}
+.urgency-slider.p-slider .p-slider-handle {
+  height: 1.5rem;
+  width: 1.5rem;
+  margin-top: -0.75rem;
+  margin-left: -0.75rem;
+  background: var(--surface);
+  border: 2px solid var(--foreground);
+}
+
+
+/* Tabs, the dropdown and the button next to them are all the same height. */
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem .p-menuitem-link,
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem.p-highlight .p-menuitem-link,
+.p-tabmenu .p-tabmenu-nav .p-tabmenuitem:not(.p-highlight) .p-menuitem-link {
+  height: 2.5rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  align-items: center;
+}
+.tab-actions .p-dropdown,
+.tab-actions .p-button {
+  height: 2.5rem;
+}
+.tab-actions .p-dropdown .p-dropdown-label {
+  display: flex;
+  align-items: center;
+}
+
+/* The side menu is inverted: dark in every mode. Boxes that open from it (the profile card) stay light. */
+.sidebar {
+  --surface: #18181b;
+  --foreground: #f4f4f5;
+  --muted: #a1a1aa;
+  --border: #3f3f46;
+  --primary: #fafafa;
+  --primary-fg: #18181b;
+}
+.sidebar .card {
+  color: #0f172a;
+  --surface: #ffffff;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --primary: #18181b;
+  --primary-fg: #fafafa;
+}
+
+/* In the dark page theme the boxes that open from the menu follow the page. */
+html[data-theme="dark"] .sidebar .card,
+html[data-theme="blue"] .sidebar .card {
+  color: #e2e8f0;
+  --surface: #1e293b;
+  --foreground: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #334155;
+  --primary: #fafafa;
+  --primary-fg: #18181b;
+}
+
+/* Collapsed side menu (wide screens): icons only. */
+@media (min-width: 768px) {
+  .sidebar {
+    transition: width 0.2s ease;
+  }
+  html[data-sidebar="collapsed"] .sidebar {
+    width: 4.5rem;
+  }
+  html[data-sidebar="collapsed"] .sidebar .sb-label {
+    display: none;
+  }
+  html[data-sidebar="collapsed"] .sidebar .sb-head {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  html[data-sidebar="collapsed"] .sidebar nav a {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  html[data-sidebar="collapsed"] .sidebar nav a > span:last-child {
+    gap: 0;
+  }
+  html[data-sidebar="collapsed"] .sidebar .sb-profile {
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 9999px;
+  }
+}
+
+html[data-sidebar="collapsed"] .sb-toggle i {
+  transform: rotate(180deg);
+}
+
+/* The colours button shows the look you are on: a sun (light), a moon (dark) or a palette (blue). */
+.sb-theme-dark,
+.sb-theme-blue {
+  display: none;
+}
+html[data-theme="dark"] .sb-theme-light,
+html[data-theme="blue"] .sb-theme-light {
+  display: none;
+}
+html[data-theme="dark"] .sb-theme-dark,
+html[data-theme="blue"] .sb-theme-blue {
+  display: inline;
+}
+
+/* The side menu is the opposite of the page: dark on the light page, light on the dark page. */
+html[data-theme="dark"] .sidebar {
+  --surface: #f8fafc;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --primary: #18181b;
+  --primary-fg: #fafafa;
+}
+html[data-theme="dark"] .sidebar .badge.border-emerald-500 {
+  color: #047857;
+}
+html[data-theme="dark"] .sidebar .badge.border-amber-400 {
+  color: #b45309;
+}
+
+/* Blue: the dark page, and a menu in the same colour as the page. */
+html[data-theme="blue"] .sidebar {
+  --surface: #0f172a;
+  --foreground: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #334155;
+  --primary: #fafafa;
+  --primary-fg: #18181b;
+}
 

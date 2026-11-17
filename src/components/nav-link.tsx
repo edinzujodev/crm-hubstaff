@@ -14,7 +14,8 @@ export function NavLink({ href, icon, children }: { href: string; icon: string; 
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`group relative flex items-center overflow-hidden rounded-md px-3 py-2 text-sm transition-colors duration-200 hover:bg-primary/10 focus-visible:bg-primary/10 ${
+      title={typeof children === "string" ? children : undefined}
+      className={`group relative flex items-center overflow-hidden rounded-md px-3 py-2.5 text-sm transition-colors duration-200 hover:bg-primary/10 focus-visible:bg-primary/10 ${
         active ? "bg-primary/10 font-semibold" : "text-foreground/80 hover:text-foreground"
       }`}
     >
@@ -24,9 +25,9 @@ export function NavLink({ href, icon, children }: { href: string; icon: string; 
           active ? "scale-y-100" : "scale-y-0 group-hover:scale-y-100 group-focus-visible:scale-y-100"
         }`}
       />
-      <span className="flex items-center gap-3 transition-transform duration-200 ease-out group-hover:translate-x-1.5 group-focus-visible:translate-x-1.5 motion-reduce:transform-none motion-reduce:transition-none">
+      <span className="flex items-center gap-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1.5 group-focus-visible:translate-x-1.5 motion-reduce:transform-none motion-reduce:transition-none">
         <i aria-hidden className={`pi ${icon} w-4 text-center text-sm`} />
-        {children}
+        <span className="sb-label">{children}</span>
       </span>
     </Link>
   );
