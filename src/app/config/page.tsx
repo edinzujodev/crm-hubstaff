@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/page-skeleton";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { TabCard } from "@/components/tab-card";
@@ -53,7 +54,7 @@ export default function ConfigPage({ searchParams }: PageProps<"/config">) {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Config</h1>
-      <Suspense fallback={<p className="text-muted">Loading…</p>}>
+      <Suspense fallback={<ListSkeleton rows={3} />}>
         <ConfigContent searchParams={searchParams} />
       </Suspense>
     </div>

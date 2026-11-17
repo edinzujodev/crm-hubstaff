@@ -202,6 +202,9 @@ export const tasks = pgTable(
     // The team that owns the task: its leader sees it and sets its urgency levels.
     teamId: integer("team_id").references((): AnyPgColumn => teams.id),
     status: taskStatus("status").notNull().default("todo"),
+    // Blocked: the task cannot move on right now. blockedReason is optional. Cleared when it is unblocked.
+    blockedAt: timestamp("blocked_at", { withTimezone: true }),
+    blockedReason: text("blocked_reason"),
     dueDate: date("due_date"),
     // Set once the task has been created in Hubstaff (on first Start).
     hubstaffTaskId: integer("hubstaff_task_id").unique(),

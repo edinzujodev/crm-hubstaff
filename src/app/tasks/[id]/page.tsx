@@ -1,3 +1,4 @@
+import { DetailSkeleton } from "@/components/page-skeleton";
 import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
@@ -648,7 +649,7 @@ export default function TaskPage({
   searchParams,
 }: PageProps<"/tasks/[id]">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<DetailSkeleton />}>
       <TaskDetail params={params} searchParams={searchParams} />
     </Suspense>
   );

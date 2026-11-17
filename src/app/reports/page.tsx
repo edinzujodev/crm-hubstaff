@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/page-skeleton";
 import { DataGrid } from "@/components/data-grid";
 import { Button, Select } from "@/components/ui";
 import Link from "next/link";
@@ -317,7 +318,7 @@ export default function ReportsPage({ searchParams }: PageProps<"/reports">) {
   return (
     <div className="space-y-4">
       <h1 className="sr-only">Reports</h1>
-      <Suspense fallback={<p className="text-muted">Loading report…</p>}>
+      <Suspense fallback={<ListSkeleton />}>
         <Report searchParams={searchParams} />
       </Suspense>
     </div>

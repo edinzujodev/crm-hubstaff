@@ -1,3 +1,5 @@
+import { DashboardSkeleton } from "@/components/page-skeleton";
+import { TableSkeleton } from "@/components/page-skeleton";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -47,7 +49,7 @@ async function Dashboard() {
           customTitle: r.title,
           config,
           body: (
-            <Suspense fallback={<p className="py-6 text-center text-sm text-muted">Loading…</p>}>
+            <Suspense fallback={<TableSkeleton rows={4} />}>
               <WidgetBody type={type} raw={r.config} auth={auth} />
             </Suspense>
           ),
@@ -60,7 +62,7 @@ async function Dashboard() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<h1 className="sr-only">Dashboard</h1>}>
+    <Suspense fallback={<DashboardSkeleton />}>
       <Dashboard />
     </Suspense>
   );

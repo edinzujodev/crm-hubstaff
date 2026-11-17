@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/page-skeleton";
 import { DataGrid } from "@/components/data-grid";
 import { TabCard } from "@/components/tab-card";
 import Link from "next/link";
@@ -128,7 +129,7 @@ export default function ClientsPage({ searchParams }: PageProps<"/clients">) {
     <div className="space-y-4">
       <h1 className="sr-only">Clients</h1>
       <NewClientForm />
-      <Suspense fallback={<p className="text-muted">Loading clients…</p>}>
+      <Suspense fallback={<ListSkeleton />}>
         <ClientListLoader show={show} />
       </Suspense>
     </div>

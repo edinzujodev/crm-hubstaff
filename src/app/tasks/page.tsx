@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/page-skeleton";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
@@ -86,6 +87,7 @@ function SeriesTable({
   return (
     <DataGrid
       flush
+      alwaysSearch
       empty={
         <>
           No recurring tasks yet. Add a task and answer Yes to &quot;Is this
@@ -450,16 +452,6 @@ async function TaskList({
             />
           ) : undefined
         }
-        toolbar={
-          !isWorker && tab !== "recurring" ? (
-            <TaskScopeToggle
-              scope={scope}
-              teamLabel={
-                auth.role === "super_admin" ? "Everyone's tasks" : "Team tasks"
-              }
-            />
-          ) : undefined
-        }
       >
         {tab === "recurring" ? (
           <SeriesTable
@@ -489,6 +481,19 @@ async function TaskList({
         ) : (
           <DataGrid
             flush
+            alwaysSearch
+            toolbar={
+              !isWorker ? (
+                <TaskScopeToggle
+                  scope={scope}
+                  teamLabel={
+                    auth.role === "super_admin"
+                      ? "Everyone's tasks"
+                      : "Team tasks"
+                  }
+                />
+              ) : undefined
+            }
             empty="No tasks here."
             headers={[
               "Task",
@@ -816,7 +821,7 @@ export default function Home({ searchParams }: PageProps<"/tasks">) {
   return (
     <div className="space-y-4">
       <h1 className="sr-only">Tasks</h1>
-      <Suspense fallback={<p className="text-muted">Loading tasks…</p>}>
+      <Suspense fallback={<ListSkeleton />}>
         <TaskList filter={filter} />
       </Suspense>
     </div>

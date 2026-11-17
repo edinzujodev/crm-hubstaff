@@ -1,3 +1,4 @@
+import { DetailSkeleton, TableSkeleton } from "@/components/page-skeleton";
 import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import Link from "next/link";
@@ -16,7 +17,7 @@ import { canReviewTask } from "@/lib/review";
 import { fmtDateTime } from "@/lib/format";
 import { config } from "@/lib/config";
 
-const Loading = () => <p className="py-6 text-center text-sm text-muted">Loading…</p>;
+const Loading = () => <TableSkeleton rows={3} />;
 
 /** One team's tasks: counts, who has what, and the open tasks. The Team page itself is only for setting teams up. */
 async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -157,7 +158,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
 
 export default function TeamDetailPage({ params }: PageProps<"/team/[id]">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<DetailSkeleton />}>
       <TeamDetail params={params} />
     </Suspense>
   );

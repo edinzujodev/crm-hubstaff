@@ -50,9 +50,6 @@ export function TaskMenu({
         label={`Actions for ${task.title}`}
         items={[
           { label: "View", onSelect: () => router.push(`/tasks/${task.id}`) },
-          ...(task.repeat && task.seriesId
-            ? [{ label: "Recurring task", onSelect: () => router.push(`/recurring/${task.seriesId}`) }]
-            : []),
           ...(canManage
             ? [
                 { label: "Edit", onSelect: () => setModal("edit" as const) },

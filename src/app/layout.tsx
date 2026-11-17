@@ -1,3 +1,4 @@
+import { NavSkeleton, ProfileSkeleton } from "@/components/page-skeleton";
 import { Button } from "@/components/ui";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -129,7 +130,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <SidebarToggle />
               </span>
             </div>
-            <Suspense>
+            <Suspense fallback={<NavSkeleton />}>
               <NavLinks />
             </Suspense>
             <div className="flex flex-col items-start gap-3 md:mt-auto">
@@ -139,7 +140,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               >
                 Hubstaff: {mode}
               </span>
-              <Suspense>
+              <Suspense fallback={<ProfileSkeleton />}>
                 <Account />
               </Suspense>
             </div>

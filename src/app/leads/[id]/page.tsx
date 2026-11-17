@@ -1,3 +1,4 @@
+import { DetailSkeleton } from "@/components/page-skeleton";
 import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import Link from "next/link";
@@ -63,7 +64,7 @@ async function LeadDetail({ params }: { params: Promise<{ id: string }> }) {
 
 export default function LeadPage({ params }: PageProps<"/leads/[id]">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<DetailSkeleton />}>
       <LeadDetail params={params} />
     </Suspense>
   );

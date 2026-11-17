@@ -1,3 +1,4 @@
+import { FormSkeleton } from "@/components/page-skeleton";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -65,7 +66,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <div className="mx-auto w-full max-w-md space-y-4 pt-8">
       <h1 className="text-xl font-semibold">Sign in to Client tracker</h1>
-      <Suspense fallback={<p className="text-muted">Loading…</p>}>
+      <Suspense fallback={<FormSkeleton />}>
         <LoginContent searchParams={searchParams} />
       </Suspense>
     </div>

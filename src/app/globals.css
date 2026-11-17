@@ -159,7 +159,7 @@ body {
 }
 .p-dropdown .p-dropdown-label,
 .p-dropdown .p-dropdown-label.p-inputtext {
-  padding: 0.3rem 0.65rem;
+  padding: 0.4rem 0.65rem;
 }
 .p-dropdown .p-dropdown-trigger {
   width: 2.25rem;
@@ -194,6 +194,10 @@ body {
 }
 .p-menu .p-menuitem-link {
   padding: 0.5rem 0.75rem;
+}
+.p-menu .p-menuitem.text-red-600 .p-menuitem-icon,
+.p-menu .p-menuitem.text-red-600 .p-menuitem-text {
+  color: inherit;
 }
 .p-calendar .p-inputtext {
   padding: 0.4rem 0.65rem;
@@ -417,14 +421,6 @@ html[data-theme="blue"] .p-button.p-button-text:not(:disabled):hover {
   height: 2.5rem;
   padding-top: 0;
   padding-bottom: 0;
-  align-items: center;
-}
-.tab-actions .p-dropdown,
-.tab-actions .p-button {
-  height: 2.5rem;
-}
-.tab-actions .p-dropdown .p-dropdown-label {
-  display: flex;
   align-items: center;
 }
 

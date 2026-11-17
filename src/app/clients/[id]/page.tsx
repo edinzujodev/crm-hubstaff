@@ -1,3 +1,4 @@
+import { DetailSkeleton } from "@/components/page-skeleton";
 import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
@@ -315,7 +316,7 @@ function TotalsTable({ rows }: { rows: { label: string; tracked: number; active:
 
 export default function ClientPage({ params, searchParams }: PageProps<"/clients/[id]">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<DetailSkeleton />}>
       <ClientDetail params={params} searchParams={searchParams} />
     </Suspense>
   );

@@ -50,7 +50,7 @@ export function PeopleList({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 px-4">
+      <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
         <InputText
           type="search"
           value={q}

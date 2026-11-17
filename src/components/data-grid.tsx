@@ -53,6 +53,8 @@ export function DataGrid({
   plain,
   flush,
   noHeader,
+  alwaysSearch,
+  toolbar,
 }: {
   headers: GridHeader[];
   rows: GridRow[];
@@ -63,6 +65,10 @@ export function DataGrid({
   /** No card around the table: it sits flush inside a box that already has one (like TabCard). */
   flush?: boolean;
   noHeader?: boolean;
+  /** Show the search box even for short lists (normally only above 8 rows). */
+  alwaysSearch?: boolean;
+  /** Shown on the right of the search bar, in place of the row count. */
+  toolbar?: ReactNode;
 }) {
   const [expanded, setExpanded] = useState<DataTableExpandedRows>({});
   const [query, setQuery] = useState("");
@@ -84,7 +90,7 @@ export function DataGrid({
     [rows],
   );
   const shown = query.trim() ? prepared.filter((r) => r._search.includes(query.trim().toLowerCase())) : prepared;
-  const searchable = !plain && !noHeader && rows.length > 8;
+  const searchable = !plain && !noHeader && (alwaysSearch || rows.length > 8);
 
   const toggle = (key: string | number) =>
     setExpanded((cur) => {
@@ -106,9 +112,11 @@ export function DataGrid({
             aria-label="Search this list"
             className="w-64 max-w-full"
           />
-          <span className="text-xs text-muted">
-            {shown.length === rows.length ? `${rows.length} rows` : `${shown.length} of ${rows.length}`}
-          </span>
+          {toolbar ?? (
+            <span className="text-xs text-muted">
+              {shown.length === rows.length ? `${rows.length} rows` : `${shown.length} of ${rows.length}`}
+            </span>
+          )}
         </div>
       )}
       <DataTable

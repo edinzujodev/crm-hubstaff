@@ -32,7 +32,7 @@ export function TabCard({
           </div>
           {toolbar && <div className="flex items-center gap-2 pb-1.5">{toolbar}</div>}
         </div>
-        <div className={padded ? "p-4" : "pt-4"}>{children}</div>
+        <div className={padded ? "p-4" : undefined}>{children}</div>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/page-skeleton";
 import { TabCard } from "@/components/tab-card";
 import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
@@ -170,7 +171,7 @@ export default function LeadsPage({ searchParams }: PageProps<"/leads">) {
   return (
     <div className="space-y-4">
       <h1 className="sr-only">Leads</h1>
-      <Suspense fallback={<p className="text-muted">Loading leads…</p>}>
+      <Suspense fallback={<ListSkeleton />}>
         <LeadList filter={filter} />
       </Suspense>
     </div>

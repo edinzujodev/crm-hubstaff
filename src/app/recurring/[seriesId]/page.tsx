@@ -1,3 +1,4 @@
+import { DetailSkeleton } from "@/components/page-skeleton";
 import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
@@ -237,7 +238,7 @@ async function SeriesDetail({
 
 export default function SeriesPage({ params, searchParams }: PageProps<"/recurring/[seriesId]">) {
   return (
-    <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    <Suspense fallback={<DetailSkeleton />}>
       <SeriesDetail params={params} searchParams={searchParams} />
     </Suspense>
   );

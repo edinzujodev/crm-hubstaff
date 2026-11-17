@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/page-skeleton";
 import { DataGrid } from "@/components/data-grid";
 import { TabCard } from "@/components/tab-card";
 import Link from "next/link";
@@ -217,7 +218,7 @@ export default function TeamPage({ searchParams }: PageProps<"/team">) {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Teams</h1>
-      <Suspense fallback={<p className="text-muted">Loading…</p>}>
+      <Suspense fallback={<ListSkeleton />}>
         <TeamLoader show={show} />
       </Suspense>
     </div>
