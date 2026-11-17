@@ -547,7 +547,9 @@ async function TaskList({
                         className="font-medium hover:underline"
                         title={task.title}
                       >
-                        {truncate(task.title, TITLE_MAX)}
+                        {task.repeat && task.dueDate
+                          ? periodLabel(task.repeat, task.dueDate)
+                          : truncate(task.title, TITLE_MAX)}
                       </Link>
                       {task.deletedAt && (
                         <span className="badge ml-2 text-red-600">Deleted</span>
@@ -589,7 +591,7 @@ async function TaskList({
                       )}
                       {task.repeat && task.dueDate && (
                         <p className="text-xs text-muted">
-                          {periodLabel(task.repeat, task.dueDate)}
+                          {truncate(task.title, TITLE_MAX)}
                         </p>
                       )}
                     </div>,

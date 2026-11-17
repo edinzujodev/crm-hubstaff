@@ -231,13 +231,15 @@ async function TaskDetail({
       <section className="card flex flex-wrap items-center justify-between gap-4 p-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold">{task.title}</h1>
+            <h1 className="text-xl font-semibold">
+              {task.repeat && task.dueDate
+                ? periodLabel(task.repeat, task.dueDate)
+                : task.title}
+            </h1>
             <span className="badge">{statusLabel}</span>
           </div>
           {task.repeat && task.dueDate && (
-            <p className="text-sm text-muted">
-              {periodLabel(task.repeat, task.dueDate)}
-            </p>
+            <p className="text-sm text-muted">{task.title}</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-4">
