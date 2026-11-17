@@ -632,11 +632,11 @@ export async function approveTask(taskId: number, note?: string) {
   });
 }
 
-/** Sends the task back to its assignee as "checked, not OK" with the reason. */
+/** Sends the task back to its assignee as "Returned" with the reason. */
 export async function rejectTask(taskId: number, reason: string) {
   return run(async () => {
     const { auth } = await requireReviewer(taskId);
-    const why = z.string().trim().min(1, "Write why it is not OK").max(2000).parse(reason);
+    const why = z.string().trim().min(1, "Write why you are returning it").max(2000).parse(reason);
     const now = new Date();
     await db
       .update(schema.tasks)
@@ -730,11 +730,13 @@ export async function removeChecklistItem(itemId: number) {
 
 export async function setTaskInstructions(taskId: number, text: string) {
   return run(async () => {
-    await requireTask(taskId, "manage");
+    const { task } = await requireTask(taskId, "manage");
+    // On a recurring task the instructions also go to every later copy that is not finished.
+    const ids = [task.id, ...(await laterCopies(task)).map((t) => t.id)];
     await db
       .update(schema.tasks)
       .set({ description: text.trim().slice(0, 5000) || null })
-      .where(eq(schema.tasks.id, taskId));
+      .where(inArray(schema.tasks.id, ids));
     return undefined;
   });
 }

@@ -22,12 +22,15 @@ export function TaskChecklist({
   items,
   canEdit,
   canTick,
+  template,
 }: {
   taskId: number;
   description: string | null;
   items: ChecklistItem[];
   canEdit: boolean;
   canTick: boolean;
+  /** A recurring task's setup, not a list to work through: no ticking or progress, and edits reach every new copy. */
+  template?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +117,7 @@ export function TaskChecklist({
         <section className="card space-y-3 p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold">Checklist</h2>
-            {items.length > 0 && (
+            {items.length > 0 && !template && (
               <span className="text-sm text-muted">
                 <span className="font-mono tabular-nums">
                   {doneCount}/{items.length}
@@ -123,7 +126,13 @@ export function TaskChecklist({
               </span>
             )}
           </div>
-          {items.length > 0 && (
+          {template && (
+            <p className="text-sm text-muted">
+              These steps are added to every occurrence. Each occurrence has its
+              own copy to tick off.
+            </p>
+          )}
+          {items.length > 0 && !template && (
             <div
               className="h-1.5 overflow-hidden rounded-full bg-border"
               aria-hidden
@@ -144,19 +153,29 @@ export function TaskChecklist({
                   <label
                     className={`flex flex-1 items-center gap-3 ${canTick ? "cursor-pointer" : ""}`}
                   >
-                    <Checkbox
-                      checked={item.done}
-                      disabled={pending || !canTick}
-                      className="h-4 w-4 cursor-pointer"
-                      aria-label={item.text}
-                      onChange={(e) =>
-                        run(() =>
-                          toggleChecklistItem(item.id, e.target.checked),
-                        )
-                      }
-                    />
+                    {!template && (
+                      <Checkbox
+                        checked={item.done}
+                        disabled={pending || !canTick}
+                        className="h-4 w-4 cursor-pointer"
+                        aria-label={item.text}
+                        onChange={(e) =>
+                          run(() =>
+                            toggleChecklistItem(item.id, e.target.checked),
+                          )
+                        }
+                      />
+                    )}
+                    {template && (
+                      <i
+                        aria-hidden
+                        className="pi pi-circle text-[0.4rem] text-muted"
+                      />
+                    )}
                     <span
-                      className={item.done ? "text-muted line-through" : ""}
+                      className={
+                        item.done && !template ? "text-muted line-through" : ""
+                      }
                     >
                       {item.text}
                     </span>

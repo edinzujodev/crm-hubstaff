@@ -2,7 +2,7 @@
 
 import { Button, InputText, InputTextarea, Select } from "@/components/ui";
 import { SelectButton } from "primereact/selectbutton";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createTask } from "@/app/actions";
 import { DateInput } from "@/components/date-input";
 import { Modal } from "@/components/modal";
@@ -72,9 +72,13 @@ function TaskForm({
   const [notes, setNotes] = useState("");
   const [checklist, setChecklist] = useState("");
   const hubstaffWarning = state?.ok ? state.data.hubstaffError : undefined;
+  const titleRef = useRef(title);
+  useEffect(() => {
+    titleRef.current = title;
+  });
 
   useEffect(() => {
-    if (state?.ok) notify({ message: "Task created", detail: title });
+    if (state?.ok) notify({ message: "Task created", detail: titleRef.current });
     if (state?.ok && !state.data.hubstaffError) onDone();
   }, [state, onDone]);
 

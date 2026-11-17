@@ -165,6 +165,13 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
   return (
     <div className="space-y-6">
       <form className="card flex flex-wrap items-end gap-2 p-3">
+        <RangeSelect
+          options={presets.map((p) => ({
+            label: p.label,
+            href: `/reports?${reportQuery({ ...filter, from: p.from, to: p.to })}`,
+            selected: p.from === filter.from && p.to === filter.to,
+          }))}
+        />
         <label className="flex flex-col gap-1 text-xs text-muted">
           From
           <DateInput key={filter.from} name="from" defaultValue={filter.from} className="w-40" />
@@ -221,13 +228,6 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
       </form>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <RangeSelect
-          options={presets.map((p) => ({
-            label: p.label,
-            href: `/reports?${reportQuery({ ...filter, from: p.from, to: p.to })}`,
-            selected: p.from === filter.from && p.to === filter.to,
-          }))}
-        />
         <span className="ml-auto">
           <LoadRangeButton from={filter.from} to={filter.to} />
         </span>

@@ -38,7 +38,7 @@ export function DateInput({
     <>
       <Calendar
         value={toDate(current)}
-        dateFormat="dd M yy"
+        dateFormat="dd/mm/yy"
         showIcon
         showButtonBar
         disabled={disabled}

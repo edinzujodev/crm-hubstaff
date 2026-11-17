@@ -47,6 +47,15 @@ export function periodLabel(repeat: Repeat, dueDate: string): string {
   return repeat === "monthly" ? `${MONTHS[m - 1]} ${y}` : `Week of ${d} ${MONTHS[m - 1]} ${y}`;
 }
 
+/** What a person calls a task in popups and toasts: "Acme: Do taxes – Nov 2026". Repeating tasks carry their period. */
+export function taskName(
+  task: { title: string; repeat: Repeat | null; dueDate: string | null },
+  clientName?: string | null,
+): string {
+  const period = task.repeat && task.dueDate ? ` – ${periodLabel(task.repeat, task.dueDate)}` : "";
+  return `${clientName ? `${clientName}: ` : ""}${task.title}${period}`;
+}
+
 /** The Hubstaff task name: "Acme: Do taxes – Nov 2026 [CRM #123]". Repeating tasks carry their period. */
 export function hubstaffSummary(
   task: { id: number; title: string; repeat: Repeat | null; dueDate: string | null },

@@ -12,6 +12,7 @@ import { Fragment, Suspense } from "react";
 import { asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { TaskChecklist } from "@/components/task-checklist";
+import { ReopenTaskButton } from "@/components/reopen-task-button";
 import { PurgeTaskButton } from "@/components/purge-task-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
@@ -22,14 +23,14 @@ import { TabCard } from "@/components/tab-card";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
-import { canReviewTask, reviewsByTask } from "@/lib/review";
-import { ReviewHistory } from "@/components/review-history";
+import { canReviewTask } from "@/lib/review";
 import { ReviewActions } from "@/components/review-actions";
 import { NextPeriodButton } from "@/components/next-period-button";
 import {
   fmtDateTime,
   fmtDay,
   fmtDuration,
+  spanSince,
   localDay,
   truncate,
 } from "@/lib/format";
@@ -37,7 +38,7 @@ import { isSessionStale } from "@/lib/report";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { listSeries } from "@/lib/series";
 import { listTemplates } from "@/lib/templates";
-import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
+import { nextHidden, periodLabel, taskName, upcomingCopies } from "@/lib/recurring";
 import { Avatar } from "@/components/avatar";
 import { InlineChecklist } from "@/components/inline-checklist";
 import { getLevels } from "@/lib/urgency-settings";
@@ -385,7 +386,6 @@ async function TaskList({
     ],
     today,
   );
-  const reviews = await reviewsByTask(visible.map((v) => v.task.id));
   const checklists = new Map<
     number,
     { id: number; text: string; done: boolean }[]
@@ -522,6 +522,7 @@ async function TaskList({
                   ? null
                   : urgencyOf(task, levels, config.timeZone);
                 const manage = canManageTask(auth, task);
+                const label = taskName(task, clientName);
                 const nextPeriod =
                   manage && task.repeat && !task.deletedAt
                     ? nextHidden(
@@ -531,9 +532,14 @@ async function TaskList({
                     : null;
                 const isBlocked =
                   !!task.blockedAt && task.status !== "done" && !task.deletedAt;
+                // Only the latest review, and only when it sent the task back.
+                const isReturned =
+                  task.status === "todo" &&
+                  task.reviewResult === "rejected" &&
+                  !task.deletedAt;
                 const hasDetails =
                   isBlocked ||
-                  (reviews.get(task.id)?.length ?? 0) > 0 ||
+                  isReturned ||
                   !!task.description ||
                   (checklists.get(task.id)?.length ?? 0) > 0 ||
                   !!nextPeriod;
@@ -568,10 +574,15 @@ async function TaskList({
                       </Link>
                       {task.blockedAt && task.status !== "done" && !task.deletedAt && (
                         <span
-                          className="badge ml-2 text-red-600"
-                          title={task.blockedReason ?? "Blocked"}
+                          className="badge ml-2 text-red-600 dark:text-red-400"
+                          title={
+                            task.blockedReason
+                              ? `Blocked: ${task.blockedReason}`
+                              : "Blocked"
+                          }
+                          aria-label="Blocked"
                         >
-                          Blocked
+                          <i aria-hidden className="pi pi-ban text-xs" />
                         </span>
                       )}
                       {task.status === "review" && tab !== "review" && (
@@ -582,16 +593,25 @@ async function TaskList({
                       {task.status === "todo" &&
                         task.reviewResult === "rejected" && (
                           <span
-                            className="badge ml-2 text-red-600"
-                            title={task.reviewNote ?? undefined}
+                            className="badge ml-2 text-orange-600 dark:text-orange-400"
+                            title={
+                              task.reviewNote
+                                ? `Returned: ${task.reviewNote}`
+                                : "Returned"
+                            }
+                            aria-label="Returned"
                           >
-                            Checked: not OK
+                            <i aria-hidden className="pi pi-undo text-xs" />
                           </span>
                         )}
                       {task.status === "done" &&
                         task.reviewResult === "approved" && (
-                          <span className="badge ml-2 text-emerald-700 dark:text-emerald-400">
-                            Checked: OK
+                          <span
+                            className="badge ml-2 text-emerald-700 dark:text-emerald-400"
+                            title="Verified"
+                            aria-label="Verified"
+                          >
+                            <i aria-hidden className="pi pi-verified text-xs" />
                           </span>
                         )}
                       {task.startDate &&
@@ -704,27 +724,30 @@ async function TaskList({
                   actions: task.deletedAt ? (
                     manage ? (
                       <>
-                        <RestoreTaskButton compact taskId={task.id} />
+                        <RestoreTaskButton compact taskId={task.id} title={label} />
                         <PurgeTaskButton
                           compact
                           taskId={task.id}
-                          title={task.title}
+                          title={label}
                         />
                       </>
                     ) : null
                   ) : (
                     <>
-                      {task.status !== "review" && (
+                      {task.status === "done" && (
+                        <ReopenTaskButton compact taskId={task.id} title={label} />
+                      )}
+                      {task.status !== "review" && task.status !== "done" && (
                       <TimerControls
                         compact
                         taskId={task.id}
-                        title={task.title}
+                        title={label}
                         lockedTo={
                           task.assigneeId && task.assigneeId !== me.id
                             ? (assigneeName ?? "someone else")
                             : null
                         }
-                        done={task.status === "done"}
+                        done={false}
                         runningSince={
                           mine?.taskId === task.id
                             ? mine.startedAt.toISOString()
@@ -738,7 +761,7 @@ async function TaskList({
                       />
                       )}
                       {canReviewTask(auth, task) && (
-                        <ReviewActions taskId={task.id} title={task.title} />
+                        <ReviewActions taskId={task.id} title={label} />
                       )}
                       {
                         <TaskMenu
@@ -746,6 +769,7 @@ async function TaskList({
                           task={{
                             id: task.id,
                             title: task.title,
+                            label,
                             clientId: task.clientId,
                             projectId: task.projectId,
                             assigneeId: task.assigneeId,
@@ -768,9 +792,33 @@ async function TaskList({
                     <div className="space-y-4 text-sm">
                       {isBlocked && (
                         <section className="space-y-1 rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-red-600 dark:text-red-300">
-                          <h2 className="text-sm font-semibold">Blocked</h2>
+                          <h2 className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
+                            Blocked
+                            {task.blockedAt && (
+                              <span className="text-xs font-normal">
+                                since {fmtDateTime(task.blockedAt, config.timeZone)} ·{" "}
+                                {spanSince(task.blockedAt)}
+                              </span>
+                            )}
+                          </h2>
                           <p className="whitespace-pre-wrap text-sm">
                             {task.blockedReason ?? "No reason given."}
+                          </p>
+                        </section>
+                      )}
+
+                      {isReturned && (
+                        <section className="space-y-1 rounded-lg border border-orange-500/60 bg-orange-500/10 px-3 py-2 text-orange-700 dark:text-orange-300">
+                          <h2 className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
+                            Returned
+                            {task.reviewedAt && (
+                              <span className="text-xs font-normal">
+                                {fmtDateTime(task.reviewedAt, config.timeZone)}
+                              </span>
+                            )}
+                          </h2>
+                          <p className="whitespace-pre-wrap text-sm">
+                            {task.reviewNote ?? "No reason given."}
                           </p>
                         </section>
                       )}
@@ -784,21 +832,6 @@ async function TaskList({
                           canEdit={false}
                           canTick={!task.deletedAt && task.status !== "done"}
                         />
-                      )}
-
-                      {(reviews.get(task.id)?.length ?? 0) > 0 && (
-                        <section className="card space-y-3 p-4">
-                          <h2 className="font-semibold">
-                            Review history{" "}
-                            <span className="text-sm font-normal text-muted">
-                              {reviews.get(task.id)!.length}
-                            </span>
-                          </h2>
-                          <ReviewHistory
-                            reviews={reviews.get(task.id)!}
-                            tz={config.timeZone}
-                          />
-                        </section>
                       )}
 
                       {(() => {

@@ -20,7 +20,7 @@ import { config } from "@/lib/config";
 import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
 import { canReviewTask, reviewsByTask } from "@/lib/review";
 import { ReviewHistory } from "@/components/review-history";
-import { periodLabel } from "@/lib/recurring";
+import { periodLabel, taskName } from "@/lib/recurring";
 import { timeLeftLabel, urgencyOf } from "@/lib/urgency";
 import { getLevels } from "@/lib/urgency-settings";
 import { asc } from "drizzle-orm";
@@ -28,7 +28,7 @@ import { ReviewActions } from "@/components/review-actions";
 import { TaskChecklist } from "@/components/task-checklist";
 import { localDay } from "@/lib/format";
 import { getCurrentUser } from "@/lib/current-user";
-import { fmtDateTime, fmtDay, fmtDuration, fmtTime } from "@/lib/format";
+import { fmtDateTime, fmtDay, fmtDuration, fmtTime, spanSince } from "@/lib/format";
 import { getTaskReport, type SessionFlag } from "@/lib/report";
 
 const endReasonLabel = {
@@ -187,6 +187,7 @@ async function TaskDetail({
         })
       : null;
 
+  const label = taskName(task, row.clientName);
   const blocked = !!task.blockedAt && task.status !== "done" && !task.deletedAt;
   const statusLabel = task.deletedAt
     ? "Deleted"
@@ -274,11 +275,11 @@ async function TaskDetail({
         <div className="flex flex-wrap items-center gap-4">
           {task.deletedAt ? (
             <>
-              <RestoreTaskButton taskId={task.id} />
+              <RestoreTaskButton taskId={task.id} title={label} />
               {manage && (
                 <PurgeTaskButton
                   taskId={task.id}
-                  title={task.title}
+                  title={label}
                   redirectTo="/tasks?show=deleted"
                 />
               )}
@@ -288,7 +289,7 @@ async function TaskDetail({
               {task.status !== "done" && (
                 <BlockTaskButton
                   taskId={task.id}
-                  title={task.title}
+                  title={label}
                   blocked={blocked}
                 />
               )}
@@ -296,7 +297,7 @@ async function TaskDetail({
                 <div className="flex items-center gap-2">
                   <DeleteTaskButton
                     taskId={task.id}
-                    title={task.title}
+                    title={label}
                     redirectTo="/tasks"
                   />
                 </div>
@@ -309,7 +310,7 @@ async function TaskDetail({
               )}
               <TimerControls
                 taskId={task.id}
-                title={task.title}
+                title={label}
                 lockedTo={
                   task.assigneeId && task.assigneeId !== me?.id
                     ? (row.assigneeName ?? "someone else")
@@ -354,7 +355,8 @@ async function TaskDetail({
           <i aria-hidden className="pi pi-ban mt-0.5 text-base" />
           <span>
             <span className="font-semibold">Blocked</span>
-            {task.blockedAt && ` since ${fmtDateTime(task.blockedAt, tz)}`}
+            {task.blockedAt &&
+              ` since ${fmtDateTime(task.blockedAt, tz)} · ${spanSince(task.blockedAt)}`}
             {task.blockedReason ? (
               <span className="mt-0.5 block whitespace-pre-wrap">
                 {task.blockedReason}
@@ -419,21 +421,21 @@ async function TaskDetail({
           <span>
             <span className="font-medium">On review.</span>{" "}
             {reviewer
-              ? `${reviewer.name} will approve it or send it back with a reason.`
+              ? `${reviewer.name} will verify it or return it with a reason.`
               : "Waiting for the team leader."}
           </span>
-          {canReview && <ReviewActions taskId={task.id} title={task.title} />}
+          {canReview && <ReviewActions taskId={task.id} title={label} />}
         </div>
       )}
 
       {task.reviewResult === "rejected" && task.status === "todo" && (
         <div className="card space-y-1 border-red-500/50 p-3 text-sm">
           <p className="font-medium text-red-600 dark:text-red-400">
-            Checked: not OK
+            Returned
           </p>
           <p className="whitespace-pre-wrap">{task.reviewNote}</p>
           <p className="text-xs text-muted">
-            Fix it and press Finish again to send it back for review.
+            Fix it and press Finish again to send it for review.
           </p>
         </div>
       )}
@@ -441,7 +443,7 @@ async function TaskDetail({
       {task.reviewResult === "approved" && task.status === "done" && (
         <p className="card border-emerald-500/50 p-3 text-sm">
           <span className="font-medium text-emerald-700 dark:text-emerald-400">
-            Checked: OK
+            Verified
           </span>
           {task.reviewedAt && (
             <span className="text-muted">

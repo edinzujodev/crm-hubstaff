@@ -5,6 +5,20 @@ export function fmtDuration(seconds: number): string {
   return `${h}h ${String(m % 60).padStart(2, "0")}m`;
 }
 
+/** How long something has lasted: "5m", "2h 05m", "3d 4h". */
+export function fmtSpan(ms: number): string {
+  const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${String(m % 60).padStart(2, "0")}m`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
+/** How long ago something started, as a span: "2h 05m". */
+export function spanSince(from: Date): string {
+  return fmtSpan(Date.now() - from.getTime());
+}
+
 export function fmtDateTime(d: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone,

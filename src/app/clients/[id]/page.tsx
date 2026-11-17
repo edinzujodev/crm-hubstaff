@@ -250,11 +250,11 @@ async function ClientDetail({
                 <div key="s" className="flex flex-wrap items-center gap-1">
                   <span className="badge">{statusLabel[task.status]}</span>
                   {task.reviewResult === "approved" && task.status === "done" && (
-                    <span className="badge text-emerald-700 dark:text-emerald-400">Checked: OK</span>
+                    <span className="badge text-emerald-700 dark:text-emerald-400">Verified</span>
                   )}
                   {task.reviewResult === "rejected" && task.status !== "done" && (
                     <span className="badge text-red-600" title={task.reviewNote ?? undefined}>
-                      Checked: not OK
+                      Returned
                     </span>
                   )}
                 </div>,

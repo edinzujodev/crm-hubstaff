@@ -202,6 +202,10 @@ body {
 .p-calendar .p-inputtext {
   padding: 0.4rem 0.65rem;
 }
+.p-calendar .p-inputtext:not(:disabled),
+.p-calendar .p-datepicker-trigger:not(:disabled) {
+  cursor: pointer;
+}
 .p-datepicker {
   font-size: 0.8125rem;
   padding: 0.25rem;

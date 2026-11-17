@@ -3,7 +3,7 @@
 import { Button, InputText, Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { SelectButton } from "primereact/selectbutton";
-import { useActionState, useEffect, useState, useTransition } from "react";import { deleteTask, setBlocked, updateTask } from "@/app/actions";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";import { deleteTask, setBlocked, updateTask } from "@/app/actions";
 import { BlockModal } from "@/components/block-task";
 import { DateInput } from "@/components/date-input";
 import { RowMenu } from "@/components/row-menu";
@@ -28,6 +28,8 @@ export type TaskFields = {
   /** Set for repeating tasks: the menu then links to the recurring task page. */
   seriesId?: number | null;
   blocked?: boolean;
+  /** How the task is named in popups and toasts (client and period included). Defaults to the title. */
+  label?: string;
 };
 
 /** The ⋯ button at the end of a row, with Edit and Delete. Both open a popup. */
@@ -51,7 +53,7 @@ export function TaskMenu({
   return (
     <>
       <RowMenu
-        label={`Actions for ${task.title}`}
+        label={`Actions for ${task.label ?? task.title}`}
         items={[
           { label: "View", onSelect: () => router.push(`/tasks/${task.id}`) },
           task.blocked
@@ -61,7 +63,7 @@ export function TaskMenu({
                 onSelect: () =>
                   startTransition(async () => {
                     const res = await setBlocked(task.id, false);
-                    if (res.ok) notify({ message: "Task unblocked", detail: task.title });
+                    if (res.ok) notify({ message: "Task unblocked", detail: task.label ?? task.title });
                   }),
               }
             : { label: "Mark as blocked", icon: "pi pi-ban", onSelect: () => setModal("block" as const) },
@@ -78,7 +80,7 @@ export function TaskMenu({
           <EditForm task={task} clients={clients} users={users} projects={projects} onDone={() => setModal(null)} />
         </Modal>
       )}
-      {modal === "block" && <BlockModal taskId={task.id} title={task.title} onDone={() => setModal(null)} />}
+      {modal === "block" && <BlockModal taskId={task.id} title={task.label ?? task.title} onDone={() => setModal(null)} />}
       {modal === "delete" && (
         <Modal title="Delete task?" onClose={() => setModal(null)}>
           <DeleteConfirm task={task} onDone={() => setModal(null)} />
@@ -108,9 +110,13 @@ export function EditForm({
   const [lead, setLead] = useState(task.repeatLeadDays !== null ? String(task.repeatLeadDays) : "");
   const [state, action, pending] = useActionState(updateTask.bind(null, task.id), null);
   const hubstaffWarning = state?.ok ? state.data.hubstaffError : undefined;
+  const titleRef = useRef(task.label ?? task.title);
+  useEffect(() => {
+    titleRef.current = task.label ?? task.title;
+  });
 
   useEffect(() => {
-    if (state?.ok) notify({ message: "Task updated", detail: task.title });
+    if (state?.ok) notify({ message: "Task updated", detail: titleRef.current });
     if (state?.ok && !state.data.hubstaffError) onDone();
   }, [state, onDone]);
 
@@ -215,7 +221,7 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
       setError(null);
       const res = await deleteTask(task.id);
       if (!res.ok) return setError(res.error);
-      notify({ message: "Task deleted", detail: task.title, link: { href: "/tasks?show=deleted", label: "Open Deleted" } });
+      notify({ message: "Task deleted", detail: task.label ?? task.title, link: { href: "/tasks?show=deleted", label: "Open Deleted" } });
       if (res.data.hubstaffError) return setWarning(res.data.hubstaffError);
       onDone();
     });
@@ -237,7 +243,7 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
   return (
     <div className="space-y-3">
       <p className="text-sm">
-        Delete <span className="font-medium">{truncate(task.title, 50)}</span>?
+        Delete <span className="font-medium">{truncate(task.label ?? task.title, 60)}</span>?
       </p>
       <p className="text-sm text-muted">
         It is hidden from the task list and any running timer on it is stopped. Its hours are left out of the reports, and you can

@@ -15,17 +15,24 @@ const SHOW_MS = 12000;
 const TOAST_MS = 5000;
 
 export function Toaster() {
-  const [notice, setNotice] = useState<
-    (FinishedNotice & { key: number }) | null
-  >(null);
+  // Every finished task gets its own notice, so finishing three tasks in a row shows three stacked notices.
+  const [notices, setNotices] = useState<(FinishedNotice & { key: number })[]>(
+    [],
+  );
   const [toasts, setToasts] = useState<(Toast & { key: number })[]>([]);
 
   useEffect(() => {
-    const onFinished = (e: Event) =>
-      setNotice({
-        ...(e as CustomEvent<FinishedNotice>).detail,
-        key: Date.now(),
-      });
+    const onFinished = (e: Event) => {
+      const key = Date.now() + Math.random();
+      setNotices((cur) => [
+        ...cur.slice(-4),
+        { ...(e as CustomEvent<FinishedNotice>).detail, key },
+      ]);
+      setTimeout(
+        () => setNotices((cur) => cur.filter((n) => n.key !== key)),
+        SHOW_MS,
+      );
+    };
     const onToast = (e: Event) => {
       const key = Date.now() + Math.random();
       setToasts((cur) => [
@@ -45,13 +52,7 @@ export function Toaster() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(null), SHOW_MS);
-    return () => clearTimeout(t);
-  }, [notice]);
-
-  if (!notice && !toasts.length) return null;
+  if (!notices.length && !toasts.length) return null;
   return (
     <div
       role="status"
@@ -93,8 +94,11 @@ export function Toaster() {
           />
         </div>
       ))}
-      {notice && (
-        <div className="card space-y-3 border-emerald-500/60 p-4 text-sm shadow-lg">
+      {notices.map((notice) => (
+        <div
+          key={notice.key}
+          className="card space-y-3 border-emerald-500/60 p-4 text-sm shadow-lg"
+        >
           <div className="flex items-start justify-between gap-3">
             <p className="font-medium text-emerald-700 dark:text-emerald-400">
               {notice.inReview ? "✓ Sent for review" : "✓ Task finished"}
@@ -107,7 +111,9 @@ export function Toaster() {
               size="small"
               severity="secondary"
               aria-label="Dismiss"
-              onClick={() => setNotice(null)}
+              onClick={() =>
+                setNotices((cur) => cur.filter((n) => n.key !== notice.key))
+              }
             />
           </div>
           <p>
@@ -124,7 +130,7 @@ export function Toaster() {
             )}
             .
             {notice.inReview
-              ? " Your team leader will approve it or send it back with a reason."
+              ? " Your team leader will verify it or return it with a reason."
               : ""}
           </p>
           {notice.nextTaskId ? (
@@ -147,7 +153,7 @@ export function Toaster() {
             </p>
           ) : null}
         </div>
-      )}
+      ))}
     </div>
   );
 }

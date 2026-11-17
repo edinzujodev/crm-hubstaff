@@ -10,10 +10,10 @@ export function RangeSelect({ options }: { options: Option[] }) {
   const router = useRouter();
   const current = options.find((o) => o.selected);
   return (
-    <label className="flex items-center gap-2 text-xs text-muted">
+    <label className="flex flex-col gap-1 text-xs text-muted">
       Range
       <Select
-        className="w-full text-foreground"
+        className="w-40 text-foreground"
         value={current?.href ?? ""}
         onChange={(e) => e.target.value && router.push(e.target.value)}
       >

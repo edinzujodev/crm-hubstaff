@@ -198,16 +198,13 @@ async function SeriesDetail({
 
           {tab === "checklist" && (
             <>
-              <p className="text-sm text-muted">
-                This is the checklist of the current copy
-                {repeat && current.dueDate ? ` (${periodLabel(repeat, current.dueDate)})` : ""}.
-              </p>
               <TaskChecklist
                 taskId={task.id}
                 description={task.description}
                 items={checklist.map((c) => ({ id: c.id, text: c.text, done: c.doneAt !== null }))}
                 canEdit={canManageTask(auth, task) && !task.deletedAt}
-                canTick={!task.deletedAt && task.status !== "done"}
+                canTick={false}
+                template
               />
             </>
           )}
