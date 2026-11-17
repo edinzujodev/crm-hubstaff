@@ -174,6 +174,52 @@ export async function restoreTask(taskId: number): Promise<Result<{ hubstaffErro
   });
 }
 
+/**
+ * Marks a task as blocked (with an optional reason) or unblocks it. Anyone who can see the task can do it, since
+ * the person working on it is the one who knows. A blocked task keeps its status; it only gets a flag.
+ */
+export async function setBlocked(taskId: number, blocked: boolean, reason?: string) {
+  return run(async () => {
+    await requireTask(taskId, "view");
+    const clean = z.string().trim().max(500).parse(reason ?? "") || null;
+    await db
+      .update(schema.tasks)
+      .set(blocked ? { blockedAt: new Date(), blockedReason: clean } : { blockedAt: null, blockedReason: null })
+      .where(eq(schema.tasks.id, taskId));
+    return undefined;
+  });
+}
+
+/**
+ * Deletes a task for good. Only a task that is already in the Deleted list can go. Its sessions, checklist and
+ * reviews are removed; Hubstaff time already synced stays in the mirror but is no longer tied to a task. The
+ * Hubstaff task itself is left as it is (it is already marked [SOFT-DELETED]).
+ */
+export async function purgeTask(taskId: number) {
+  return run(async () => {
+    const { task } = await requireTask(taskId, "manage");
+    if (!task.deletedAt) throw new Error("Delete the task first. Only deleted tasks can be removed for good.");
+    await db.transaction(async (tx) => {
+      // Other copies of a recurring task point at this one: move them on to the next copy so none is left dangling.
+      const rest = await tx
+        .select({ id: schema.tasks.id })
+        .from(schema.tasks)
+        .where(and(eq(schema.tasks.seriesId, taskId), ne(schema.tasks.id, taskId)))
+        .orderBy(asc(schema.tasks.id));
+      if (rest.length) {
+        await tx.update(schema.tasks).set({ seriesId: rest[0].id }).where(inArray(schema.tasks.id, rest.map((r) => r.id)));
+      }
+      await tx.update(schema.tasks).set({ repeatedFromId: null }).where(eq(schema.tasks.repeatedFromId, taskId));
+      await tx.update(schema.hubstaffActivities).set({ taskId: null }).where(eq(schema.hubstaffActivities.taskId, taskId));
+      await tx.delete(schema.workSessions).where(eq(schema.workSessions.taskId, taskId));
+      await tx.delete(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.taskId, taskId));
+      await tx.delete(schema.taskReviews).where(eq(schema.taskReviews.taskId, taskId));
+      await tx.delete(schema.tasks).where(eq(schema.tasks.id, taskId));
+    });
+    return undefined;
+  });
+}
+
 /** The CRM change is already saved; a Hubstaff failure is reported, not thrown. */
 async function renameInHubstaff(hubstaffTaskId: number | null, rename: (title: string) => string) {
   if (!hubstaffTaskId) return {};

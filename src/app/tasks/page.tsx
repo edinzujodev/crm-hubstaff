@@ -11,6 +11,7 @@ import {
 import { Fragment, Suspense } from "react";
 import { asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { PurgeTaskButton } from "@/components/purge-task-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
 import { SeriesMenu } from "@/components/series-menu";
@@ -564,6 +565,14 @@ async function TaskList({
                       {task.deletedAt && (
                         <span className="badge ml-2 text-red-600">Deleted</span>
                       )}
+                      {task.blockedAt && task.status !== "done" && !task.deletedAt && (
+                        <span
+                          className="badge ml-2 text-red-600"
+                          title={task.blockedReason ?? "Blocked"}
+                        >
+                          Blocked
+                        </span>
+                      )}
                       {task.status === "review" && (
                         <span className="badge ml-2 text-amber-700 dark:text-amber-400">
                           On review
@@ -693,7 +702,14 @@ async function TaskList({
                   ],
                   actions: task.deletedAt ? (
                     manage ? (
-                      <RestoreTaskButton compact taskId={task.id} />
+                      <>
+                        <RestoreTaskButton compact taskId={task.id} />
+                        <PurgeTaskButton
+                          compact
+                          taskId={task.id}
+                          title={task.title}
+                        />
+                      </>
                     ) : null
                   ) : (
                     <>
@@ -737,6 +753,7 @@ async function TaskList({
                             repeatLeadDays: task.repeatLeadDays,
                             repeatShow: task.repeatShow,
                             seriesId: task.seriesId,
+                            blocked: !!task.blockedAt && task.status !== "done",
                           }}
                           clients={clients}
                           users={users}

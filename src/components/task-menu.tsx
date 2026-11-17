@@ -3,7 +3,8 @@
 import { Button, InputText, Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { SelectButton } from "primereact/selectbutton";
-import { useActionState, useEffect, useState, useTransition } from "react";import { deleteTask, updateTask } from "@/app/actions";
+import { useActionState, useEffect, useState, useTransition } from "react";import { deleteTask, setBlocked, updateTask } from "@/app/actions";
+import { BlockModal } from "@/components/block-task";
 import { DateInput } from "@/components/date-input";
 import { RowMenu } from "@/components/row-menu";
 import { Modal } from "@/components/modal";
@@ -25,6 +26,7 @@ export type TaskFields = {
   repeatShow: RepeatShow | null;
   /** Set for repeating tasks: the menu then links to the recurring task page. */
   seriesId?: number | null;
+  blocked?: boolean;
 };
 
 /** The ⋯ button at the end of a row, with Edit and Delete. Both open a popup. */
@@ -41,8 +43,9 @@ export function TaskMenu({
   users: Option[];
   projects: ProjectOption[];
 }) {
-  const [modal, setModal] = useState<"edit" | "delete" | null>(null);
+  const [modal, setModal] = useState<"edit" | "delete" | "block" | null>(null);
   const router = useRouter();
+  const [, startTransition] = useTransition();
 
   return (
     <>
@@ -50,6 +53,13 @@ export function TaskMenu({
         label={`Actions for ${task.title}`}
         items={[
           { label: "View", onSelect: () => router.push(`/tasks/${task.id}`) },
+          task.blocked
+            ? {
+                label: "Unblock",
+                icon: "pi pi-lock-open",
+                onSelect: () => startTransition(async () => void (await setBlocked(task.id, false))),
+              }
+            : { label: "Mark as blocked", icon: "pi pi-ban", onSelect: () => setModal("block" as const) },
           ...(canManage
             ? [
                 { label: "Edit", onSelect: () => setModal("edit" as const) },
@@ -63,6 +73,7 @@ export function TaskMenu({
           <EditForm task={task} clients={clients} users={users} projects={projects} onDone={() => setModal(null)} />
         </Modal>
       )}
+      {modal === "block" && <BlockModal taskId={task.id} title={task.title} onDone={() => setModal(null)} />}
       {modal === "delete" && (
         <Modal title="Delete task?" onClose={() => setModal(null)}>
           <DeleteConfirm task={task} onDone={() => setModal(null)} />

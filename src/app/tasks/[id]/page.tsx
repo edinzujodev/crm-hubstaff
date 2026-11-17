@@ -11,6 +11,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { BlockTaskButton } from "@/components/block-task";
+import { PurgeTaskButton } from "@/components/purge-task-button";
 import { DeleteTaskButton } from "@/components/delete-task-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { TimerControls } from "@/components/timer-controls";
@@ -185,9 +187,12 @@ async function TaskDetail({
         })
       : null;
 
+  const blocked = !!task.blockedAt && task.status !== "done" && !task.deletedAt;
   const statusLabel = task.deletedAt
     ? "Deleted"
-    : task.status === "done"
+    : blocked
+      ? "Blocked"
+      : task.status === "done"
       ? "Done"
       : task.status === "review"
         ? "On review"
@@ -247,9 +252,25 @@ async function TaskDetail({
         </div>
         <div className="flex flex-wrap items-center gap-4">
           {task.deletedAt ? (
-            <RestoreTaskButton taskId={task.id} />
+            <>
+              <RestoreTaskButton taskId={task.id} />
+              {manage && (
+                <PurgeTaskButton
+                  taskId={task.id}
+                  title={task.title}
+                  redirectTo="/tasks?show=deleted"
+                />
+              )}
+            </>
           ) : (
             <>
+              {task.status !== "done" && (
+                <BlockTaskButton
+                  taskId={task.id}
+                  title={task.title}
+                  blocked={blocked}
+                />
+              )}
               {manage && (
                 <div className="flex items-center gap-2">
                   <DeleteTaskButton
@@ -348,6 +369,26 @@ async function TaskDetail({
           <span>
             This copy is waiting for its start date ({task.startDate}); it is
             hidden from the open lists until then.
+          </span>
+        </div>
+      )}
+
+      {blocked && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300"
+        >
+          <i aria-hidden className="pi pi-ban mt-0.5 text-base" />
+          <span>
+            <span className="font-semibold">Blocked</span>
+            {task.blockedAt && ` since ${fmtDateTime(task.blockedAt, tz)}`}
+            {task.blockedReason ? (
+              <span className="mt-0.5 block whitespace-pre-wrap">
+                {task.blockedReason}
+              </span>
+            ) : (
+              <span className="opacity-80"> · no reason given</span>
+            )}
           </span>
         </div>
       )}
