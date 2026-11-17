@@ -221,7 +221,19 @@ async function TaskDetail({
             <span className="badge">{statusLabel}</span>
           </div>
           {task.repeat && task.dueDate && (
-            <p className="text-sm text-muted">{task.title}</p>
+            <p className="text-sm text-muted">
+              {task.seriesId ? (
+                <Link
+                  href={`/recurring/${task.seriesId}`}
+                  className="underline hover:text-foreground"
+                  title="Open the recurring task: all copies, stop repeating, delete"
+                >
+                  {task.title}
+                </Link>
+              ) : (
+                task.title
+              )}
+            </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -231,15 +243,6 @@ async function TaskDetail({
             <>
               {manage && (
                 <div className="flex items-center gap-2">
-                  {task.repeat && task.seriesId && (
-                    <Link
-                      href={`/recurring/${task.seriesId}`}
-                      className="p-button p-button-sm p-button-outlined p-button-secondary"
-                      title="All copies of this recurring task"
-                    >
-                      Recurring task
-                    </Link>
-                  )}
                   <DeleteTaskButton
                     taskId={task.id}
                     title={task.title}

@@ -43,6 +43,7 @@ export function SeriesActions({
         <span title="No more copies will be created after the current one">
           <Button
             type="button"
+            size="small"
             severity="secondary"
             outlined
             disabled={stopping}
@@ -52,7 +53,7 @@ export function SeriesActions({
           </Button>
         </span>
       )}
-      <Button type="button" severity="danger" outlined onClick={() => setOpen(true)}>
+      <Button type="button" size="small" severity="danger" onClick={() => setOpen(true)}>
         Delete
       </Button>
 

@@ -9,9 +9,9 @@ export function BackButton({ fallback }: { fallback: string }) {
   return (
     <Button
       type="button"
-      text
-      size="small"
+      outlined
       severity="secondary"
+      className="!border-border !bg-surface !text-foreground hover:!bg-background"
       icon="pi pi-arrow-left"
       label="Back"
       onClick={() => (window.history.length > 1 ? router.back() : router.push(fallback))}
