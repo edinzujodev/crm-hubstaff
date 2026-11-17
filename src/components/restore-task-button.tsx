@@ -17,7 +17,7 @@ export function RestoreTaskButton({ taskId, compact }: { taskId: number; compact
           const res = await restoreTask(taskId);
           if (!res.ok) alert(res.error);
           else notify({ message: "Task restored" });
-          if (res.ok && (res.data.hubstaffError)
+          if (res.ok && res.data.hubstaffError)
             alert(`Restored in the CRM, but Hubstaff could not be updated: ${res.data.hubstaffError}`);
         })
       }
