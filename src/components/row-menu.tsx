@@ -32,7 +32,7 @@ export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] 
     <>
       <Button
         type="button"
-        icon="pi pi-ellipsis-h"
+        icon="pi pi-ellipsis-v"
         aria-label={label}
         aria-haspopup
         severity="secondary"

@@ -64,7 +64,8 @@ const newTask = z.object({
   title: z.string().trim().min(1, "Title is required"),
   clientId: z.coerce.number({ error: "Pick a client" }).int().positive("Pick a client"),
   assigneeId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
-  dueDate: z.string().optional().transform((v) => v || undefined),
+  // Every task has a due date.
+  dueDate: z.string({ error: "Pick a due date" }).regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a due date"),
   repeat: z.enum(["weekly", "monthly"]).optional().or(z.literal("").transform(() => undefined)),
   // Days before the due date that each new copy appears in the open lists.
   repeatLeadDays: z.coerce.number().int().min(0).max(90).optional().or(z.literal("").transform(() => undefined)),
@@ -846,11 +847,21 @@ export async function updateTask(
   return run(async () => {
     const { auth, task } = await requireTask(taskId, "manage");
     if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
-    const { projectId, projectName, projectKind, ...input } = newTask
+    const parsed = newTask
       .omit({ checklist: true, description: true, templateId: true })
       .parse(Object.fromEntries(formData));
+    const { projectId, projectName, projectKind, ...input } = parsed;
+    // One copy of a repeating task can't change what defines the series: title, client, project and how it repeats.
+    const inSeries = !!task.seriesId || !!task.repeat;
+    if (inSeries) {
+      input.title = task.title;
+      input.clientId = task.clientId!;
+      input.repeat = task.repeat ?? undefined;
+      input.repeatShow = task.repeatShow ?? undefined;
+      input.repeatLeadDays = task.repeatLeadDays ?? undefined;
+    }
     // Leaving the project blank keeps the current one while the client is the same.
-    const keep = !projectId && !projectName && task.projectId && task.clientId === input.clientId;
+    const keep = inSeries || (!projectId && !projectName && task.projectId && task.clientId === input.clientId);
     const project = keep ? { id: task.projectId! } : await pickProject(input.clientId, projectId, projectName, projectKind, input.title);
     const picked = input.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })

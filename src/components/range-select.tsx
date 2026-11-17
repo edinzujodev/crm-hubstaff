@@ -11,8 +11,8 @@ export function RangeSelect({ options }: { options: Option[] }) {
   const current = options.find((o) => o.selected);
   return (
     <label className="flex flex-col gap-1 text-xs text-muted">
-      Range
       <Select
+        aria-label="Date range"
         className="w-40 text-foreground"
         value={current?.href ?? ""}
         onChange={(e) => e.target.value && router.push(e.target.value)}

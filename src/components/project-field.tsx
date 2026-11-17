@@ -18,7 +18,10 @@ export function ProjectField({
   projects,
   initialProjectId,
   className = "",
+  lockedHint,
 }: {
+  /** When set, the project can't be changed and this text shows on hover. */
+  lockedHint?: string;
   clientId: string;
   title: string;
   projects: ProjectOption[];
@@ -37,13 +40,14 @@ export function ProjectField({
   const picked = mine.find((p) => String(p.id) === selected);
 
   return (
-    <div className={`flex flex-col gap-1 text-xs text-muted ${className}`}>
+    <div className={`flex flex-col gap-1 text-xs text-muted ${className}`} title={lockedHint}>
       <label className="flex flex-col gap-1">
         Project
         <Select
           value={selected}
           required={!creating}
-          disabled={!clientId}
+          disabled={!clientId || !!lockedHint}
+          title={lockedHint}
           onChange={(e) => setChoice(e.target.value)}
           className="w-full text-foreground"
         >

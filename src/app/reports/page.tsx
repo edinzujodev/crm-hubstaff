@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { DateInput } from "@/components/date-input";
+import { DateRangeInput } from "@/components/date-range-input";
 import { BarList } from "@/components/charts/bar-list";
 import { ChartTip } from "@/components/charts/chart-tip";
 import { ColumnChart } from "@/components/charts/column-chart";
@@ -165,6 +165,17 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
   return (
     <div className="space-y-6">
       <form className="card flex flex-wrap items-end gap-2 p-3">
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          Dates
+          <DateRangeInput
+            key={`${filter.from}-${filter.to}`}
+            fromName="from"
+            toName="to"
+            defaultFrom={filter.from}
+            defaultTo={filter.to}
+            className="w-64"
+          />
+        </label>
         <RangeSelect
           options={presets.map((p) => ({
             label: p.label,
@@ -172,14 +183,6 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
             selected: p.from === filter.from && p.to === filter.to,
           }))}
         />
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          From
-          <DateInput key={filter.from} name="from" defaultValue={filter.from} className="w-40" />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          To
-          <DateInput key={filter.to} name="to" defaultValue={filter.to} className="w-40" />
-        </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Client
           <Select name="client" defaultValue={filter.clientId ?? ""} className="w-full text-foreground">

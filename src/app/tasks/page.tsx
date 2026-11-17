@@ -545,8 +545,9 @@ async function TaskList({
                   !!nextPeriod;
                 return {
                   key: task.id,
-                  tone:
-                    urgency === "critical"
+                  tone: isBlocked
+                    ? ("blocked" as const)
+                    : urgency === "critical"
                       ? ("critical" as const)
                       : urgency === "approaching"
                         ? ("approaching" as const)
@@ -593,7 +594,7 @@ async function TaskList({
                       {task.status === "todo" &&
                         task.reviewResult === "rejected" && (
                           <span
-                            className="badge ml-2 text-orange-600 dark:text-orange-400"
+                            className="badge ml-2 text-sky-600 dark:text-sky-400"
                             title={
                               task.reviewNote
                                 ? `Returned: ${task.reviewNote}`
@@ -808,7 +809,7 @@ async function TaskList({
                       )}
 
                       {isReturned && (
-                        <section className="space-y-1 rounded-lg border border-orange-500/60 bg-orange-500/10 px-3 py-2 text-orange-700 dark:text-orange-300">
+                        <section className="space-y-1 rounded-lg border border-sky-500/60 bg-sky-500/10 px-3 py-2 text-sky-700 dark:text-sky-300">
                           <h2 className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
                             Returned
                             {task.reviewedAt && (

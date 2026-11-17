@@ -16,7 +16,7 @@ export type GridRow = {
   /** Values to sort each column by, when the text of the cell would sort wrongly (dates, for example). */
   sort?: (string | number | null | undefined)[];
   /** "critical" marks the row in red, "approaching" the same way in amber. */
-  tone?: "critical" | "approaching";
+  tone?: "critical" | "approaching" | "blocked";
 };
 
 export type GridHeader = string | { label: string; title?: string; align?: "right"; className?: string };

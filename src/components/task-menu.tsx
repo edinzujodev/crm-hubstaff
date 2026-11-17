@@ -120,18 +120,34 @@ export function EditForm({
     if (state?.ok && !state.data.hubstaffError) onDone();
   }, [state, onDone]);
 
+  // One copy of a repeating task: what defines the whole series is changed on the recurring task, not here.
+  const locked = !!task.seriesId || !!task.repeat;
+  const hint = locked ? "You can't change this for one occurrence" : undefined;
+
   return (
     <form action={action} className="space-y-3">
-      <label className="flex flex-col gap-1 text-xs text-muted">
+      {/* Disabled fields are not submitted, so locked values go along as hidden fields. */}
+      {locked && <input type="hidden" name="title" value={task.title} />}
+      {locked && <input type="hidden" name="clientId" value={clientId} />}
+      <label className="flex flex-col gap-1 text-xs text-muted" title={hint}>
         Title
-        <InputText name="title" required defaultValue={task.title} className="w-full text-foreground" />
+        <InputText
+          name={locked ? undefined : "title"}
+          required
+          disabled={locked}
+          title={hint}
+          defaultValue={task.title}
+          className="w-full text-foreground"
+        />
       </label>
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-xs text-muted">
+        <label className="flex flex-col gap-1 text-xs text-muted" title={hint}>
           Client
           <Select
-            name="clientId"
+            name={locked ? undefined : "clientId"}
             required
+            disabled={locked}
+            title={hint}
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
             className="w-full text-foreground"
@@ -151,6 +167,7 @@ export function EditForm({
           clientId={clientId}
           title=""
           projects={projects}
+          lockedHint={hint}
           initialProjectId={clientId === String(task.clientId) && task.projectId ? String(task.projectId) : ""}
         />
         <label className="flex flex-col gap-1 text-xs text-muted">
@@ -166,11 +183,12 @@ export function EditForm({
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           Due
-          <DateInput name="dueDate" value={due} onChange={(e) => setDue(e.target.value)} />
+          <DateInput name="dueDate" required value={due} onChange={(e) => setDue(e.target.value)} />
         </label>
-        <div className="col-span-2 flex flex-col gap-1 text-xs text-muted">
+        <div className="col-span-2 flex flex-col gap-1 text-xs text-muted" title={hint}>
           Type of task
           <SelectButton
+            disabled={locked}
             value={repeat || "once"}
             options={[
               { label: "One-time", value: "once" },
@@ -191,7 +209,7 @@ export function EditForm({
         </div>
         {repeat && (
           <div className="col-span-2">
-            <RepeatShowFields repeat={repeat} show={show} lead={lead} onShow={setShow} onLead={setLead} />
+            <RepeatShowFields repeat={repeat} show={show} lead={lead} onShow={setShow} onLead={setLead} lockedHint={hint} />
           </div>
         )}
       </div>

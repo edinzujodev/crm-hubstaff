@@ -204,7 +204,15 @@ body {
 }
 .p-calendar .p-inputtext:not(:disabled),
 .p-calendar .p-datepicker-trigger:not(:disabled) {
-  cursor: pointer;
+  cursor: pointer !important;
+}
+/* The calendar button is as tall as the input next to it. */
+.p-calendar.p-calendar-w-btn {
+  align-items: stretch;
+}
+.p-calendar.p-calendar-w-btn .p-datepicker-trigger {
+  height: auto;
+  min-height: 0;
 }
 .p-datepicker {
   font-size: 0.8125rem;
@@ -242,6 +250,15 @@ body {
   width: auto;
   min-width: 6rem;
   flex: 1 1 auto;
+}
+
+/* A button that can't be clicked says so: the theme turns pointer events off, which also hides any cursor. */
+.p-button:disabled,
+.p-button.p-disabled,
+.p-dropdown.p-disabled,
+.p-dropdown.p-disabled * {
+  pointer-events: auto;
+  cursor: not-allowed;
 }
 
 /* Button hover states. The noir theme's own hover is almost the same colour as the resting button, so it was
@@ -341,6 +358,16 @@ html[data-theme="blue"] .p-button.p-button-text:not(:disabled):hover {
 .p-tabmenu .p-tabmenu-nav,
 .p-tabmenu .p-tabmenu-nav .p-tabmenuitem .p-menuitem-link {
   background: transparent;
+}
+
+/* Blocked tasks: the whole row is greyed out until the task is unblocked. */
+.p-datatable .p-datatable-tbody > tr.row-blocked > td {
+  background: rgb(113 113 122 / 0.08);
+  color: var(--muted);
+  opacity: 0.6;
+}
+.p-datatable .p-datatable-tbody > tr.row-blocked:hover > td {
+  opacity: 0.9;
 }
 
 /* Approaching tasks: the same row design as critical, in amber. */
@@ -533,4 +560,6 @@ html[data-theme="blue"] .sidebar {
   --primary: #fafafa;
   --primary-fg: #18181b;
 }
+
+
 

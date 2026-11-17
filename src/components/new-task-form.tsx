@@ -86,9 +86,9 @@ function TaskForm({
   function chooseTemplate(id: string) {
     setTemplateId(id);
     const t = templates.find((x) => String(x.id) === id);
-    if (!t) return;
-    setNotes(t.description ?? "");
-    setChecklist(t.items.join("\n"));
+    // "No template" empties the fields the previous template filled in.
+    setNotes(t?.description ?? "");
+    setChecklist(t ? t.items.join("\n") : "");
   }
 
   function chooseRepeat(value: Repeat) {
@@ -145,9 +145,10 @@ function TaskForm({
           </Select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
-          Due
+          Due date
           <DateInput
             name="dueDate"
+            required
             value={due}
             onChange={(e) => {
               setDue(e.target.value);
@@ -173,7 +174,6 @@ function TaskForm({
           onChange={(e) => chooseRepeat(e.value === "once" ? "" : (e.value as Repeat))}
           aria-label="Type of task"
         />
-        {!due && <p className="text-xs text-muted">Set a due date to make it repeat.</p>}
         {repeat && (
           <>
             <p className="text-xs text-muted">

@@ -42,6 +42,7 @@ export function DateInput({
         showIcon
         showButtonBar
         disabled={disabled}
+        required={required}
         className={className}
         appendTo={typeof document === "undefined" ? undefined : document.body}
         onChange={(e) => {

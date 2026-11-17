@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { deleteTeam } from "@/app/actions";
 import { EditTeamForm, type TeamEditData } from "@/components/edit-team-form";
@@ -9,18 +10,22 @@ import { HoldToDelete } from "@/components/hold-to-delete";
 import { RowMenu } from "@/components/row-menu";
 import { Modal } from "@/components/modal";
 
-/** The ⋯ button at the end of a team row. Its menu has Delete, which asks for a press-and-hold. */
+/** The ⋯ button at the end of a team row. Its menu has View, Edit and Delete (Delete asks for a press-and-hold). */
 export function TeamMenu({
   teamId,
   name,
   team,
   users,
+  canManage = true,
 }: {
   teamId: number;
   name: string;
   team: TeamEditData;
   users: PickerUser[];
+  /** False for a team leader: they can open the team but not edit or delete it. */
+  canManage?: boolean;
 }) {
+  const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [editing, setEditing] = useState(false);
   const closeEdit = useCallback(() => setEditing(false), []);
@@ -29,8 +34,13 @@ export function TeamMenu({
       <RowMenu
         label={`Actions for ${name}`}
         items={[
-          { label: "Edit team & members", onSelect: () => setEditing(true) },
-          { label: "Delete", danger: true, onSelect: () => setConfirm(true) },
+          { label: "View", onSelect: () => router.push(`/team/${teamId}`) },
+          ...(canManage
+            ? [
+                { label: "Edit", onSelect: () => setEditing(true) },
+                { label: "Delete", danger: true, onSelect: () => setConfirm(true) },
+              ]
+            : []),
         ]}
       />
       {editing && (

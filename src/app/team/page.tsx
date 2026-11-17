@@ -173,29 +173,18 @@ async function TeamContent({ show }: { show?: string }) {
                     ),
                   ],
                   actions: (
-                    <>
-                      <Link
-                        href={`/team/${t.id}`}
-                        className="p-button p-button-icon-only p-button-outlined p-button-secondary"
-                        title="Team details and tasks"
-                        aria-label={`Details for ${t.name}`}
-                      >
-                        <i aria-hidden className="pi pi-arrow-up-right" />
-                      </Link>
-                      {admin && (
-                        <TeamMenu
-                          teamId={t.id}
-                          name={t.name}
-                          team={{
-                            id: t.id,
-                            name: t.name,
-                            leaderId: t.leaderId,
-                            memberIds: members.map((m) => m.id),
-                          }}
-                          users={options}
-                        />
-                      )}
-                    </>
+                    <TeamMenu
+                      teamId={t.id}
+                      name={t.name}
+                      canManage={admin}
+                      team={{
+                        id: t.id,
+                        name: t.name,
+                        leaderId: t.leaderId,
+                        memberIds: members.map((m) => m.id),
+                      }}
+                      users={options}
+                    />
                   ),
                 };
               })}
