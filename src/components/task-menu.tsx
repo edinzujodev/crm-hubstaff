@@ -2,6 +2,7 @@
 
 import { Button, InputText, Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
+import { SelectButton } from "primereact/selectbutton";
 import { useActionState, useEffect, useState, useTransition } from "react";import { deleteTask, updateTask } from "@/app/actions";
 import { DateInput } from "@/components/date-input";
 import { RowMenu } from "@/components/row-menu";
@@ -22,6 +23,8 @@ export type TaskFields = {
   repeat: "weekly" | "monthly" | null;
   repeatLeadDays: number | null;
   repeatShow: RepeatShow | null;
+  /** Set for repeating tasks: the menu then links to the recurring task page. */
+  seriesId?: number | null;
 };
 
 /** The ⋯ button at the end of a row, with Edit and Delete. Both open a popup. */
@@ -47,6 +50,9 @@ export function TaskMenu({
         label={`Actions for ${task.title}`}
         items={[
           { label: "View", onSelect: () => router.push(`/tasks/${task.id}`) },
+          ...(task.repeat && task.seriesId
+            ? [{ label: "Recurring task", onSelect: () => router.push(`/recurring/${task.seriesId}`) }]
+            : []),
           ...(canManage
             ? [
                 { label: "Edit", onSelect: () => setModal("edit" as const) },
@@ -142,23 +148,27 @@ export function EditForm({
           Due
           <DateInput name="dueDate" value={due} onChange={(e) => setDue(e.target.value)} />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          Repeats
-          <Select
-            name="repeat"
-            value={repeat}
+        <div className="col-span-2 flex flex-col gap-1 text-xs text-muted">
+          Type of task
+          <SelectButton
+            value={repeat || "once"}
+            options={[
+              { label: "One-time", value: "once" },
+              { label: "Weekly", value: "weekly" },
+              { label: "Monthly", value: "monthly" },
+            ]}
+            optionLabel="label"
+            optionValue="value"
+            allowEmpty={false}
             onChange={(e) => {
-              const v = e.target.value as "" | "weekly" | "monthly";
+              const v = (e.value === "once" ? "" : e.value) as "" | "weekly" | "monthly";
               setRepeat(v);
               if (v && !lead) setLead(String(defaultLead(v)));
             }}
-            className="w-full text-foreground"
-          >
-            <option value="">One-time</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </Select>
-        </label>
+            aria-label="Type of task"
+          />
+          <input type="hidden" name="repeat" value={repeat} />
+        </div>
         {repeat && (
           <div className="col-span-2">
             <RepeatShowFields repeat={repeat} show={show} lead={lead} onShow={setShow} onLead={setLead} />

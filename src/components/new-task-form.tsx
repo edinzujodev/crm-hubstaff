@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, InputText, InputTextarea, Select } from "@/components/ui";
+import { SelectButton } from "primereact/selectbutton";
 import { useActionState, useEffect, useState } from "react";
 import { createTask } from "@/app/actions";
 import { DateInput } from "@/components/date-input";
@@ -151,27 +152,21 @@ function TaskForm({
       </div>
 
       <fieldset className="space-y-3 rounded-md border border-border p-3">
-        <legend className="px-1 text-xs text-muted">Repeats</legend>
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["", "One-time"],
-              ["weekly", "Weekly"],
-              ["monthly", "Monthly"],
-            ] as const
-          ).map(([value, label]) => (
-            <Button
-              key={value}
-              type="button"
-              disabled={value !== "" && !due}
-              onClick={() => chooseRepeat(value)}
-              aria-pressed={repeat === value}
-              className={`${repeat === value ? "" : ""}`}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+        <legend className="px-1 text-xs text-muted">Type of task</legend>
+        <SelectButton
+          value={repeat || "once"}
+          options={[
+            { label: "One-time", value: "once" },
+            { label: "Weekly", value: "weekly", disabled: !due },
+            { label: "Monthly", value: "monthly", disabled: !due },
+          ]}
+          optionLabel="label"
+          optionValue="value"
+          optionDisabled="disabled"
+          allowEmpty={false}
+          onChange={(e) => chooseRepeat(e.value === "once" ? "" : (e.value as Repeat))}
+          aria-label="Type of task"
+        />
         {!due && <p className="text-xs text-muted">Set a due date to make it repeat.</p>}
         {repeat && (
           <>

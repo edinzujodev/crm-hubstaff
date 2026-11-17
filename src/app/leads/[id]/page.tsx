@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -22,6 +23,9 @@ async function LeadDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-6">
+      <div className="-mb-3">
+        <BackButton fallback="/leads" />
+      </div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">{lead.name}</h1>

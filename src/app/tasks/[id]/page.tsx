@@ -1,7 +1,9 @@
+import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { MoveTimeButton } from "@/components/move-time-button";
 import { TabCard } from "@/components/tab-card";
+import { InfoItem } from "@/components/info-item";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -205,6 +207,9 @@ async function TaskDetail({
 
   return (
     <div className="space-y-6">
+      <div className="-mb-3">
+        <BackButton fallback="/tasks" />
+      </div>
       <section className="card flex flex-wrap items-center justify-between gap-4 p-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -230,7 +235,7 @@ async function TaskDetail({
                     <Link
                       href={`/recurring/${task.seriesId}`}
                       className="p-button p-button-sm p-button-outlined p-button-secondary"
-                      title="All copies of this recurring task. Stop repeating and delete are there."
+                      title="All copies of this recurring task"
                     >
                       Recurring task
                     </Link>
@@ -624,32 +629,6 @@ function TotalsTable({
         ],
       }))}
     />
-  );
-}
-
-/** One fact about the task: a round icon, a small label and the value under it. */
-function InfoItem({
-  icon,
-  label,
-  children,
-}: {
-  icon: string;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-3 bg-surface px-4 py-3">
-      <span
-        aria-hidden
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
-      >
-        <i className={`pi ${icon} text-sm`} />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs text-muted">{label}</p>
-        <p className="truncate text-sm font-medium">{children}</p>
-      </div>
-    </div>
   );
 }
 

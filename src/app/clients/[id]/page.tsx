@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
 import { Button } from "@/components/ui";
 import Link from "next/link";
@@ -79,6 +80,9 @@ async function ClientDetail({
 
   return (
     <div className="space-y-6">
+      <div className="-mb-3">
+        <BackButton fallback="/clients" />
+      </div>
       <header className="card p-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{client.name}</h1>

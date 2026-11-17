@@ -731,6 +731,7 @@ async function TaskList({
                             repeat: task.repeat,
                             repeatLeadDays: task.repeatLeadDays,
                             repeatShow: task.repeatShow,
+                            seriesId: task.seriesId,
                           }}
                           clients={clients}
                           users={users}
