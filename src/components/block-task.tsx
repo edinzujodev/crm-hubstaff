@@ -4,6 +4,7 @@ import { Button, InputTextarea } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { setBlocked } from "@/app/actions";
 import { Modal } from "@/components/modal";
+import { notify } from "@/lib/toast";
 
 /** Asks why a task is blocked (the reason is optional), then marks it blocked. */
 export function BlockModal({ taskId, title, onDone }: { taskId: number; title: string; onDone: () => void }) {
@@ -19,6 +20,7 @@ export function BlockModal({ taskId, title, onDone }: { taskId: number; title: s
           start(async () => {
             const res = await setBlocked(taskId, true, reason);
             if (!res.ok) return setError(res.error);
+            notify({ message: "Task marked as blocked", detail: title });
             onDone();
           });
         }}
@@ -62,7 +64,12 @@ export function BlockTaskButton({ taskId, title, blocked }: { taskId: number; ti
         severity="secondary"
         outlined
         disabled={pending}
-        onClick={() => start(async () => void (await setBlocked(taskId, false)))}
+        onClick={() =>
+          start(async () => {
+            const res = await setBlocked(taskId, false);
+            if (res.ok) notify({ message: "Task unblocked", detail: title });
+          })
+        }
       >
         {pending ? "Unblocking…" : "Unblock"}
       </Button>

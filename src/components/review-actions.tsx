@@ -4,6 +4,7 @@ import { Button, InputTextarea } from "@/components/ui";
 import { useState, useTransition } from "react";
 import { approveTask, rejectTask } from "@/app/actions";
 import { Modal } from "@/components/modal";
+import { notify } from "@/lib/toast";
 
 /** Approve or deny a task that is waiting for review. Denying needs a reason, which the assignee will see. */
 export function ReviewActions({ taskId, title }: { taskId: number; title: string }) {
@@ -16,11 +17,13 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
     start(async () => {
       const res = await approveTask(taskId);
       setError(res.ok ? null : res.error);
+      if (res.ok) notify({ message: "Task approved", detail: title, link: { href: "/tasks?show=finished", label: "Open Finished" } });
     });
   const submitDeny = () =>
     start(async () => {
       const res = await rejectTask(taskId, reason);
       if (res.ok) {
+        notify({ message: "Task sent back", detail: `${title} goes back to its assignee with your reason.` });
         setDeny(false);
         setReason("");
         setError(null);

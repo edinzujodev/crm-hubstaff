@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { deleteSeries, stopRepeating } from "@/app/actions";
 import { Modal } from "@/components/modal";
 import { truncate } from "@/lib/format";
+import { notify } from "@/lib/toast";
 
 /** Stop repeating and Delete for a whole recurring task. Delete asks first and says how many copies go. */
 export function SeriesActions({
@@ -33,6 +34,7 @@ export function SeriesActions({
       setError(null);
       const res = await deleteSeries(seriesId);
       if (!res.ok) return setError(res.error);
+      notify({ message: `Deleted ${res.data.deleted} ${res.data.deleted === 1 ? "occurrence" : "occurrences"}`, detail: title, link: { href: "/tasks?show=deleted", label: "Open Deleted" } });
       if (res.data.hubstaffError) return setWarning(res.data.hubstaffError);
       router.push("/tasks?show=recurring");
     });
@@ -47,7 +49,12 @@ export function SeriesActions({
             severity="secondary"
             outlined
             disabled={stopping}
-            onClick={() => startStop(async () => void (await stopRepeating(latestTaskId)))}
+            onClick={() =>
+              startStop(async () => {
+                const res = await stopRepeating(latestTaskId);
+                if (res.ok) notify({ message: "Stopped repeating", detail: `${title} will not create new copies.` });
+              })
+            }
           >
             {stopping ? "Stopping…" : "Stop repeating"}
           </Button>

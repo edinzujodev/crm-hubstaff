@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { purgeTask } from "@/app/actions";
 import { Modal } from "@/components/modal";
 import { truncate } from "@/lib/format";
+import { notify } from "@/lib/toast";
 
 /** "Delete" (for good) for a task in the Deleted list. It asks first, because it can't be undone. */
 export function PurgeTaskButton({
@@ -56,6 +57,7 @@ export function PurgeTaskButton({
                   start(async () => {
                     const res = await purgeTask(taskId);
                     if (!res.ok) return setError(res.error);
+                    notify({ message: "Task deleted permanently", detail: title });
                     setOpen(false);
                     if (redirectTo) router.push(redirectTo);
                   })

@@ -10,6 +10,7 @@ import { ProjectField, type ProjectOption } from "@/components/project-field";
 import { RepeatShowFields } from "@/components/repeat-show-fields";
 import { defaultLead, type RepeatShow } from "@/lib/repeat-show";
 import type { TemplateOption } from "@/lib/templates";
+import { notify } from "@/lib/toast";
 
 type Option = { id: number; name: string };
 type Repeat = "" | "weekly" | "monthly";
@@ -73,6 +74,7 @@ function TaskForm({
   const hubstaffWarning = state?.ok ? state.data.hubstaffError : undefined;
 
   useEffect(() => {
+    if (state?.ok) notify({ message: "Task created", detail: title });
     if (state?.ok && !state.data.hubstaffError) onDone();
   }, [state, onDone]);
 

@@ -12,6 +12,7 @@ import { RepeatShowFields } from "@/components/repeat-show-fields";
 import { defaultLead, type RepeatShow } from "@/lib/repeat-show";
 import { ProjectField, type ProjectOption } from "@/components/project-field";
 import { truncate } from "@/lib/format";
+import { notify } from "@/lib/toast";
 
 export type Option = { id: number; name: string };
 export type TaskFields = {
@@ -57,7 +58,11 @@ export function TaskMenu({
             ? {
                 label: "Unblock",
                 icon: "pi pi-lock-open",
-                onSelect: () => startTransition(async () => void (await setBlocked(task.id, false))),
+                onSelect: () =>
+                  startTransition(async () => {
+                    const res = await setBlocked(task.id, false);
+                    if (res.ok) notify({ message: "Task unblocked", detail: task.title });
+                  }),
               }
             : { label: "Mark as blocked", icon: "pi pi-ban", onSelect: () => setModal("block" as const) },
           ...(canManage
@@ -105,6 +110,7 @@ export function EditForm({
   const hubstaffWarning = state?.ok ? state.data.hubstaffError : undefined;
 
   useEffect(() => {
+    if (state?.ok) notify({ message: "Task updated", detail: task.title });
     if (state?.ok && !state.data.hubstaffError) onDone();
   }, [state, onDone]);
 
@@ -209,6 +215,7 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
       setError(null);
       const res = await deleteTask(task.id);
       if (!res.ok) return setError(res.error);
+      notify({ message: "Task deleted", detail: task.title, link: { href: "/tasks?show=deleted", label: "Open Deleted" } });
       if (res.data.hubstaffError) return setWarning(res.data.hubstaffError);
       onDone();
     });

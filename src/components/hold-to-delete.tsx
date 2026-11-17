@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { notify } from "@/lib/toast";
 
 const HOLD_MS = 1200;
 
@@ -39,6 +40,7 @@ export function HoldToDelete({
           setHolding(false);
           alert(res.error ?? "Could not delete.");
         } else {
+          notify({ message: "Deleted", detail: title, link: { href: "/tasks?show=deleted", label: "Open Deleted" } });
           const d = res.data;
           if (d && typeof d === "object" && "hubstaffError" in d) {
             alert(`Deleted in the CRM, but Hubstaff could not be updated: ${String(d.hubstaffError)}`);

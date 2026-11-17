@@ -5,7 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { finishTask, setTaskStatus, startTask } from "@/app/actions";
 import { helper } from "@/lib/helper-client";
-import { notifyFinished } from "@/lib/toast";
+import { notify, notifyFinished } from "@/lib/toast";
 
 type Props = {
   taskId: number;
@@ -44,6 +44,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
       setMessage(null);
       const res = await startTask(taskId);
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
+      notify({ message: "Timer started", detail: title });
       const h = await helper.start(res.data.hubstaffTaskId);
       if (h.ok) setMessage({ tone: "ok", text: "Hubstaff timer started." });
       else if (h.reason === "not_running")
@@ -64,6 +65,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
       const h = await helper.stop();
       const res = await finishTask();
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
+      notify({ message: "Timer stopped", detail: title });
       const parts = [
         h.ok ? "Hubstaff timer stopped." : "Session stopped. Stop the timer in the Hubstaff app if it's still running.",
       ];

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui";
 import { useTransition } from "react";
 import { restoreTask } from "@/app/actions";
+import { notify } from "@/lib/toast";
 
 export function RestoreTaskButton({ taskId, compact }: { taskId: number; compact?: boolean }) {
   const [pending, startTransition] = useTransition();
@@ -15,7 +16,8 @@ export function RestoreTaskButton({ taskId, compact }: { taskId: number; compact
         startTransition(async () => {
           const res = await restoreTask(taskId);
           if (!res.ok) alert(res.error);
-          else if (res.data.hubstaffError)
+          else notify({ message: "Task restored" });
+          if (res.ok && (res.data.hubstaffError)
             alert(`Restored in the CRM, but Hubstaff could not be updated: ${res.data.hubstaffError}`);
         })
       }
