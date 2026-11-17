@@ -24,6 +24,7 @@ const ICONS: Record<string, string> = {
   Time: "pi-clock",
   Occurrences: "pi-history",
   Reviews: "pi-verified",
+  Blocked: "pi-ban",
   Templates: "pi-clone",
   "Urgency levels": "pi-bell",
 };
@@ -32,7 +33,8 @@ export type LinkTab = { label: string; href: string; count?: number; alarm?: boo
 
 /**
  * Page-level tabs that are links. The tab you pick turns active right away, and a small spinner turns in front
- * of its name while its page loads.
+ * of its name while its page loads. Switching tabs replaces the history entry, so Back leaves the page instead of
+ * stepping through the tabs you opened.
  */
 export function LinkTabs({ tabs, active }: { tabs: LinkTab[]; active: number }) {
   const router = useRouter();
@@ -80,7 +82,7 @@ export function LinkTabs({ tabs, active }: { tabs: LinkTab[]; active: number }) 
         activeIndex={current}
         onTabChange={(e) => {
           setCurrent(e.index);
-          startNavigation(() => router.push(tabs[e.index].href));
+          startNavigation(() => router.replace(tabs[e.index].href));
         }}
       />
     </div>

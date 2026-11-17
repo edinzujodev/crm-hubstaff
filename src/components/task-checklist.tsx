@@ -48,65 +48,67 @@ export function TaskChecklist({
 
   return (
     <div className="space-y-4">
-      <section className="card space-y-2 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold">Instructions</h2>
-          {canEdit && !editingNotes && (
-            <Button
-              type="button"
-              link
-              size="small"
-              className="p-0 text-xs"
-              onClick={() => setEditingNotes(true)}
-            >
-              {description ? "Edit" : "+ Add instructions"}
-            </Button>
-          )}
-        </div>
-        {editingNotes ? (
-          <div className="space-y-2">
-            <InputTextarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={4}
-              autoFocus
-              placeholder="What needs to be done, and how"
-              className="w-full text-foreground"
-            />
-            <div className="flex gap-2">
+      {(description || canEdit) && (
+        <section className="card space-y-2 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">Instructions</h2>
+            {canEdit && !editingNotes && (
               <Button
                 type="button"
-                disabled={pending}
-                onClick={() =>
-                  run(
-                    () => setTaskInstructions(taskId, notes),
-                    () => setEditingNotes(false),
-                  )
-                }
+                link
+                size="small"
+                className="p-0 text-xs"
+                onClick={() => setEditingNotes(true)}
               >
-                Save
+                {description ? "Edit" : "+ Add instructions"}
               </Button>
-              <Button
-                type="button"
-                severity="secondary"
-                outlined
-                onClick={() => (
-                  setNotes(description ?? ""),
-                  setEditingNotes(false)
-                )}
-              >
-                Cancel
-              </Button>
-            </div>
+            )}
           </div>
-        ) : description ? (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-            {description}
-          </p>
-        ) : (
-          <p className="text-sm text-muted">No instructions for this task.</p>
-        )}
-      </section>
+          {editingNotes ? (
+            <div className="space-y-2">
+              <InputTextarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                autoFocus
+                placeholder="What needs to be done, and how"
+                className="w-full text-foreground"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    run(
+                      () => setTaskInstructions(taskId, notes),
+                      () => setEditingNotes(false),
+                    )
+                  }
+                >
+                  Save
+                </Button>
+                <Button
+                  type="button"
+                  severity="secondary"
+                  outlined
+                  onClick={() => (
+                    setNotes(description ?? ""),
+                    setEditingNotes(false)
+                  )}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : description ? (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">
+              {description}
+            </p>
+          ) : (
+            <p className="text-sm text-muted">No instructions for this task.</p>
+          )}
+        </section>
+      )}
 
       {(items.length > 0 || canEdit) && (
         <section className="card space-y-3 p-4">

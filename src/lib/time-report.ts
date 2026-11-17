@@ -94,6 +94,8 @@ export async function getTimeReport(f: TimeReportFilter) {
     const team = user?.teamId ? teamById.get(user.teamId) : undefined;
 
     const taskRow = a.taskId ? taskById.get(a.taskId) : undefined;
+    // Time on a deleted task is left out of every report until the task is restored.
+    if (taskRow?.task.deletedAt) continue;
     const clientId = taskRow?.task.clientId ?? null;
     if (f.clientId && clientId !== f.clientId) continue;
     const projectId = taskRow?.task.projectId ?? null;

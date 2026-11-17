@@ -7,7 +7,7 @@ import { purgeTask } from "@/app/actions";
 import { Modal } from "@/components/modal";
 import { truncate } from "@/lib/format";
 
-/** "Delete forever" for a task in the Deleted list. It asks first, because it can't be undone. */
+/** "Delete" (for good) for a task in the Deleted list. It asks first, because it can't be undone. */
 export function PurgeTaskButton({
   taskId,
   title,
@@ -29,20 +29,19 @@ export function PurgeTaskButton({
         type="button"
         className={compact ? "py-1" : ""}
         severity="danger"
-        outlined
         onClick={() => setOpen(true)}
       >
-        Delete forever
+        Delete
       </Button>
       {open && (
-        <Modal title="Delete forever?" onClose={() => setOpen(false)}>
+        <Modal title="Delete task?" onClose={() => setOpen(false)}>
           <div className="space-y-3">
             <p className="text-sm">
               Permanently delete <span className="font-medium">{truncate(title, 50)}</span>?
             </p>
             <p className="text-sm text-muted">
-              This can&apos;t be undone. Its sessions, checklist and reviews are removed, and the hours already
-              synced from Hubstaff are no longer counted on any task.
+              This can&apos;t be undone. Its sessions, checklist and reviews are removed. Its hours are already left out of
+              the reports, and they stay in Hubstaff.
             </p>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex justify-end gap-2">
@@ -62,7 +61,7 @@ export function PurgeTaskButton({
                   })
                 }
               >
-                {pending ? "Deleting…" : "Delete forever"}
+                {pending ? "Deleting…" : "Delete"}
               </Button>
             </div>
           </div>

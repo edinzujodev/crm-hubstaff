@@ -9,8 +9,7 @@ export function RestoreTaskButton({ taskId, compact }: { taskId: number; compact
   return (
     <Button
       className={`${compact ? "py-1" : ""}`}
-      severity="secondary"
-      outlined
+      severity="info"
       disabled={pending}
       onClick={() =>
         startTransition(async () => {

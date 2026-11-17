@@ -200,11 +200,32 @@ async function TaskDetail({
           ? "In progress"
           : "Open";
   const reviews = reviewMap.get(id) ?? [];
+  const blockRows = await db
+    .select()
+    .from(schema.taskBlocks)
+    .where(eq(schema.taskBlocks.taskId, id))
+    .orderBy(desc(schema.taskBlocks.blockedAt));
+  const blockUserIds = [
+    ...new Set(
+      blockRows.flatMap((b) => [b.blockedById, b.unblockedById]).filter((x): x is number => x !== null),
+    ),
+  ];
+  const blockUsers = blockUserIds.length
+    ? new Map(
+        (
+          await db
+            .select({ id: schema.users.id, name: schema.users.name })
+            .from(schema.users)
+            .where(inArray(schema.users.id, blockUserIds))
+        ).map((u) => [u.id, u.name]),
+      )
+    : new Map<number, string>();
   const wanted = (await searchParams).tab;
   const tabList = [
     { key: "checklist", label: "Checklist" },
     { key: "time", label: "Time" },
     { key: "reviews", label: "Reviews", count: reviews.length },
+    { key: "blocked", label: "Blocked", count: blockRows.length },
   ];
   const activeTab = Math.max(
     0,
@@ -325,6 +346,26 @@ async function TaskDetail({
           </div>
         )}
 
+      {blocked && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300"
+        >
+          <i aria-hidden className="pi pi-ban mt-0.5 text-base" />
+          <span>
+            <span className="font-semibold">Blocked</span>
+            {task.blockedAt && ` since ${fmtDateTime(task.blockedAt, tz)}`}
+            {task.blockedReason ? (
+              <span className="mt-0.5 block whitespace-pre-wrap">
+                {task.blockedReason}
+              </span>
+            ) : (
+              <span className="opacity-80"> · no reason given</span>
+            )}
+          </span>
+        </div>
+      )}
+
       <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3">
         <InfoItem icon="pi-tag" label="Kind of task">
           {task.repeat
@@ -373,26 +414,6 @@ async function TaskDetail({
         </div>
       )}
 
-      {blocked && (
-        <div
-          role="alert"
-          className="flex items-start gap-3 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300"
-        >
-          <i aria-hidden className="pi pi-ban mt-0.5 text-base" />
-          <span>
-            <span className="font-semibold">Blocked</span>
-            {task.blockedAt && ` since ${fmtDateTime(task.blockedAt, tz)}`}
-            {task.blockedReason ? (
-              <span className="mt-0.5 block whitespace-pre-wrap">
-                {task.blockedReason}
-              </span>
-            ) : (
-              <span className="opacity-80"> · no reason given</span>
-            )}
-          </span>
-        </div>
-      )}
-
       {task.status === "review" && (
         <div className="card flex flex-wrap items-center justify-between gap-3 border-amber-500/50 p-3 text-sm">
           <span>
@@ -436,8 +457,8 @@ async function TaskDetail({
         <p className="card border-red-500/40 p-3 text-sm">
           This task was deleted on {fmtDateTime(task.deletedAt, tz)}. It is
           hidden from the task list and can&apos;t be started. Its Hubstaff task
-          is marked [SOFT-DELETED], and the hours below still count in reports.
-          Restore it to use it again.
+          is marked [SOFT-DELETED], and the hours below are left out of the
+          reports. Restore it to use it again and count them again.
         </p>
       )}
 
@@ -649,6 +670,51 @@ async function TaskDetail({
               )}
             </>
           )}
+
+          {tab === "blocked" &&
+            (blockRows.length > 0 ? (
+                <section className="card space-y-3 p-4">
+                  <h2 className="font-semibold">
+                    Blocked history{" "}
+                    <span className="text-sm font-normal text-muted">
+                      {blockRows.length}
+                    </span>
+                  </h2>
+                  <ul className="divide-y divide-border rounded-md border border-border text-sm">
+                    {blockRows.map((b) => (
+                      <li key={b.id} className="space-y-1 px-3 py-2">
+                        <p className="flex flex-wrap items-center gap-x-2">
+                          <span className="font-medium text-red-600 dark:text-red-400">
+                            Blocked
+                          </span>
+                          <span>{fmtDateTime(b.blockedAt, tz)}</span>
+                          {b.blockedById && (
+                            <span className="text-muted">
+                              by {blockUsers.get(b.blockedById) ?? "someone"}
+                            </span>
+                          )}
+                        </p>
+                        {b.reason ? (
+                          <p className="whitespace-pre-wrap">{b.reason}</p>
+                        ) : (
+                          <p className="text-muted">No reason given.</p>
+                        )}
+                        <p className="text-xs text-muted">
+                          {b.unblockedAt
+                            ? `Unblocked ${fmtDateTime(b.unblockedAt, tz)}${b.unblockedById ? ` by ${blockUsers.get(b.unblockedById) ?? "someone"}` : ""}`
+                            : task.status === "done"
+                              ? "Ended when the task was finished"
+                              : "Still blocked"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+            ) : (
+              <p className="text-sm text-muted">
+                This task has never been blocked.
+              </p>
+            ))}
         </div>
       </TabCard>
     </div>

@@ -147,8 +147,9 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
 
 /**
  * Soft delete: the task is hidden in the CRM and its Hubstaff title gets a
- * "[SOFT-DELETED]" prefix. Nothing is removed, so Hubstaff time and reports
- * keep working. A running session on it is ended.
+ * "[SOFT-DELETED]" prefix. Nothing is removed, so Hubstaff time stays in Hubstaff
+ * and in the database, but it is left out of the reports until the task is restored.
+ * A running session on it is ended.
  */
 export async function deleteTask(taskId: number): Promise<Result<{ hubstaffError?: string }>> {
   return run(async () => {
@@ -180,12 +181,23 @@ export async function restoreTask(taskId: number): Promise<Result<{ hubstaffErro
  */
 export async function setBlocked(taskId: number, blocked: boolean, reason?: string) {
   return run(async () => {
-    await requireTask(taskId, "view");
+    const { auth, task } = await requireTask(taskId, "view");
     const clean = z.string().trim().max(500).parse(reason ?? "") || null;
-    await db
-      .update(schema.tasks)
-      .set(blocked ? { blockedAt: new Date(), blockedReason: clean } : { blockedAt: null, blockedReason: null })
-      .where(eq(schema.tasks.id, taskId));
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      // The history keeps one row per time the task was blocked; unblocking closes the open one.
+      await tx
+        .update(schema.taskBlocks)
+        .set({ unblockedAt: now, unblockedById: auth.user.id })
+        .where(and(eq(schema.taskBlocks.taskId, taskId), isNull(schema.taskBlocks.unblockedAt)));
+      if (blocked) {
+        await tx.insert(schema.taskBlocks).values({ taskId, reason: clean, blockedAt: now, blockedById: auth.user.id });
+      }
+      await tx
+        .update(schema.tasks)
+        .set(blocked ? { blockedAt: now, blockedReason: clean } : { blockedAt: null, blockedReason: null })
+        .where(eq(schema.tasks.id, task.id));
+    });
     return undefined;
   });
 }
@@ -214,6 +226,7 @@ export async function purgeTask(taskId: number) {
       await tx.delete(schema.workSessions).where(eq(schema.workSessions.taskId, taskId));
       await tx.delete(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.taskId, taskId));
       await tx.delete(schema.taskReviews).where(eq(schema.taskReviews.taskId, taskId));
+      await tx.delete(schema.taskBlocks).where(eq(schema.taskBlocks.taskId, taskId));
       await tx.delete(schema.tasks).where(eq(schema.tasks.id, taskId));
     });
     return undefined;
@@ -906,7 +919,7 @@ export async function stopRepeating(taskId: number) {
 
 /**
  * Deletes a whole recurring task: every copy (soft delete, like deleteTask) and stops it repeating, so no new
- * copy appears. Running sessions on any copy are ended. Hours are kept.
+ * copy appears. Running sessions on any copy are ended. Their hours are left out of the reports.
  */
 export async function deleteSeries(seriesId: number): Promise<Result<{ deleted: number; hubstaffError?: string }>> {
   return run(async () => {

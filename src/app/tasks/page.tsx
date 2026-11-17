@@ -11,6 +11,7 @@ import {
 import { Fragment, Suspense } from "react";
 import { asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { TaskChecklist } from "@/components/task-checklist";
 import { PurgeTaskButton } from "@/components/purge-task-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { NewTaskForm } from "@/components/new-task-form";
@@ -528,7 +529,10 @@ async function TaskList({
                         task.dueDate,
                       )
                     : null;
+                const isBlocked =
+                  !!task.blockedAt && task.status !== "done" && !task.deletedAt;
                 const hasDetails =
+                  isBlocked ||
                   (reviews.get(task.id)?.length ?? 0) > 0 ||
                   !!task.description ||
                   (checklists.get(task.id)?.length ?? 0) > 0 ||
@@ -562,9 +566,6 @@ async function TaskList({
                           ? periodLabel(task.repeat, task.dueDate)
                           : truncate(task.title, TITLE_MAX)}
                       </Link>
-                      {task.deletedAt && (
-                        <span className="badge ml-2 text-red-600">Deleted</span>
-                      )}
                       {task.blockedAt && task.status !== "done" && !task.deletedAt && (
                         <span
                           className="badge ml-2 text-red-600"
@@ -573,7 +574,7 @@ async function TaskList({
                           Blocked
                         </span>
                       )}
-                      {task.status === "review" && (
+                      {task.status === "review" && tab !== "review" && (
                         <span className="badge ml-2 text-amber-700 dark:text-amber-400">
                           On review
                         </span>
@@ -713,6 +714,7 @@ async function TaskList({
                     ) : null
                   ) : (
                     <>
+                      {task.status !== "review" && (
                       <TimerControls
                         compact
                         taskId={task.id}
@@ -722,9 +724,7 @@ async function TaskList({
                             ? (assigneeName ?? "someone else")
                             : null
                         }
-                        done={
-                          task.status === "done" || task.status === "review"
-                        }
+                        done={task.status === "done"}
                         runningSince={
                           mine?.taskId === task.id
                             ? mine.startedAt.toISOString()
@@ -736,6 +736,7 @@ async function TaskList({
                             : null
                         }
                       />
+                      )}
                       {canReviewTask(auth, task) && (
                         <ReviewActions taskId={task.id} title={task.title} />
                       )}
@@ -765,42 +766,39 @@ async function TaskList({
                   // Nothing to show means no arrow: only tasks with history, instructions, a checklist or a next period open.
                   details: hasDetails ? (
                     <div className="space-y-4 text-sm">
-                      {(reviews.get(task.id)?.length ?? 0) > 0 && (
-                        <div>
-                          <p className="mb-1 text-xs text-muted">
-                            Review history · {reviews.get(task.id)!.length}
+                      {isBlocked && (
+                        <section className="space-y-1 rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-red-600 dark:text-red-300">
+                          <h2 className="text-sm font-semibold">Blocked</h2>
+                          <p className="whitespace-pre-wrap text-sm">
+                            {task.blockedReason ?? "No reason given."}
                           </p>
+                        </section>
+                      )}
+
+                      {(task.description ||
+                        (checklists.get(task.id)?.length ?? 0) > 0) && (
+                        <TaskChecklist
+                          taskId={task.id}
+                          description={task.description}
+                          items={checklists.get(task.id) ?? []}
+                          canEdit={false}
+                          canTick={!task.deletedAt && task.status !== "done"}
+                        />
+                      )}
+
+                      {(reviews.get(task.id)?.length ?? 0) > 0 && (
+                        <section className="card space-y-3 p-4">
+                          <h2 className="font-semibold">
+                            Review history{" "}
+                            <span className="text-sm font-normal text-muted">
+                              {reviews.get(task.id)!.length}
+                            </span>
+                          </h2>
                           <ReviewHistory
                             reviews={reviews.get(task.id)!}
                             tz={config.timeZone}
                           />
-                        </div>
-                      )}
-
-                      {task.description && (
-                        <div>
-                          <p className="text-xs text-muted">Instructions</p>
-                          <p className="whitespace-pre-wrap">
-                            {task.description}
-                          </p>
-                        </div>
-                      )}
-
-                      {(checklists.get(task.id)?.length ?? 0) > 0 && (
-                        <div>
-                          <p className="mb-1 text-xs text-muted">
-                            Checklist ·{" "}
-                            {
-                              checklists.get(task.id)!.filter((i) => i.done)
-                                .length
-                            }{" "}
-                            of {checklists.get(task.id)!.length} checked
-                          </p>
-                          <InlineChecklist
-                            items={checklists.get(task.id)!}
-                            canTick={!task.deletedAt && task.status !== "done"}
-                          />
-                        </div>
+                        </section>
                       )}
 
                       {(() => {

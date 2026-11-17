@@ -233,7 +233,7 @@ function DeleteConfirm({ task, onDone }: { task: TaskFields; onDone: () => void 
         Delete <span className="font-medium">{truncate(task.title, 50)}</span>?
       </p>
       <p className="text-sm text-muted">
-        It is hidden from the task list and any running timer on it is stopped. Tracked hours are kept, and you can
+        It is hidden from the task list and any running timer on it is stopped. Its hours are left out of the reports, and you can
         restore it from the Deleted tab.
       </p>
       {error && <p className="text-sm text-red-600">{error}</p>}

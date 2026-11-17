@@ -79,7 +79,7 @@ export function SeriesActions({
               </p>
               <p className="text-sm text-muted">
                 Every copy is hidden from the task list, any running timer on them is stopped and no new copies are
-                made. Tracked hours are kept, and each copy can be restored from the Deleted tab.
+                made. Their hours are left out of the reports, and each copy can be restored from the Deleted tab.
               </p>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex justify-end gap-2">

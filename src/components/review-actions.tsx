@@ -30,11 +30,11 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button type="button" size="small" severity="success" disabled={pending} onClick={approve}>
+        <Button type="button" size="small" severity="success" className="w-20 justify-center" disabled={pending} onClick={approve}>
           Approve
         </Button>
-        <Button type="button" size="small" severity="danger" disabled={pending} onClick={() => setDeny(true)}>
-          Deny…
+        <Button type="button" size="small" severity="danger" className="w-20 justify-center" disabled={pending} onClick={() => setDeny(true)}>
+          Deny
         </Button>
         {error && !deny && <span className="text-xs text-red-600">{error}</span>}
       </div>

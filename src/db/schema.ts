@@ -279,6 +279,23 @@ export const taskReviews = pgTable(
   (t) => [index("task_reviews_task_idx").on(t.taskId)],
 );
 
+// Every time a task was blocked: when, by whom, why (optional) and when it was unblocked (null while still blocked).
+export const taskBlocks = pgTable(
+  "task_blocks",
+  {
+    id: serial("id").primaryKey(),
+    taskId: integer("task_id")
+      .notNull()
+      .references(() => tasks.id),
+    reason: text("reason"),
+    blockedAt: timestamp("blocked_at", { withTimezone: true }).notNull().defaultNow(),
+    blockedById: integer("blocked_by_id").references(() => users.id),
+    unblockedAt: timestamp("unblocked_at", { withTimezone: true }),
+    unblockedById: integer("unblocked_by_id").references(() => users.id),
+  },
+  (t) => [index("task_blocks_task_idx").on(t.taskId)],
+);
+
 export const sessionEndReason = pgEnum("session_end_reason", [
   "finished", // user clicked Finish
   "switched", // user started another task

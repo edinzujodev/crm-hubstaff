@@ -3,18 +3,46 @@
 import { Button } from "@/components/ui";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { FINISHED_EVENT, type FinishedNotice } from "@/lib/toast";
+import {
+  FINISHED_EVENT,
+  TOAST_EVENT,
+  type FinishedNotice,
+  type Toast,
+} from "@/lib/toast";
 import { truncate } from "@/lib/format";
 
 const SHOW_MS = 12000;
+const TOAST_MS = 5000;
 
 export function Toaster() {
-  const [notice, setNotice] = useState<(FinishedNotice & { key: number }) | null>(null);
+  const [notice, setNotice] = useState<
+    (FinishedNotice & { key: number }) | null
+  >(null);
+  const [toasts, setToasts] = useState<(Toast & { key: number })[]>([]);
 
   useEffect(() => {
-    const onFinished = (e: Event) => setNotice({ ...(e as CustomEvent<FinishedNotice>).detail, key: Date.now() });
+    const onFinished = (e: Event) =>
+      setNotice({
+        ...(e as CustomEvent<FinishedNotice>).detail,
+        key: Date.now(),
+      });
+    const onToast = (e: Event) => {
+      const key = Date.now() + Math.random();
+      setToasts((cur) => [
+        ...cur.slice(-3),
+        { ...(e as CustomEvent<Toast>).detail, key },
+      ]);
+      setTimeout(
+        () => setToasts((cur) => cur.filter((t) => t.key !== key)),
+        TOAST_MS,
+      );
+    };
     window.addEventListener(FINISHED_EVENT, onFinished);
-    return () => window.removeEventListener(FINISHED_EVENT, onFinished);
+    window.addEventListener(TOAST_EVENT, onToast);
+    return () => {
+      window.removeEventListener(FINISHED_EVENT, onFinished);
+      window.removeEventListener(TOAST_EVENT, onToast);
+    };
   }, []);
 
   useEffect(() => {
@@ -23,14 +51,34 @@ export function Toaster() {
     return () => clearTimeout(t);
   }, [notice]);
 
-  if (!notice) return null;
+  if (!notice && !toasts.length) return null;
   return (
-    <div role="status" className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]">
-      <div className="card space-y-3 border-emerald-500/60 p-4 text-sm shadow-lg">
-        <div className="flex items-start justify-between gap-3">
-          <p className="font-medium text-emerald-700 dark:text-emerald-400">
-            {notice.inReview ? "✓ Sent for review" : "✓ Task finished"}
-          </p>
+    <div
+      role="status"
+      className="fixed bottom-4 right-4 z-50 flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2"
+    >
+      {toasts.map((t) => (
+        <div
+          key={t.key}
+          className={`card flex items-start justify-between gap-3 p-3 text-sm shadow-lg ${t.tone === "error" ? "border-red-500/60" : "border-emerald-500/60"}`}
+        >
+          <div>
+            <p
+              className={`font-medium ${t.tone === "error" ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}
+            >
+              {t.tone === "error" ? "✕ " : "✓ "}
+              {t.message}
+            </p>
+            {t.detail && <p className="text-xs text-muted">{t.detail}</p>}
+            {t.link && (
+              <Link
+                className="text-xs font-medium underline"
+                href={t.link.href}
+              >
+                {t.link.label}
+              </Link>
+            )}
+          </div>
           <Button
             type="button"
             icon="pi pi-times"
@@ -39,38 +87,67 @@ export function Toaster() {
             size="small"
             severity="secondary"
             aria-label="Dismiss"
-            onClick={() => setNotice(null)}
+            onClick={() =>
+              setToasts((cur) => cur.filter((x) => x.key !== t.key))
+            }
           />
         </div>
-        <p>
-          <span className="font-medium">{truncate(notice.title, 50)}</span> was moved to{" "}
-          {notice.inReview ? (
-            <Link className="underline" href="/tasks?show=review">
-              On review
-            </Link>
-          ) : (
-            <Link className="underline" href="/tasks?show=finished">
-              Done
-            </Link>
-          )}
-          .{notice.inReview ? " Your team leader will approve it or send it back with a reason." : ""}
-        </p>
-        {notice.nextTaskId ? (
-          <p className="rounded-md bg-emerald-500/10 p-2">
-            ↻ A new task was created
-            {notice.nextDueDate ? (
-              <>
-                {" "}
-                and is due <span className="font-medium">{notice.nextDueDate}</span>
-              </>
-            ) : null}
-            .{" "}
-            <Link className="font-medium underline" href={`/tasks/${notice.nextTaskId}`}>
-              Open new task
-            </Link>
+      ))}
+      {notice && (
+        <div className="card space-y-3 border-emerald-500/60 p-4 text-sm shadow-lg">
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-medium text-emerald-700 dark:text-emerald-400">
+              {notice.inReview ? "✓ Sent for review" : "✓ Task finished"}
+            </p>
+            <Button
+              type="button"
+              icon="pi pi-times"
+              text
+              rounded
+              size="small"
+              severity="secondary"
+              aria-label="Dismiss"
+              onClick={() => setNotice(null)}
+            />
+          </div>
+          <p>
+            <span className="font-medium">{truncate(notice.title, 50)}</span>{" "}
+            was moved to{" "}
+            {notice.inReview ? (
+              <Link className="underline" href="/tasks?show=review">
+                On review
+              </Link>
+            ) : (
+              <Link className="underline" href="/tasks?show=finished">
+                Done
+              </Link>
+            )}
+            .
+            {notice.inReview
+              ? " Your team leader will approve it or send it back with a reason."
+              : ""}
           </p>
-        ) : null}
-      </div>
+          {notice.nextTaskId ? (
+            <p className="rounded-md bg-emerald-500/10 p-2">
+              ↻ A new task was created
+              {notice.nextDueDate ? (
+                <>
+                  {" "}
+                  and is due{" "}
+                  <span className="font-medium">{notice.nextDueDate}</span>
+                </>
+              ) : null}
+              .{" "}
+              <Link
+                className="font-medium underline"
+                href={`/tasks/${notice.nextTaskId}`}
+              >
+                Open new task
+              </Link>
+            </p>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

@@ -177,7 +177,8 @@ export async function getClientReport(clientId: number, from: string, to: string
     db.select().from(schema.tasks).where(and(eq(schema.tasks.clientId, clientId), scope)),
     db.select().from(schema.users),
   ]);
-  const taskIds = tasks.map((t) => t.id);
+  // Time on a deleted task is left out until the task is restored.
+  const taskIds = tasks.filter((t) => !t.deletedAt).map((t) => t.id);
   // Query a wider UTC window, then keep the slots whose local day is inside the range.
   const activities = taskIds.length
     ? await db
@@ -244,7 +245,7 @@ export async function trackedByClient(since: Date, scope?: SQL) {
     })
     .from(schema.hubstaffActivities)
     .innerJoin(schema.tasks, eq(schema.hubstaffActivities.taskId, schema.tasks.id))
-    .where(and(gte(schema.hubstaffActivities.startsAt, since), scope))
+    .where(and(gte(schema.hubstaffActivities.startsAt, since), isNull(schema.tasks.deletedAt), scope))
     .groupBy(schema.tasks.clientId);
   return new Map(rows.filter((r) => r.clientId !== null).map((r) => [r.clientId!, r.tracked]));
 }
