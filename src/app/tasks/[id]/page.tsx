@@ -2,26 +2,23 @@ import { DataGrid } from "@/components/data-grid";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { MoveTimeButton } from "@/components/move-time-button";
 import { TabCard } from "@/components/tab-card";
-import { getSeries } from "@/lib/series";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { DeleteTaskButton } from "@/components/delete-task-button";
-import { StopRepeatingButton } from "@/components/stop-repeating-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
 import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
 import { canReviewTask, reviewsByTask } from "@/lib/review";
 import { ReviewHistory } from "@/components/review-history";
-import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
+import { periodLabel } from "@/lib/recurring";
 import { timeLeftLabel, urgencyOf } from "@/lib/urgency";
 import { getLevels } from "@/lib/urgency-settings";
 import { asc } from "drizzle-orm";
 import { ReviewActions } from "@/components/review-actions";
-import { NextPeriodButton } from "@/components/next-period-button";
 import { TaskChecklist } from "@/components/task-checklist";
 import { localDay } from "@/lib/format";
 import { getCurrentUser } from "@/lib/current-user";
@@ -163,7 +160,6 @@ async function TaskDetail({
         where: eq(schema.projects.id, task.projectId),
       })
     : null;
-  const series = task.seriesId ? await getSeries(task.seriesId, auth) : null;
   const today = localDay(new Date(), tz);
   const team = task.teamId
     ? await db.query.teams.findFirst({
@@ -177,15 +173,6 @@ async function TaskDetail({
     !!task.startDate &&
     task.startDate > localDay(new Date(), tz) &&
     task.status !== "done";
-  const next =
-    manage && task.repeat && task.seriesId && !task.deletedAt && !waiting
-      ? nextHidden(
-          (await upcomingCopies([task.seriesId], localDay(new Date(), tz))).get(
-            task.seriesId,
-          ),
-          task.dueDate,
-        )
-      : null;
   const otherTask =
     mine && mine.taskId !== id
       ? await db.query.tasks.findFirst({
@@ -204,20 +191,10 @@ async function TaskDetail({
           ? "In progress"
           : "Open";
   const reviews = reviewMap.get(id) ?? [];
-  const showOccurrences = !!series && series.occurrences.length > 1;
   const wanted = (await searchParams).tab;
   const tabList = [
     { key: "checklist", label: "Checklist" },
     { key: "time", label: "Time" },
-    ...(showOccurrences
-      ? [
-          {
-            key: "occurrences",
-            label: "Occurrences",
-            count: series!.occurrences.length,
-          },
-        ]
-      : []),
     { key: "reviews", label: "Reviews", count: reviews.length },
   ];
   const activeTab = Math.max(
@@ -249,10 +226,14 @@ async function TaskDetail({
             <>
               {manage && (
                 <div className="flex items-center gap-2">
-                  {task.repeat && (
-                    <span title="No more copies will be created after this one">
-                      <StopRepeatingButton taskId={task.id} />
-                    </span>
+                  {task.repeat && task.seriesId && (
+                    <Link
+                      href={`/recurring/${task.seriesId}`}
+                      className="p-button p-button-sm p-button-outlined p-button-secondary"
+                      title="All copies of this recurring task. Stop repeating and delete are there."
+                    >
+                      Recurring task
+                    </Link>
                   )}
                   <DeleteTaskButton
                     taskId={task.id}
@@ -566,83 +547,6 @@ async function TaskDetail({
                 </section>
               )}
             </>
-          )}
-
-          {tab === "occurrences" && series && (
-            <section className="space-y-3">
-              {next && task.repeat && (
-                <div className="card flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
-                  <span>
-                    {periodLabel(task.repeat, next.dueDate)} is created but
-                    hidden until its time comes. Need it earlier?
-                  </span>
-                  <NextPeriodButton
-                    nextTaskId={next.id}
-                    label={periodLabel(task.repeat, next.dueDate)}
-                  />
-                </div>
-              )}
-              <DataGrid
-                headers={[
-                  "Period",
-                  "Due",
-                  "Status",
-                  "Assignee",
-                  "Finished",
-                  { label: "Time", align: "right" },
-                ]}
-                rows={[...series.occurrences].reverse().map((o) => ({
-                  key: o.id,
-                  cells: [
-                    <div key="p">
-                      {o.id === id ? (
-                        <span className="font-semibold">
-                          {series.summary.repeat && o.dueDate
-                            ? periodLabel(series.summary.repeat, o.dueDate)
-                            : o.title}{" "}
-                          <span className="badge ml-1 text-muted">Current</span>
-                        </span>
-                      ) : (
-                        <Link
-                          href={`/tasks/${o.id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {series.summary.repeat && o.dueDate
-                            ? periodLabel(series.summary.repeat, o.dueDate)
-                            : o.title}
-                        </Link>
-                      )}
-                      {o.startDate &&
-                        o.startDate > today &&
-                        o.status !== "done" && (
-                          <span className="badge ml-2 text-muted">
-                            Hidden until {fmtDay(o.startDate)}
-                          </span>
-                        )}
-                    </div>,
-                    <span key="d" className="text-muted">
-                      {o.dueDate ? fmtDay(o.dueDate) : "—"}
-                    </span>,
-                    <span key="s" className="badge">
-                      {o.status === "done"
-                        ? "Done"
-                        : o.status === "review"
-                          ? "On review"
-                          : "Open"}
-                    </span>,
-                    <span key="a" className="text-muted">
-                      {o.assigneeName ?? "—"}
-                    </span>,
-                    <span key="f" className="text-muted">
-                      {o.doneAt ? fmtDateTime(o.doneAt, tz) : "—"}
-                    </span>,
-                    <span key="t" className="font-mono tabular-nums">
-                      {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
-                    </span>,
-                  ],
-                }))}
-              />
-            </section>
           )}
 
           {tab === "reviews" && (

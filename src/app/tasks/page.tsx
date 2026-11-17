@@ -106,9 +106,13 @@ function SeriesTable({
         return {
           key: s.id,
           cells: [
-            <span key="t" className="font-medium">
+            <Link
+              key="t"
+              href={`/recurring/${s.id}`}
+              className="font-medium hover:underline"
+            >
               {s.title}
-            </span>,
+            </Link>,
             s.clientId ? (
               <Link
                 key="c"
@@ -141,6 +145,7 @@ function SeriesTable({
           ],
           actions: task ? (
             <SeriesMenu
+              seriesId={s.id}
               task={task}
               clients={edit.clients}
               users={edit.users}

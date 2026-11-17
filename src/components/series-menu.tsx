@@ -1,45 +1,40 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { stopRepeating } from "@/app/actions";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import type { ProjectOption } from "@/components/project-field";
 import { RowMenu } from "@/components/row-menu";
 import { EditForm, type Option, type TaskFields } from "@/components/task-menu";
 
 /**
- * ⋯ menu for a recurring task. Edit changes the current copy (title, client, project, assignee, due date and
- * how it repeats); every new copy is made from it, so the change carries forward. Finished copies are untouched.
+ * ⋯ menu for a recurring task. View opens the recurring task page (all copies, Stop repeating, Delete). Edit
+ * changes the current copy (title, client, project, assignee, due date and how it repeats); every new copy is
+ * made from it, so the change carries forward. Finished copies are untouched.
  */
 export function SeriesMenu({
+  seriesId,
   task,
   clients,
   users,
   projects,
 }: {
+  seriesId: number;
   task: TaskFields;
   clients: Option[];
   users: Option[];
   projects: ProjectOption[];
 }) {
   const [editing, setEditing] = useState(false);
-  const [, startTransition] = useTransition();
+  const router = useRouter();
   const close = useCallback(() => setEditing(false), []);
   return (
     <>
       <RowMenu
         label={`Actions for ${task.title}`}
         items={[
+          { label: "View", onSelect: () => router.push(`/recurring/${seriesId}`) },
           { label: "Edit", onSelect: () => setEditing(true) },
-          ...(task.repeat
-            ? [
-                {
-                  label: "Stop repeating",
-                  danger: true,
-                  onSelect: () => startTransition(async () => void (await stopRepeating(task.id))),
-                },
-              ]
-            : []),
         ]}
       />
       {editing && (

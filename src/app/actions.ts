@@ -835,6 +835,40 @@ export async function stopRepeating(taskId: number) {
   });
 }
 
+/**
+ * Deletes a whole recurring task: every copy (soft delete, like deleteTask) and stops it repeating, so no new
+ * copy appears. Running sessions on any copy are ended. Hours are kept.
+ */
+export async function deleteSeries(seriesId: number): Promise<Result<{ deleted: number; hubstaffError?: string }>> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const copies = await db
+      .select()
+      .from(schema.tasks)
+      .where(and(eq(schema.tasks.seriesId, seriesId), isNull(schema.tasks.deletedAt)));
+    if (!copies.length) throw new Error("Task not found");
+    if (!copies.every((t) => canManageTask(auth, t))) throw new Error("You don't have permission to do that.");
+    const ids = copies.map((t) => t.id);
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.workSessions)
+        .set({ endedAt: now, endReason: "finished" })
+        .where(and(inArray(schema.workSessions.taskId, ids), isNull(schema.workSessions.endedAt)));
+      await tx
+        .update(schema.tasks)
+        .set({ deletedAt: now, repeat: null, repeatDay: null })
+        .where(inArray(schema.tasks.id, ids));
+    });
+    let hubstaffError: string | undefined;
+    for (const t of copies) {
+      const r = await renameInHubstaff(t.hubstaffTaskId, markDeleted);
+      if ("hubstaffError" in r) hubstaffError ??= r.hubstaffError;
+    }
+    return { deleted: ids.length, hubstaffError };
+  });
+}
+
 /** Pulls older Hubstaff time for the range being reported, so reports can cover it. */
 export async function loadHubstaffRange(from: string, to: string) {
   return run(async () => {

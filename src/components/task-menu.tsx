@@ -2,8 +2,7 @@
 
 import { Button, InputText, Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { deleteTask, stopRepeating, updateTask } from "@/app/actions";
+import { useActionState, useEffect, useState, useTransition } from "react";import { deleteTask, updateTask } from "@/app/actions";
 import { DateInput } from "@/components/date-input";
 import { RowMenu } from "@/components/row-menu";
 import { Modal } from "@/components/modal";
@@ -41,7 +40,6 @@ export function TaskMenu({
 }) {
   const [modal, setModal] = useState<"edit" | "delete" | null>(null);
   const router = useRouter();
-  const [, startTransition] = useTransition();
 
   return (
     <>
@@ -52,14 +50,6 @@ export function TaskMenu({
           ...(canManage
             ? [
                 { label: "Edit", onSelect: () => setModal("edit" as const) },
-                ...(task.repeat
-                  ? [
-                      {
-                        label: "Stop repeating",
-                        onSelect: () => startTransition(async () => void (await stopRepeating(task.id))),
-                      },
-                    ]
-                  : []),
                 { label: "Delete", danger: true, onSelect: () => setModal("delete" as const) },
               ]
             : []),
