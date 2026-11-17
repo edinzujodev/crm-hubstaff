@@ -207,7 +207,7 @@ async function TaskDetail({
 
   return (
     <div className="space-y-6">
-      <div className="-mb-3">
+      <div>
         <BackButton fallback="/tasks" />
       </div>
       <section className="card flex flex-wrap items-center justify-between gap-4 p-4">

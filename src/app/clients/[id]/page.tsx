@@ -80,7 +80,7 @@ async function ClientDetail({
 
   return (
     <div className="space-y-6">
-      <div className="-mb-3">
+      <div>
         <BackButton fallback="/clients" />
       </div>
       <header className="card p-4">

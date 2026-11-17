@@ -50,7 +50,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-6">
-      <div className="-mb-3">
+      <div>
         <BackButton fallback="/team?show=teams" />
       </div>
       <header className="card flex flex-wrap items-start justify-between gap-3 p-4">
