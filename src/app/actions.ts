@@ -625,22 +625,45 @@ export async function toggleChecklistItem(itemId: number, done: boolean) {
   });
 }
 
+/** The copies of a recurring task that come after this one and are not finished: they share its checklist. */
+async function laterCopies(task: schema.Task) {
+  if (!task.repeat || !task.seriesId) return [];
+  const rows = await db
+    .select()
+    .from(schema.tasks)
+    .where(and(eq(schema.tasks.seriesId, task.seriesId), isNull(schema.tasks.deletedAt), ne(schema.tasks.status, "done")));
+  return rows.filter((t) =>
+    t.id !== task.id && (task.dueDate && t.dueDate ? t.dueDate > task.dueDate : t.id > task.id),
+  );
+}
+
+/** Adds an item. On a recurring task it is added to every later copy too, so the next ones have it. */
 export async function addChecklistItem(taskId: number, text: string) {
   return run(async () => {
-    await requireTask(taskId, "manage");
+    const { task } = await requireTask(taskId, "manage");
     const clean = z.string().trim().min(1, "Write the item").max(300).parse(text);
-    const [{ n }] = await db
-      .select({ n: count() })
-      .from(schema.taskChecklistItems)
-      .where(eq(schema.taskChecklistItems.taskId, taskId));
-    await db.insert(schema.taskChecklistItems).values({ taskId, text: clean, position: n });
+    for (const t of [task, ...(await laterCopies(task))]) {
+      const [{ n }] = await db
+        .select({ n: count() })
+        .from(schema.taskChecklistItems)
+        .where(eq(schema.taskChecklistItems.taskId, t.id));
+      await db.insert(schema.taskChecklistItems).values({ taskId: t.id, text: clean, position: n });
+    }
     return undefined;
   });
 }
 
+/** Removes an item. On a recurring task the same item is removed from every later copy too. */
 export async function removeChecklistItem(itemId: number) {
   return run(async () => {
-    await itemTask(itemId, "manage");
+    const item = await itemTask(itemId, "manage");
+    const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, item.taskId) });
+    const later = task ? await laterCopies(task) : [];
+    if (later.length) {
+      await db
+        .delete(schema.taskChecklistItems)
+        .where(and(inArray(schema.taskChecklistItems.taskId, later.map((t) => t.id)), eq(schema.taskChecklistItems.text, item.text)));
+    }
     await db.delete(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.id, itemId));
     return undefined;
   });

@@ -1,3 +1,4 @@
+import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
@@ -86,6 +87,7 @@ async function SeriesDetail({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold">{summary.title}</h1>
+          <Crumb name={summary.title} />
             <span className="badge">{summary.repeat ? `Repeats ${summary.repeat}` : "Stopped repeating"}</span>
           </div>
           <p className="text-sm text-muted">

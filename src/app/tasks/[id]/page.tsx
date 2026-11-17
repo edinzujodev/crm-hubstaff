@@ -1,3 +1,4 @@
+import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
 import { KIND_LABEL } from "@/lib/project-kind";
@@ -213,6 +214,13 @@ async function TaskDetail({
       <section className="card flex flex-wrap items-center justify-between gap-4 p-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
+            <Crumb
+              name={
+                task.repeat && task.dueDate
+                  ? periodLabel(task.repeat, task.dueDate)
+                  : task.title
+              }
+            />
             <h1 className="text-xl font-semibold">
               {task.repeat && task.dueDate
                 ? periodLabel(task.repeat, task.dueDate)

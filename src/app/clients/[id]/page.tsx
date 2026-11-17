@@ -1,3 +1,4 @@
+import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
 import { Button } from "@/components/ui";
@@ -86,6 +87,7 @@ async function ClientDetail({
       <header className="card p-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{client.name}</h1>
+          <Crumb name={client.name} />
           {client.kind === "group" && (
             <span className="badge">
               Group of {companies.length} {companies.length === 1 ? "company" : "companies"}

@@ -1,10 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import { InputNumber } from "primereact/inputnumber";
 import { Message } from "primereact/message";
 import { Slider } from "primereact/slider";
-import { Tag } from "primereact/tag";
 import { useActionState, useState } from "react";
 import { setUrgencyLevels } from "@/app/actions";
 
@@ -34,51 +32,6 @@ function Zone({ zone, children }: { zone: keyof typeof ZONES; children: React.Re
       <div>
         <p className={`text-sm font-semibold ${z.text}`}>{z.label}</p>
         <p className="text-sm text-muted">{children}</p>
-      </div>
-    </div>
-  );
-}
-
-function HoursInput({
-  id,
-  label,
-  tone,
-  value,
-  onChange,
-  invalid,
-}: {
-  id: string;
-  label: string;
-  tone: "red" | "amber";
-  value: number | null;
-  onChange: (v: number | null) => void;
-  invalid: boolean;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">
-        <Tag
-          value={label}
-          className={tone === "red" ? "!bg-red-500/10 !text-red-600" : "!bg-amber-500/15 !text-amber-700"}
-        />
-        <span className="font-normal text-muted">due in under</span>
-      </label>
-      <div className="flex items-center gap-3">
-        <InputNumber
-          inputId={id}
-          value={value}
-          onValueChange={(e) => onChange(e.value ?? null)}
-          min={1}
-          max={MAX_HOURS}
-          suffix=" hours"
-          useGrouping={false}
-          showButtons
-          buttonLayout="horizontal"
-          step={1}
-          invalid={invalid}
-          inputClassName="w-28 text-center"
-        />
-        <span className="text-sm text-muted">{value && value >= 48 ? `= ${long(value)}` : ""}</span>
       </div>
     </div>
   );
@@ -133,25 +86,6 @@ export function UrgencyLevelsForm({
           <span>{long(SLIDER_MAX / 2)} before due</span>
           <span>{long(SLIDER_MAX)}+</span>
         </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <HoursInput
-          id="critical-hours"
-          label="Critical"
-          tone="red"
-          value={critical}
-          onChange={setCritical}
-          invalid={!orderOk}
-        />
-        <HoursInput
-          id="approaching-hours"
-          label="Approaching"
-          tone="amber"
-          value={approaching}
-          onChange={setApproaching}
-          invalid={!orderOk}
-        />
       </div>
 
       {numbersOk && orderOk ? (

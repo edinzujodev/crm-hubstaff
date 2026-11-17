@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { useCrumb } from "@/components/crumb";
 
 const SECTIONS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -24,14 +25,18 @@ const DETAIL: Record<string, string> = {
   team: "Team",
 };
 
-/** Where you are: Home › Tasks › Task #12. Detail pages are named by kind and id. */
+/** Where you are: Home › Tasks › Task name. Detail pages name themselves with <Crumb>; until then (or without it) kind and id. */
 function Breadcrumb() {
-  const parts = usePathname().split("/").filter(Boolean);
+  const pathname = usePathname();
+  const named = useCrumb(pathname);
+  const parts = pathname.split("/").filter(Boolean);
   const crumbs: { label: string; href?: string }[] = [{ label: "Home", href: "/dashboard" }];
   if (parts[0]) {
     const section = SECTIONS[parts[0]] ?? parts[0];
-    crumbs.push({ label: section, href: parts[1] ? `/${parts[0]}` : undefined });
-    if (parts[1]) crumbs.push({ label: `${DETAIL[parts[0]] ?? "Item"} #${parts[1]}` });
+    // There is no /recurring list page: recurring tasks are a tab on Tasks.
+    const listHref = parts[0] === "recurring" ? "/tasks?show=recurring" : `/${parts[0]}`;
+    crumbs.push({ label: section, href: parts[1] ? listHref : undefined });
+    if (parts[1]) crumbs.push({ label: named ?? `${DETAIL[parts[0]] ?? "Item"} #${parts[1]}` });
   }
   // On the dashboard itself "Home › Dashboard" says the same thing twice.
   const shown = parts[0] === "dashboard" ? crumbs.slice(1) : crumbs;

@@ -1,3 +1,4 @@
+import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -56,6 +57,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
       <header className="card flex flex-wrap items-start justify-between gap-3 p-4">
         <div>
           <h1 className="text-xl font-semibold">{team.name}</h1>
+          <Crumb name={team.name} />
           <p className="text-sm text-muted">Leader: {leader?.name ?? "none yet"}</p>
         </div>
         <div className="flex gap-2">

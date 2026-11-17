@@ -1,3 +1,4 @@
+import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -29,6 +30,7 @@ async function LeadDetail({ params }: { params: Promise<{ id: string }> }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">{lead.name}</h1>
+          <Crumb name={lead.name} />
           <p className="mt-1 text-sm text-muted">
             Added {fmtDateTime(lead.createdAt, config.timeZone)}
             {lead.convertedAt && <> · became a client {fmtDateTime(lead.convertedAt, config.timeZone)}</>}
