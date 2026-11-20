@@ -16,6 +16,8 @@ export type GridRow = {
   details?: ReactNode;
   /** Values to sort each column by, when the text of the cell would sort wrongly (dates, for example). */
   sort?: (string | number | null | undefined)[];
+  /** Extra words the search should match for this row (status, names behind icons, ...), beyond the cells' text. */
+  search?: string;
   /** "critical" marks the row in red, "approaching" the same way in amber. */
   tone?: "critical" | "approaching" | "blocked";
 };
@@ -28,9 +30,11 @@ function textOf(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(textOf).join(" ");
   if (isValidElement(node)) {
-    const props = node.props as { children?: ReactNode; title?: unknown };
+    const props = node.props as { children?: ReactNode; title?: unknown; "aria-label"?: unknown };
     const inner = Children.toArray(props.children).map(textOf).join(" ").trim();
-    return inner || (typeof props.title === "string" ? props.title : "");
+    // A name behind an icon or initials (a title or label) is searchable too.
+    const named = [props.title, props["aria-label"]].filter((v): v is string => typeof v === "string");
+    return [inner, ...named].filter(Boolean).join(" ");
   }
   return "";
 }
@@ -88,7 +92,7 @@ export function DataGrid({
           const given = r.sort?.[i];
           sortBy[`c${i}`] = given !== undefined && given !== null ? given : asSortValue(t);
         });
-        return { ...r, _search: texts.join(" ").toLowerCase(), _sort: sortBy };
+        return { ...r, _search: [...texts, r.search ?? ""].join(" ").toLowerCase(), _sort: sortBy };
       }),
     [rows],
   );
@@ -122,8 +126,9 @@ export function DataGrid({
     }
     return list;
   }, [prepared, ghosts]);
-  const q = query.trim().toLowerCase();
-  const shown = q ? withGhosts.filter((r) => r._search.includes(q)) : withGhosts;
+  // Every word typed must be found somewhere in the row, in any column ("edin zujo", "bingo weekly").
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = words.length ? withGhosts.filter((r) => words.every((w) => r._search.includes(w))) : withGhosts;
   const searchable = !plain && !noHeader && (alwaysSearch || rows.length > 8);
 
   const toggle = (key: string | number) =>

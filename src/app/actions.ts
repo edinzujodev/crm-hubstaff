@@ -117,7 +117,7 @@ export async function createTask(_prev: unknown, formData: FormData): Promise<Re
     const picked = input.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })
       : null;
-    if (auth.role === "leader" && picked && picked.teamId !== auth.ledTeam?.id) {
+    if (auth.role === "leader" && picked && !(picked.teamId !== null && auth.ledTeamIds.includes(picked.teamId))) {
       throw new Error("You can only assign tasks to people in your team.");
     }
     const teamId = picked?.teamId ?? auth.ledTeam?.id ?? null;
@@ -565,19 +565,11 @@ export async function finishTask(): Promise<Result<{ sync: SyncResult | null; sy
   });
 }
 
-/** Ticks whatever is left on a task's checklist. */
-async function completeChecklist(taskId: number) {
-  await db
-    .update(schema.taskChecklistItems)
-    .set({ doneAt: new Date() })
-    .where(and(eq(schema.taskChecklistItems.taskId, taskId), isNull(schema.taskChecklistItems.doneAt)));
-}
-
 const clearReview = { reviewerId: null, submittedAt: null, reviewResult: null, reviewNote: null, reviewedAt: null } as const;
 
 /**
- * "done" finishes the task: its checklist is completed, and if the team has a leader (who isn't the person
- * finishing) it goes to that leader for review instead of straight to Done. "todo" reopens it.
+ * "done" finishes the task (its checklist is left as the person ticked it), and if the team has a leader (who
+ * isn't the person finishing) it goes to that leader for review instead of straight to Done. "todo" reopens it.
  */
 export async function setTaskStatus(taskId: number, status: "todo" | "in_progress" | "done") {
   return run(async () => {
@@ -586,7 +578,6 @@ export async function setTaskStatus(taskId: number, status: "todo" | "in_progres
       await db.update(schema.tasks).set({ status, doneAt: null, ...clearReview }).where(eq(schema.tasks.id, taskId));
       return { nextTaskId: null, nextDueDate: null, inReview: false };
     }
-    await completeChecklist(taskId);
     const reviewerId = await reviewerFor(task);
     const inReview = reviewerId !== null && reviewerId !== auth.user.id;
     const now = new Date();
@@ -685,9 +676,12 @@ export async function toggleChecklistItem(itemId: number, done: boolean) {
   });
 }
 
-/** The copies of a recurring task that come after this one and are not finished: they share its checklist. */
+/**
+ * The copies of a recurring task that come after this one and are not finished: they share its checklist.
+ * Membership in the series is what counts, not the repeat flag (a copy may no longer repeat).
+ */
 async function laterCopies(task: schema.Task) {
-  if (!task.repeat || !task.seriesId) return [];
+  if (!task.seriesId) return [];
   const rows = await db
     .select()
     .from(schema.tasks)
@@ -726,6 +720,44 @@ export async function removeChecklistItem(itemId: number) {
     }
     await db.delete(schema.taskChecklistItems).where(eq(schema.taskChecklistItems.id, itemId));
     return undefined;
+  });
+}
+
+/**
+ * Gives a task to someone else (or to nobody). Team leaders can hand it to people in their team and the teams under
+ * it. Whoever had it stops their running timer on it, and the Hubstaff task follows the new person.
+ */
+export async function assignTask(taskId: number, userId: number | null): Promise<Result<{ name: string | null; hubstaffError?: string }>> {
+  return run(async () => {
+    const { auth, task } = await requireTask(taskId, "manage");
+    if (task.deletedAt) throw new Error("This task was deleted. Restore it first.");
+    if (task.status === "done") throw new Error("This task is done. Reopen it to give it to someone else.");
+    const person = userId ? await db.query.users.findFirst({ where: eq(schema.users.id, userId) }) : null;
+    if (userId && !person) throw new Error("That person doesn't exist.");
+    if (auth.role === "leader" && person && !(person.teamId !== null && auth.ledTeamIds.includes(person.teamId))) {
+      throw new Error("You can only give tasks to people in your team.");
+    }
+    if (person?.id === task.assigneeId) return { name: person.name };
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.workSessions)
+        .set({ endedAt: now, endReason: "switched" })
+        .where(and(eq(schema.workSessions.taskId, taskId), isNull(schema.workSessions.endedAt)));
+      await tx
+        .update(schema.tasks)
+        .set({ assigneeId: person?.id ?? null, teamId: person ? (person.teamId ?? task.teamId) : task.teamId })
+        .where(eq(schema.tasks.id, taskId));
+    });
+    let hubstaffError: string | undefined;
+    if (task.hubstaffTaskId && person?.hubstaffUserId) {
+      try {
+        await hubstaff().assignTask(task.hubstaffTaskId, person.hubstaffUserId);
+      } catch (e) {
+        hubstaffError = e instanceof Error ? e.message : String(e);
+      }
+    }
+    return { name: person?.name ?? null, ...(hubstaffError ? { hubstaffError } : {}) };
   });
 }
 
@@ -870,7 +902,7 @@ export async function updateTask(
     const picked = input.assigneeId
       ? await db.query.users.findFirst({ where: eq(schema.users.id, input.assigneeId) })
       : null;
-    if (auth.role === "leader" && picked && picked.teamId !== auth.ledTeam?.id) {
+    if (auth.role === "leader" && picked && !(picked.teamId !== null && auth.ledTeamIds.includes(picked.teamId))) {
       throw new Error("You can only assign tasks to people in your team.");
     }
     const teamId = picked ? (picked.teamId ?? task.teamId) : task.teamId;

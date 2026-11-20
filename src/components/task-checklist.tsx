@@ -13,7 +13,7 @@ export type ChecklistItem = { id: number; text: string; done: boolean };
 
 /**
  * The how-to of a task: instructions and a checklist. Anyone on the task can tick items, but the task can be
- * finished without ticking them all (finishing ticks what is left). Managers edit the list and instructions
+ * finished without ticking them all (finishing leaves them as they are). Managers edit the list and instructions
  *.
  */
 export function TaskChecklist({

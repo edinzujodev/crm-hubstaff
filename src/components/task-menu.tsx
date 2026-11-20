@@ -3,7 +3,7 @@
 import { Button, InputText, Select } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { SelectButton } from "primereact/selectbutton";
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";import { deleteTask, setBlocked, updateTask } from "@/app/actions";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";import { assignTask, deleteTask, setBlocked, updateTask } from "@/app/actions";
 import { BlockModal } from "@/components/block-task";
 import { DateInput } from "@/components/date-input";
 import { RowMenu } from "@/components/row-menu";
@@ -46,7 +46,7 @@ export function TaskMenu({
   users: Option[];
   projects: ProjectOption[];
 }) {
-  const [modal, setModal] = useState<"edit" | "delete" | "block" | null>(null);
+  const [modal, setModal] = useState<"edit" | "delete" | "block" | "assign" | null>(null);
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -69,6 +69,7 @@ export function TaskMenu({
             : { label: "Mark as blocked", icon: "pi pi-ban", onSelect: () => setModal("block" as const) },
           ...(canManage
             ? [
+                { label: "Assign to…", icon: "pi pi-user-edit", onSelect: () => setModal("assign" as const) },
                 { label: "Edit", onSelect: () => setModal("edit" as const) },
                 { label: "Delete", danger: true, onSelect: () => setModal("delete" as const) },
               ]
@@ -80,6 +81,11 @@ export function TaskMenu({
           <EditForm task={task} clients={clients} users={users} projects={projects} onDone={() => setModal(null)} />
         </Modal>
       )}
+      {modal === "assign" && (
+        <Modal title="Assign task" onClose={() => setModal(null)}>
+          <AssignForm task={task} users={users} onDone={() => setModal(null)} />
+        </Modal>
+      )}
       {modal === "block" && <BlockModal taskId={task.id} title={task.label ?? task.title} onDone={() => setModal(null)} />}
       {modal === "delete" && (
         <Modal title="Delete task?" onClose={() => setModal(null)}>
@@ -87,6 +93,73 @@ export function TaskMenu({
         </Modal>
       )}
     </>
+  );
+}
+
+/** Gives the task to someone else (or to nobody). */
+function AssignForm({ task, users, onDone }: { task: TaskFields; users: Option[]; onDone: () => void }) {
+  const [who, setWho] = useState(task.assigneeId ? String(task.assigneeId) : "");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const name = task.label ?? task.title;
+
+  const save = () =>
+    startTransition(async () => {
+      setError(null);
+      const res = await assignTask(task.id, who ? Number(who) : null);
+      if (!res.ok) return setError(res.error);
+      notify({
+        message: res.data.name ? `Task assigned to ${res.data.name}` : "Task is now unassigned",
+        detail: name,
+      });
+      if (res.data.hubstaffError) return setWarning(res.data.hubstaffError);
+      onDone();
+    });
+
+  if (warning)
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-amber-700 dark:text-amber-400">
+          Assigned in the CRM, but the Hubstaff task could not be moved to them ({warning}).
+        </p>
+        <div className="flex justify-end">
+          <Button severity="secondary" outlined onClick={onDone}>
+            Close
+          </Button>
+        </div>
+      </div>
+    );
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm">
+        Who should have <span className="font-medium">{truncate(name, 60)}</span>?
+      </p>
+      <label className="flex flex-col gap-1 text-xs text-muted">
+        Assignee
+        <Select value={who} onChange={(e) => setWho(e.target.value)} className="w-full text-foreground">
+          <option value="">Nobody (unassigned)</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </Select>
+      </label>
+      <p className="text-xs text-muted">
+        A timer the current person has running on this task is stopped. The hours already tracked stay with them.
+      </p>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <Button type="button" severity="secondary" outlined onClick={onDone} disabled={pending}>
+          Cancel
+        </Button>
+        <Button type="button" onClick={save} disabled={pending || who === (task.assigneeId ? String(task.assigneeId) : "")}>
+          {pending ? "Assigning…" : "Assign"}
+        </Button>
+      </div>
+    </div>
   );
 }
 

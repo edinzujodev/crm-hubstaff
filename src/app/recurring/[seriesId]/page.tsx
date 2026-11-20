@@ -21,7 +21,7 @@ import { KIND_LABEL } from "@/lib/project-kind";
 import { nextHidden, periodLabel, upcomingCopies } from "@/lib/recurring";
 import { getSeries } from "@/lib/series";
 
-const statusLabel = { todo: "Open", in_progress: "Open", review: "On review", done: "Done" } as const;
+const statusLabel = { todo: "Open", in_progress: "In progress", review: "On review", done: "Done" } as const;
 
 /** A recurring task as a whole, laid out like a single task: header, facts, then tabs. */
 async function SeriesDetail({
@@ -108,7 +108,7 @@ async function SeriesDetail({
       </section>
 
       <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3">
-        <InfoItem icon="pi-tag" label="Kind of task">
+        <InfoItem icon="pi-tag" label="Type">
           {summary.repeat ? (summary.repeat === "weekly" ? "Weekly, repeats" : "Monthly, repeats") : "Stopped"}
         </InfoItem>
         <InfoItem icon="pi-briefcase" label="Client">

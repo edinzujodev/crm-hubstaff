@@ -233,7 +233,7 @@ function TaskForm({
           />
         </label>
         <p className="text-xs text-muted">
-          The task can be finished without ticking every item; finishing ticks what is left.
+          The task can be finished without ticking every item; finishing does not tick them for you.
         </p>
       </fieldset>
 

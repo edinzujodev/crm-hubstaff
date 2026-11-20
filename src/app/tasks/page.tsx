@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { TaskScopeToggle } from "@/components/task-scope-toggle";
 import { ApprovedBadge, BlockedBadge, OnReviewBadge, ReturnedBadge } from "@/components/approved-badge";
 import { SeriesStateFilter } from "@/components/series-state-filter";
+import { TaskPeopleFilter } from "@/components/task-people-filter";
 import { SERIES_STATES, type SeriesState } from "@/lib/series-state";
 import {
   TASK_SCOPE_COOKIE,
@@ -33,6 +34,7 @@ import {
   fmtDateTime,
   fmtDay,
   fmtDuration,
+  fmtSpan,
   spanSince,
   localDay,
   truncate,
@@ -220,7 +222,9 @@ function SeriesTable({
                         ? "Done"
                         : o.status === "review"
                           ? "On review"
-                          : "Open"}
+                          : o.status === "in_progress"
+                            ? "In progress"
+                            : "Open"}
                     </span>,
                     <span key="a" className="text-muted">
                       {o.assigneeName ?? "—"}
@@ -245,9 +249,9 @@ function SeriesTable({
 async function TaskList({
   filter,
 }: {
-  filter: Promise<{ show?: string; scope?: string; state?: string }>;
+  filter: Promise<{ show?: string; scope?: string; state?: string; team?: string; person?: string }>;
 }) {
-  const [auth, { show, scope: scopeParam, state: stateParam }] = await Promise.all([
+  const [auth, { show, scope: scopeParam, state: stateParam, team: teamParam, person: personParam }] = await Promise.all([
     getAuth(),
     filter,
   ]);
@@ -309,13 +313,33 @@ async function TaskList({
     !isWorker && TASK_SCOPES.find((s) => s === wanted)
       ? (wanted as TaskScope)
       : "mine";
-  // Tasks waiting for your review always show, whichever list you picked.
+  // Pick a team (for someone who leads team leaders) and a person from it. Workers have no such filter.
+  const [allTeams, allPeople] = isWorker
+    ? [[], []]
+    : await Promise.all([
+        db.select({ id: schema.teams.id, name: schema.teams.name, leaderId: schema.teams.leaderId }).from(schema.teams).orderBy(schema.teams.name),
+        db.select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId }).from(schema.users).orderBy(schema.users.name),
+      ]);
+  const teamOptions = allTeams.filter((t) => auth.role === "super_admin" || auth.ledTeamIds.includes(t.id));
+  const teamIds = new Set(teamOptions.map((t) => t.id));
+  const teamSel = teamIds.has(Number(teamParam)) ? Number(teamParam) : null;
+  const peopleOptions = allPeople.filter((u) =>
+    teamSel !== null ? u.teamId === teamSel : auth.role === "super_admin" || (u.teamId !== null && teamIds.has(u.teamId)),
+  );
+  const personSel = peopleOptions.some((u) => u.id === Number(personParam)) ? Number(personParam) : null;
+  const filterQuery = `${teamSel !== null ? `&team=${teamSel}` : ""}${personSel !== null ? `&person=${personSel}` : ""}`;
+  // Tasks waiting for your review always show, whichever list you picked. A picked person or team replaces
+  // the My / Team / Unassigned choice.
   const inScope = tasks.filter(({ task }) =>
-    scope === "team" || (task.status === "review" && task.reviewerId === me.id)
-      ? true
-      : scope === "unassigned"
-        ? !task.assigneeId
-        : !me || task.assigneeId === me.id,
+    personSel !== null
+      ? task.assigneeId === personSel
+      : teamSel !== null
+        ? task.teamId === teamSel
+        : scope === "team" || (task.status === "review" && task.reviewerId === me.id)
+          ? true
+          : scope === "unassigned"
+            ? !task.assigneeId
+            : !me || task.assigneeId === me.id,
   );
   const now = new Date();
   type Row = (typeof tasks)[number];
@@ -329,9 +353,11 @@ async function TaskList({
   };
   const tabs = [
     "open",
+    "progress",
+    "finished",
     "critical",
     "recurring",
-    "finished",
+    "blocked",
     "deleted",
   ] as const;
   type Tab = (typeof tabs)[number];
@@ -341,11 +367,15 @@ async function TaskList({
     asked && !(isWorker && managerOnly.includes(asked)) ? asked : "open";
   const matches = {
     // A repeat copy waiting for its start date stays out of the open lists until then.
-    // Tasks waiting for review are open too: the Review column tells them apart.
+    // Tasks waiting for review are open too: the Review column tells them apart. Started tasks are In progress.
     open: ({ task }: Row) =>
       !task.deletedAt &&
       task.status !== "done" &&
+      task.status !== "in_progress" &&
       !(task.startDate && task.startDate > today),
+    progress: ({ task }: Row) =>
+      !task.deletedAt && task.status === "in_progress" && !(task.startDate && task.startDate > today),
+    blocked: ({ task }: Row) => !task.deletedAt && task.status !== "done" && !!task.blockedAt,
     critical: (row: Row) =>
       !row.task.deletedAt &&
       row.task.status !== "done" &&
@@ -356,6 +386,8 @@ async function TaskList({
   };
   const counts: Record<Tab, number> = {
     open: inScope.filter(matches.open).length,
+    progress: inScope.filter(matches.progress).length,
+    blocked: inScope.filter(matches.blocked).length,
     critical: inScope.filter(matches.critical).length,
     recurring: series.filter((s) => s.repeat).length,
     finished: inScope.filter(matches.finished).length,
@@ -364,9 +396,11 @@ async function TaskList({
   const taskTabs = (
     [
       ["open", "Open"],
+      ["progress", "In progress"],
       ["finished", "Finished"],
       ["critical", "Critical"],
       ["recurring", "Recurring"],
+      ["blocked", "Blocked"],
       ["deleted", "Deleted"],
     ] as const
   ).filter(([key]) => !isWorker || !managerOnly.includes(key));
@@ -423,6 +457,21 @@ async function TaskList({
     }
   }
 
+  // How long each visible task has been blocked in all: every block, and the one still going until now.
+  const blockedTotals = new Map<number, { ms: number; times: number }>();
+  if (visible.length) {
+    const blocks = await db
+      .select()
+      .from(schema.taskBlocks)
+      .where(inArray(schema.taskBlocks.taskId, visible.map((v) => v.task.id)));
+    for (const b of blocks) {
+      const cur = blockedTotals.get(b.taskId) ?? { ms: 0, times: 0 };
+      cur.ms += Math.max(0, (b.unblockedAt ?? now).getTime() - b.blockedAt.getTime());
+      cur.times += 1;
+      blockedTotals.set(b.taskId, cur);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {mine && mineTask && (
@@ -448,10 +497,12 @@ async function TaskList({
       <TabCard
         tabs={taskTabs.map(([key, label]) => ({
           label,
-          href: key === "open" ? "/tasks" : `/tasks?show=${key}`,
+          href: `/tasks${key === "open" ? "" : `?show=${key}`}${
+            filterQuery ? (key === "open" ? `?${filterQuery.slice(1)}` : filterQuery) : ""
+          }`,
           count: counts[key],
           alarm: key === "critical" && counts.critical > 0,
-          end: key === "critical" || key === "recurring" || key === "deleted",
+          end: key === "critical" || key === "recurring" || key === "blocked" || key === "deleted",
         }))}
         active={Math.max(
           0,
@@ -500,14 +551,22 @@ async function TaskList({
             alwaysSearch
             toolbar={
               !isWorker ? (
-                <TaskScopeToggle
-                  scope={scope}
-                  teamLabel={
-                    auth.role === "super_admin"
-                      ? "Everyone's tasks"
-                      : "Team tasks"
-                  }
-                />
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <TaskPeopleFilter
+                    teams={teamOptions.length > 1 ? teamOptions.map((t) => ({ id: t.id, label: t.name })) : []}
+                    people={peopleOptions.map((u) => ({ id: u.id, name: u.name }))}
+                    team={teamSel}
+                    person={personSel}
+                  />
+                  <TaskScopeToggle
+                    scope={scope}
+                    teamLabel={
+                      auth.role === "super_admin"
+                        ? "Everyone's tasks"
+                        : "Team tasks"
+                    }
+                  />
+                </div>
               ) : undefined
             }
             empty="No tasks here."
@@ -520,6 +579,7 @@ async function TaskList({
               "Project",
               "Created",
               "Due",
+              ...(tab === "finished" ? ["Finished"] : []),
             ]}
             rows={visible.map(
               ({
@@ -548,7 +608,7 @@ async function TaskList({
                   !!task.blockedAt && task.status !== "done" && !task.deletedAt;
                 // Only the latest review, and only when it sent the task back.
                 const isReturned =
-                  task.status === "todo" &&
+                  (task.status === "todo" || task.status === "in_progress") &&
                   task.reviewResult === "rejected" &&
                   !task.deletedAt;
                 const hasDetails =
@@ -557,8 +617,35 @@ async function TaskList({
                   !!task.description ||
                   (checklists.get(task.id)?.length ?? 0) > 0 ||
                   !!nextPeriod;
+                const approved = task.status === "done" && task.reviewResult === "approved";
+                const search = [
+                  task.deletedAt
+                    ? "deleted"
+                    : task.status === "done"
+                      ? "finished done"
+                      : task.status === "review"
+                        ? "on review review"
+                        : task.status === "in_progress"
+                          ? "in progress started"
+                          : "open",
+                  isBlocked ? `blocked ${task.blockedReason ?? ""}` : "",
+                  approved ? "approved" : "",
+                  isReturned ? `returned ${task.reviewNote ?? ""}` : "",
+                  task.repeat === "weekly"
+                    ? "weekly recurring repeating"
+                    : task.repeat === "monthly"
+                      ? "monthly recurring repeating"
+                      : "one-time once",
+                  assigneeName ?? "unassigned",
+                  clientName ?? "",
+                  projectName ? `${projectName} ${KIND_LABEL[projectKind ?? "one_off"]}` : "",
+                  urgency === "critical" ? "critical overdue" : urgency === "approaching" ? "approaching soon" : "",
+                  task.dueDate ?? "",
+                  task.doneAt ? fmtDateTime(task.doneAt, config.timeZone) : "",
+                ].join(" ");
                 return {
                   key: task.id,
+                  search,
                   tone: isBlocked
                     ? ("blocked" as const)
                     : urgency === "critical"
@@ -575,6 +662,7 @@ async function TaskList({
                     projectName ?? "",
                     task.createdAt.toISOString(),
                     task.dueDate ?? "9999-12-31",
+                    ...(tab === "finished" ? [task.doneAt?.toISOString() ?? ""] : []),
                   ],
                   cells: [
                     <div key="title">
@@ -613,7 +701,7 @@ async function TaskList({
                           isBlocked ||
                           task.status === "review" ||
                           (task.status === "done" && task.reviewResult === "approved") ||
-                          (task.status === "todo" && task.reviewResult === "rejected") ? (
+                          isReturned ? (
                             <div key="review" className="flex items-center gap-1.5">
                               {isBlocked && <BlockedBadge reason={task.blockedReason} />}
                               {task.status === "done" && task.reviewResult === "approved" && (
@@ -622,9 +710,7 @@ async function TaskList({
                                 />
                               )}
                               {task.status === "review" && <OnReviewBadge />}
-                              {task.status === "todo" && task.reviewResult === "rejected" && (
-                                <ReturnedBadge reason={task.reviewNote} />
-                              )}
+                              {isReturned && <ReturnedBadge reason={task.reviewNote} />}
                             </div>
                           ) : (
                             <span key="review" className="text-muted">
@@ -714,6 +800,13 @@ async function TaskList({
                         —
                       </span>
                     ),
+                    ...(tab === "finished"
+                      ? [
+                          <span key="finished" className="whitespace-nowrap text-muted">
+                            {task.doneAt ? fmtDateTime(task.doneAt, config.timeZone) : "—"}
+                          </span>,
+                        ]
+                      : []),
                   ],
                   actions: task.deletedAt ? (
                     manage ? (
@@ -809,6 +902,8 @@ async function TaskList({
                           {task.blockedAt && (
                             <p className="text-xs text-muted">
                               Blocked on {fmtDateTime(task.blockedAt, config.timeZone)}
+                              {(blockedTotals.get(task.id)?.times ?? 0) > 1 &&
+                                ` · ${fmtSpan(blockedTotals.get(task.id)!.ms)} blocked in total, over ${blockedTotals.get(task.id)!.times} times`}
                             </p>
                           )}
                         </div>
@@ -876,6 +971,8 @@ export default function Home({ searchParams }: PageProps<"/tasks">) {
     show: typeof p.show === "string" ? p.show : undefined,
     scope: typeof p.scope === "string" ? p.scope : undefined,
     state: typeof p.state === "string" ? p.state : undefined,
+    team: typeof p.team === "string" ? p.team : undefined,
+    person: typeof p.person === "string" ? p.person : undefined,
   }));
   return (
     <div className="space-y-4">

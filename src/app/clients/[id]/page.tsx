@@ -20,7 +20,7 @@ import { KIND_LABEL } from "@/lib/project-kind";
 import { getClientReport } from "@/lib/report";
 import { pageGuard, taskScope } from "@/lib/auth";
 
-const statusLabel = { todo: "Open", in_progress: "Open", review: "On review", done: "Done" } as const;
+const statusLabel = { todo: "Open", in_progress: "In progress", review: "On review", done: "Done" } as const;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function lastDayOfMonth(ym: string) {

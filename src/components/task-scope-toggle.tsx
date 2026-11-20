@@ -19,6 +19,9 @@ export function TaskScopeToggle({ scope, teamLabel }: { scope: TaskScope; teamLa
     // Drop a ?scope= link override so the saved choice applies.
     const q = new URLSearchParams(params.toString());
     q.delete("scope");
+    // Picking whose tasks to list replaces a picked team or person.
+    q.delete("team");
+    q.delete("person");
     startTransition(async () => {
       await saveTaskScope(next);
       router.replace(q.size ? `${pathname}?${q}` : pathname);

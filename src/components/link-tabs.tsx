@@ -8,6 +8,7 @@ import { useState, useTransition } from "react";
 const ICONS: Record<string, string> = {
   Open: "pi-inbox",
   "On review": "pi-eye",
+  "In progress": "pi-play",
   Critical: "pi-exclamation-triangle",
   Recurring: "pi-refresh",
   Finished: "pi-check-circle",

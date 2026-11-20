@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { eq, or, type SQL } from "drizzle-orm";
+import { eq, inArray, or, type SQL } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/current-user";
@@ -15,7 +15,22 @@ export type Auth = {
   role: Role;
   /** The team this person leads, if any. */
   ledTeam: schema.Team | null;
+  /**
+   * The teams whose tasks they look after: the one they lead plus every team that reports to it, so a leader of
+   * team leaders also covers those leaders' teams. Empty for people who lead nothing.
+   */
+  ledTeamIds: number[];
 };
+
+/** The team plus every team below it (teams whose parent is it, and so on). */
+async function teamsUnder(teamId: number): Promise<number[]> {
+  const all = await db.select({ id: schema.teams.id, parentTeamId: schema.teams.parentTeamId }).from(schema.teams);
+  const ids = [teamId];
+  for (let i = 0; i < ids.length; i++) {
+    for (const t of all) if (t.parentTeamId === ids[i] && !ids.includes(t.id)) ids.push(t.id);
+  }
+  return ids;
+}
 
 /** Who is signed in and what they are. Cached for the duration of one request. */
 export const getAuth = cache(async (): Promise<Auth | null> => {
@@ -23,7 +38,7 @@ export const getAuth = cache(async (): Promise<Auth | null> => {
   if (!user) return null;
   const ledTeam = (await db.query.teams.findFirst({ where: eq(schema.teams.leaderId, user.id) })) ?? null;
   const role: Role = user.role === "super_admin" ? "super_admin" : ledTeam ? "leader" : "worker";
-  return { user, role, ledTeam };
+  return { user, role, ledTeam, ledTeamIds: ledTeam ? await teamsUnder(ledTeam.id) : [] };
 });
 
 export async function requireAuth(): Promise<Auth> {
@@ -53,13 +68,13 @@ type TaskScope = { assigneeId: number | null; teamId: number | null; reviewerId?
 export function canViewTask(a: Auth, t: TaskScope): boolean {
   if (a.role === "super_admin") return true;
   if (t.assigneeId === a.user.id || t.reviewerId === a.user.id) return true;
-  return a.role === "leader" && t.teamId !== null && t.teamId === a.ledTeam?.id;
+  return a.role === "leader" && t.teamId !== null && a.ledTeamIds.includes(t.teamId);
 }
 
 /** Editing, deleting, restoring and stopping the repeat of a task. */
 export function canManageTask(a: Auth, t: TaskScope): boolean {
   if (a.role === "super_admin") return true;
-  return a.role === "leader" && t.teamId !== null && t.teamId === a.ledTeam?.id;
+  return a.role === "leader" && t.teamId !== null && a.ledTeamIds.includes(t.teamId);
 }
 
 /** SQL filter for the tasks a person may see; undefined means all. */
@@ -67,7 +82,7 @@ export function taskScope(a: Auth): SQL | undefined {
   if (a.role === "super_admin") return undefined;
   // Tasks sent to you for review are yours to see too.
   const own = or(eq(schema.tasks.assigneeId, a.user.id), eq(schema.tasks.reviewerId, a.user.id));
-  if (a.role === "leader" && a.ledTeam) return or(own, eq(schema.tasks.teamId, a.ledTeam.id));
+  if (a.role === "leader" && a.ledTeamIds.length) return or(own, inArray(schema.tasks.teamId, a.ledTeamIds));
   return own;
 }
 
@@ -86,8 +101,8 @@ export function canManageTeam(a: Auth, teamId: number): boolean {
   return a.role === "super_admin" || (a.role === "leader" && a.ledTeam?.id === teamId);
 }
 
-/** Who a person may assign tasks to: a leader their own team, the super admin anyone. */
+/** Who a person may assign tasks to: a leader their team (and the teams under it), the super admin anyone. */
 export async function assignableUsers(a: Auth) {
-  const where = a.role === "super_admin" || !a.ledTeam ? undefined : eq(schema.users.teamId, a.ledTeam.id);
+  const where = a.role === "super_admin" || !a.ledTeamIds.length ? undefined : inArray(schema.users.teamId, a.ledTeamIds);
   return db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(where).orderBy(schema.users.name);
 }

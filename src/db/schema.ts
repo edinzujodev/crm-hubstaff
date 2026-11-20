@@ -248,7 +248,7 @@ export const tasks = pgTable(
 );
 
 // The checklist of one task. Items can be ticked, but the task can be finished without ticking them all;
-// finishing ticks whatever is left.
+// finishing leaves them as they are.
 export const taskChecklistItems = pgTable(
   "task_checklist_items",
   {

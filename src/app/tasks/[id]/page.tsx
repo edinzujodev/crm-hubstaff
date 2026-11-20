@@ -28,7 +28,8 @@ import { ReviewActions } from "@/components/review-actions";
 import { TaskChecklist } from "@/components/task-checklist";
 import { localDay } from "@/lib/format";
 import { getCurrentUser } from "@/lib/current-user";
-import { fmtDateTime, fmtDay, fmtDuration, fmtTime, spanSince } from "@/lib/format";
+import { fmtDateTime, fmtDay, fmtDuration, fmtSpan, fmtTime, spanSince } from "@/lib/format";
+import { blockedMs } from "@/lib/blocks";
 import { getTaskReport, type SessionFlag } from "@/lib/report";
 
 const endReasonLabel = {
@@ -206,6 +207,7 @@ async function TaskDetail({
     .from(schema.taskBlocks)
     .where(eq(schema.taskBlocks.taskId, id))
     .orderBy(desc(schema.taskBlocks.blockedAt));
+  const blockedTotal = blockedMs(blockRows, task.status === "done" ? task.doneAt : null);
   const blockUserIds = [
     ...new Set(
       blockRows.flatMap((b) => [b.blockedById, b.unblockedById]).filter((x): x is number => x !== null),
@@ -356,7 +358,7 @@ async function TaskDetail({
           <span>
             <span className="font-semibold">Blocked</span>
             {task.blockedAt &&
-              ` since ${fmtDateTime(task.blockedAt, tz)} · ${spanSince(task.blockedAt)}`}
+              ` since ${fmtDateTime(task.blockedAt, tz)} · ${spanSince(task.blockedAt)}${blockRows.length > 1 ? ` · ${fmtSpan(blockedTotal)} in total` : ""}`}
             {task.blockedReason ? (
               <span className="mt-0.5 block whitespace-pre-wrap">
                 {task.blockedReason}
@@ -369,13 +371,21 @@ async function TaskDetail({
       )}
 
       <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3">
-        <InfoItem icon="pi-tag" label="Kind of task">
+        <InfoItem icon="pi-tag" label="Type">
           {task.repeat
             ? task.repeat === "weekly"
               ? "Weekly, repeats"
               : "Monthly, repeats"
             : "One-time"}
         </InfoItem>
+        {blockRows.length > 0 && (
+          <InfoItem icon="pi-ban" label="Time blocked">
+            {fmtSpan(blockedTotal)}{" "}
+            <span className="text-muted">
+              · {blockRows.length} {blockRows.length === 1 ? "time" : "times"}
+            </span>
+          </InfoItem>
+        )}
         <InfoItem icon="pi-briefcase" label="Client">
           {task.clientId ? (
             <Link
@@ -428,7 +438,7 @@ async function TaskDetail({
         </div>
       )}
 
-      {task.reviewResult === "rejected" && task.status === "todo" && (
+      {task.reviewResult === "rejected" && (task.status === "todo" || task.status === "in_progress") && (
         <div className="card space-y-1 border-red-500/50 p-3 text-sm">
           <p className="font-medium text-red-600 dark:text-red-400">
             Returned
@@ -682,6 +692,14 @@ async function TaskDetail({
                       {blockRows.length}
                     </span>
                   </h2>
+                  <p className="text-sm">
+                    <span className="font-medium">Total time blocked: {fmtSpan(blockedTotal)}</span>
+                    <span className="text-muted">
+                      {" "}
+                      over {blockRows.length} {blockRows.length === 1 ? "time" : "times"}
+                      {blocked ? ", counting the block that is still going" : ""}
+                    </span>
+                  </p>
                   <ul className="divide-y divide-border rounded-md border border-border text-sm">
                     {blockRows.map((b) => (
                       <li key={b.id} className="space-y-1 px-3 py-2">

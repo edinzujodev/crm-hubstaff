@@ -79,6 +79,11 @@ export async function startSession(taskId: number, userId: number) {
     .insert(schema.workSessions)
     .values({ taskId, userId, startedAt: now })
     .returning({ id: schema.workSessions.id });
+  // Starting a task puts it in progress. A task that is waiting for review isn't started again.
+  await db
+    .update(schema.tasks)
+    .set({ status: "in_progress" })
+    .where(and(eq(schema.tasks.id, taskId), eq(schema.tasks.status, "todo")));
   return { sessionId: session.id, hubstaffTaskId };
 }
 
