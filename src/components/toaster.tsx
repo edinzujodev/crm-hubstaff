@@ -120,8 +120,8 @@ export function Toaster() {
             <span className="font-medium">{truncate(notice.title, 50)}</span>{" "}
             was moved to{" "}
             {notice.inReview ? (
-              <Link className="underline" href="/tasks?show=review">
-                On review
+              <Link className="underline" href="/tasks">
+                Open tasks
               </Link>
             ) : (
               <Link className="underline" href="/tasks?show=finished">
@@ -130,7 +130,7 @@ export function Toaster() {
             )}
             .
             {notice.inReview
-              ? " Your team leader will verify it or return it with a reason."
+              ? " Your team leader will approve it or return it with a reason."
               : ""}
           </p>
           {notice.nextTaskId ? (

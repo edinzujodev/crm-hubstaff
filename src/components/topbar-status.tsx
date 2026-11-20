@@ -78,7 +78,7 @@ export async function TopbarStatus() {
         {critical ? `${critical} critical` : "Nothing critical"}
       </Link>
       <Link
-        href={reviewMine ? "/tasks?show=review&scope=team" : "/tasks?show=review"}
+        href={reviewMine ? "/tasks?scope=team" : "/tasks"}
         className={`${pill} ${reviewMine ? "border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400" : "text-muted"}`}
         title="Finished tasks waiting for the team leader's check"
       >

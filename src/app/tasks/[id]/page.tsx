@@ -421,7 +421,7 @@ async function TaskDetail({
           <span>
             <span className="font-medium">On review.</span>{" "}
             {reviewer
-              ? `${reviewer.name} will verify it or return it with a reason.`
+              ? `${reviewer.name} will approve it or return it with a reason.`
               : "Waiting for the team leader."}
           </span>
           {canReview && <ReviewActions taskId={task.id} title={label} />}
@@ -443,7 +443,7 @@ async function TaskDetail({
       {task.reviewResult === "approved" && task.status === "done" && (
         <p className="card border-emerald-500/50 p-3 text-sm">
           <span className="font-medium text-emerald-700 dark:text-emerald-400">
-            Verified
+            Approved
           </span>
           {task.reviewedAt && (
             <span className="text-muted">

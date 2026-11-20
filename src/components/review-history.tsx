@@ -19,7 +19,7 @@ export function ReviewHistory({ reviews, tz }: { reviews: ReviewEntry[]; tz: str
             <span
               className={`font-medium ${r.result === "approved" ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
             >
-              {r.result === "approved" ? "Verified" : "Returned"}
+              {r.result === "approved" ? "Approved" : "Returned"}
             </span>
             <span className="text-muted">
               {" "}

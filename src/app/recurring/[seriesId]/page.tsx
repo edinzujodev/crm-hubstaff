@@ -1,5 +1,6 @@
 import { DetailSkeleton } from "@/components/page-skeleton";
 import { Crumb } from "@/components/crumb";
+import { ApprovedBadge } from "@/components/approved-badge";
 import { BackButton } from "@/components/back-button";
 import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
@@ -171,9 +172,10 @@ async function SeriesDetail({
                     <span key="d" className="text-muted">
                       {o.dueDate ? fmtDay(o.dueDate) : "—"}
                     </span>,
-                    <span key="s" className="badge">
-                      {statusLabel[o.status]}
-                    </span>,
+                    <div key="s" className="flex items-center gap-2">
+                      <span className="badge">{statusLabel[o.status]}</span>
+                      {o.approvedAt && <ApprovedBadge at={fmtDateTime(o.approvedAt, config.timeZone)} />}
+                    </div>,
                     <span key="a" className="text-muted">
                       {o.assigneeName ?? "—"}
                     </span>,

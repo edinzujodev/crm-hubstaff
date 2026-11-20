@@ -3,6 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { TaskScopeToggle } from "@/components/task-scope-toggle";
+import { ApprovedBadge, BlockedBadge, OnReviewBadge, ReturnedBadge } from "@/components/approved-badge";
+import { SeriesStateFilter } from "@/components/series-state-filter";
+import { SERIES_STATES, type SeriesState } from "@/lib/series-state";
 import {
   TASK_SCOPE_COOKIE,
   TASK_SCOPES,
@@ -81,9 +84,11 @@ type SeriesEdit = {
 
 function SeriesTable({
   series,
+  state,
   edit,
 }: {
   series: Awaited<ReturnType<typeof listSeries>>;
+  state: SeriesState;
   edit: SeriesEdit;
 }) {
   const today = localDay(new Date(), config.timeZone);
@@ -91,11 +96,15 @@ function SeriesTable({
     <DataGrid
       flush
       alwaysSearch
+      toolbar={<SeriesStateFilter state={state} />}
       empty={
-        <>
-          No recurring tasks yet. Add a task and answer Yes to &quot;Is this
-          task recurring?&quot;
-        </>
+        state === "stopped" ? (
+          "No stopped recurring tasks."
+        ) : state === "active" ? (
+          "No recurring tasks that are still repeating. Add a task and set its type to Weekly or Monthly."
+        ) : (
+          "No recurring tasks yet. Add a task and set its type to Weekly or Monthly."
+        )
       }
       headers={[
         "Task",
@@ -236,9 +245,9 @@ function SeriesTable({
 async function TaskList({
   filter,
 }: {
-  filter: Promise<{ show?: string; scope?: string }>;
+  filter: Promise<{ show?: string; scope?: string; state?: string }>;
 }) {
-  const [auth, { show, scope: scopeParam }] = await Promise.all([
+  const [auth, { show, scope: scopeParam, state: stateParam }] = await Promise.all([
     getAuth(),
     filter,
   ]);
@@ -320,7 +329,6 @@ async function TaskList({
   };
   const tabs = [
     "open",
-    "review",
     "critical",
     "recurring",
     "finished",
@@ -333,12 +341,11 @@ async function TaskList({
     asked && !(isWorker && managerOnly.includes(asked)) ? asked : "open";
   const matches = {
     // A repeat copy waiting for its start date stays out of the open lists until then.
+    // Tasks waiting for review are open too: the Review column tells them apart.
     open: ({ task }: Row) =>
       !task.deletedAt &&
       task.status !== "done" &&
-      task.status !== "review" &&
       !(task.startDate && task.startDate > today),
-    review: ({ task }: Row) => !task.deletedAt && task.status === "review",
     critical: (row: Row) =>
       !row.task.deletedAt &&
       row.task.status !== "done" &&
@@ -349,22 +356,27 @@ async function TaskList({
   };
   const counts: Record<Tab, number> = {
     open: inScope.filter(matches.open).length,
-    review: inScope.filter(matches.review).length,
     critical: inScope.filter(matches.critical).length,
-    recurring: series.length,
+    recurring: series.filter((s) => s.repeat).length,
     finished: inScope.filter(matches.finished).length,
     deleted: inScope.filter(matches.deleted).length,
   };
   const taskTabs = (
     [
       ["open", "Open"],
-      ["review", "On review"],
+      ["finished", "Finished"],
       ["critical", "Critical"],
       ["recurring", "Recurring"],
-      ["finished", "Finished"],
       ["deleted", "Deleted"],
     ] as const
   ).filter(([key]) => !isWorker || !managerOnly.includes(key));
+  // Recurring: tasks that still repeat are what people work with, so they are the default.
+  const seriesState: SeriesState = SERIES_STATES.find((s) => s === stateParam) ?? "active";
+  const shownSeries = series.filter((s) =>
+    seriesState === "all" ? true : seriesState === "stopped" ? !s.repeat : !!s.repeat,
+  );
+  // The Review column is in every task list, so approved tasks look the same wherever they show.
+  const showReview = true;
   const hoursLeft = (r: Row) =>
     hoursUntilDue(r.task.dueDate!, config.timeZone, now);
   const visible =
@@ -439,6 +451,7 @@ async function TaskList({
           href: key === "open" ? "/tasks" : `/tasks?show=${key}`,
           count: counts[key],
           alarm: key === "critical" && counts.critical > 0,
+          end: key === "critical" || key === "recurring" || key === "deleted",
         }))}
         active={Math.max(
           0,
@@ -457,7 +470,8 @@ async function TaskList({
       >
         {tab === "recurring" ? (
           <SeriesTable
-            series={series}
+            series={shownSeries}
+            state={seriesState}
             edit={{
               clients,
               users,
@@ -499,11 +513,11 @@ async function TaskList({
             empty="No tasks here."
             headers={[
               "Task",
+              ...(showReview ? ["Review"] : []),
               { label: "Repeat", title: "W weekly · M monthly · O one-time" },
               ...(isWorker ? [] : ["Assignee"]),
               "Client",
               "Project",
-              "Project type",
               "Created",
               "Due",
             ]}
@@ -554,11 +568,11 @@ async function TaskList({
                         : undefined,
                   sort: [
                     task.title,
+                    ...(showReview ? [task.reviewResult ?? ""] : []),
                     task.repeat ?? "",
                     ...(isWorker ? [] : [assigneeName ?? ""]),
                     clientName ?? "",
                     projectName ?? "",
-                    projectKind ?? "",
                     task.createdAt.toISOString(),
                     task.dueDate ?? "9999-12-31",
                   ],
@@ -573,48 +587,6 @@ async function TaskList({
                           ? periodLabel(task.repeat, task.dueDate)
                           : truncate(task.title, TITLE_MAX)}
                       </Link>
-                      {task.blockedAt && task.status !== "done" && !task.deletedAt && (
-                        <span
-                          className="badge ml-2 text-red-600 dark:text-red-400"
-                          title={
-                            task.blockedReason
-                              ? `Blocked: ${task.blockedReason}`
-                              : "Blocked"
-                          }
-                          aria-label="Blocked"
-                        >
-                          <i aria-hidden className="pi pi-ban text-xs" />
-                        </span>
-                      )}
-                      {task.status === "review" && tab !== "review" && (
-                        <span className="badge ml-2 text-amber-700 dark:text-amber-400">
-                          On review
-                        </span>
-                      )}
-                      {task.status === "todo" &&
-                        task.reviewResult === "rejected" && (
-                          <span
-                            className="badge ml-2 text-sky-600 dark:text-sky-400"
-                            title={
-                              task.reviewNote
-                                ? `Returned: ${task.reviewNote}`
-                                : "Returned"
-                            }
-                            aria-label="Returned"
-                          >
-                            <i aria-hidden className="pi pi-undo text-xs" />
-                          </span>
-                        )}
-                      {task.status === "done" &&
-                        task.reviewResult === "approved" && (
-                          <span
-                            className="badge ml-2 text-emerald-700 dark:text-emerald-400"
-                            title="Verified"
-                            aria-label="Verified"
-                          >
-                            <i aria-hidden className="pi pi-verified text-xs" />
-                          </span>
-                        )}
                       {task.startDate &&
                         task.startDate > today &&
                         task.status !== "done" && (
@@ -636,6 +608,31 @@ async function TaskList({
                         </p>
                       )}
                     </div>,
+                    ...(showReview
+                      ? [
+                          isBlocked ||
+                          task.status === "review" ||
+                          (task.status === "done" && task.reviewResult === "approved") ||
+                          (task.status === "todo" && task.reviewResult === "rejected") ? (
+                            <div key="review" className="flex items-center gap-1.5">
+                              {isBlocked && <BlockedBadge reason={task.blockedReason} />}
+                              {task.status === "done" && task.reviewResult === "approved" && (
+                                <ApprovedBadge
+                                  at={task.reviewedAt ? fmtDateTime(task.reviewedAt, config.timeZone) : undefined}
+                                />
+                              )}
+                              {task.status === "review" && <OnReviewBadge />}
+                              {task.status === "todo" && task.reviewResult === "rejected" && (
+                                <ReturnedBadge reason={task.reviewNote} />
+                              )}
+                            </div>
+                          ) : (
+                            <span key="review" className="text-muted">
+                              —
+                            </span>
+                          ),
+                        ]
+                      : []),
                     <TypeChip key="type" repeat={task.repeat} />,
                     ...(isWorker
                       ? []
@@ -673,18 +670,14 @@ async function TaskList({
                       </span>
                     ),
                     projectName ? (
-                      <span key="project">{projectName}</span>
+                      <div key="project">
+                        <span>{projectName}</span>
+                        <p className="text-xs text-muted">
+                          {KIND_LABEL[projectKind ?? "one_off"]}
+                        </p>
+                      </div>
                     ) : (
                       <span key="project" className="text-muted">
-                        —
-                      </span>
-                    ),
-                    projectName ? (
-                      <span key="kind" className="whitespace-nowrap text-muted">
-                        {KIND_LABEL[projectKind ?? "one_off"]}
-                      </span>
-                    ) : (
-                      <span key="kind" className="text-muted">
                         —
                       </span>
                     ),
@@ -792,36 +785,52 @@ async function TaskList({
                   details: hasDetails ? (
                     <div className="space-y-4 text-sm">
                       {isBlocked && (
-                        <section className="space-y-1 rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-red-600 dark:text-red-300">
-                          <h2 className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
-                            Blocked
+                        <div className="card space-y-2 border-red-500/50 p-3 text-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="flex items-center gap-2 font-medium text-red-600 dark:text-red-400">
+                              <i aria-hidden className="pi pi-ban text-sm" />
+                              Blocked
+                            </p>
                             {task.blockedAt && (
-                              <span className="text-xs font-normal">
-                                since {fmtDateTime(task.blockedAt, config.timeZone)} ·{" "}
+                              <span
+                                className="badge text-red-600 dark:text-red-400"
+                                title="How long it has been blocked"
+                              >
+                                <i aria-hidden className="pi pi-clock mr-1 text-xs" />
                                 {spanSince(task.blockedAt)}
                               </span>
                             )}
-                          </h2>
-                          <p className="whitespace-pre-wrap text-sm">
-                            {task.blockedReason ?? "No reason given."}
-                          </p>
-                        </section>
+                          </div>
+                          {task.blockedReason ? (
+                            <p className="whitespace-pre-wrap">{task.blockedReason}</p>
+                          ) : (
+                            <p className="text-muted">No reason given.</p>
+                          )}
+                          {task.blockedAt && (
+                            <p className="text-xs text-muted">
+                              Blocked on {fmtDateTime(task.blockedAt, config.timeZone)}
+                            </p>
+                          )}
+                        </div>
                       )}
 
                       {isReturned && (
-                        <section className="space-y-1 rounded-lg border border-sky-500/60 bg-sky-500/10 px-3 py-2 text-sky-700 dark:text-sky-300">
-                          <h2 className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
+                        <div className="card space-y-1 border-red-500/50 p-3 text-sm">
+                          <p className="font-medium text-red-600 dark:text-red-400">
                             Returned
                             {task.reviewedAt && (
-                              <span className="text-xs font-normal">
+                              <span className="ml-2 text-xs font-normal">
                                 {fmtDateTime(task.reviewedAt, config.timeZone)}
                               </span>
                             )}
-                          </h2>
-                          <p className="whitespace-pre-wrap text-sm">
+                          </p>
+                          <p className="whitespace-pre-wrap">
                             {task.reviewNote ?? "No reason given."}
                           </p>
-                        </section>
+                          <p className="text-xs text-muted">
+                            Fix it and press Finish again to send it for review.
+                          </p>
+                        </div>
                       )}
 
                       {(task.description ||
@@ -866,6 +875,7 @@ export default function Home({ searchParams }: PageProps<"/tasks">) {
   const filter = searchParams.then((p) => ({
     show: typeof p.show === "string" ? p.show : undefined,
     scope: typeof p.scope === "string" ? p.scope : undefined,
+    state: typeof p.state === "string" ? p.state : undefined,
   }));
   return (
     <div className="space-y-4">

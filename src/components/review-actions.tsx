@@ -6,7 +6,7 @@ import { approveTask, rejectTask } from "@/app/actions";
 import { Modal } from "@/components/modal";
 import { notify } from "@/lib/toast";
 
-/** Verify or return a task that is waiting for review. Returning needs a reason, which the assignee will see. */
+/** Approve or return a task that is waiting for review. Returning needs a reason, which the assignee will see. */
 export function ReviewActions({ taskId, title }: { taskId: number; title: string }) {
   const [pending, start] = useTransition();
   const [deny, setDeny] = useState(false);
@@ -17,7 +17,7 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
     start(async () => {
       const res = await approveTask(taskId);
       setError(res.ok ? null : res.error);
-      if (res.ok) notify({ message: "Task verified", detail: title, link: { href: "/tasks?show=finished", label: "Open Finished" } });
+      if (res.ok) notify({ message: "Task approved", detail: title, link: { href: "/tasks?show=finished", label: "Open Finished" } });
     });
   const submitDeny = () =>
     start(async () => {
@@ -34,7 +34,7 @@ export function ReviewActions({ taskId, title }: { taskId: number; title: string
     <>
       <div className="flex items-center gap-2">
         <Button type="button" size="small" severity="success" className="w-20 justify-center" disabled={pending} onClick={approve}>
-          Verify
+          Approve
         </Button>
         <Button type="button" size="small" severity="danger" className="w-20 justify-center" disabled={pending} onClick={() => setDeny(true)}>
           Return

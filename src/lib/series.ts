@@ -11,6 +11,8 @@ export type Occurrence = {
   dueDate: string | null;
   startDate: string | null;
   doneAt: Date | null;
+  /** Finished and approved by the team leader, and when. */
+  approvedAt: Date | null;
   assigneeName: string | null;
   repeat: Repeat | null;
   trackedSeconds: number;
@@ -75,6 +77,7 @@ async function occurrencesBySeries(scope: SQL | undefined, onlySeriesId?: number
       dueDate: task.dueDate,
       startDate: task.startDate,
       doneAt: task.doneAt,
+      approvedAt: task.status === "done" && task.reviewResult === "approved" ? (task.reviewedAt ?? task.doneAt ?? new Date(0)) : null,
       assigneeName,
       repeat: task.repeat,
       trackedSeconds: tracked.get(task.id) ?? 0,

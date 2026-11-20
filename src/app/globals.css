@@ -563,3 +563,48 @@ html[data-theme="blue"] .sidebar {
 
 
 
+
+/* A row removed from a list fades out and collapses (DataGrid keeps it for LEAVE_MS as a "ghost"). */
+.p-datatable tr.row-leaving {
+  pointer-events: none;
+}
+.p-datatable tr.row-leaving > td {
+  animation: row-leave 350ms ease forwards;
+  overflow: hidden;
+}
+.p-datatable tr.row-leaving .ghost-cell {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: row-leave-cell 350ms ease forwards;
+}
+.p-datatable tr.row-leaving .ghost-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+@keyframes row-leave {
+  30% {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+}
+@keyframes row-leave-cell {
+  to {
+    grid-template-rows: 0fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .p-datatable tr.row-leaving > td,
+  .p-datatable tr.row-leaving .ghost-cell {
+    animation-duration: 1ms;
+  }
+}
+
+/* Tabs marked `end` (LinkTabs) sit at the far right of the tab row. */
+.p-tabmenu .p-tabmenu-nav .tab-end-first {
+  margin-left: auto;
+}

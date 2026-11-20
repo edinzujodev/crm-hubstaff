@@ -1,3 +1,4 @@
+import { ApprovedBadge } from "@/components/approved-badge";
 import { DetailSkeleton } from "@/components/page-skeleton";
 import { Crumb } from "@/components/crumb";
 import { BackButton } from "@/components/back-button";
@@ -250,7 +251,7 @@ async function ClientDetail({
                 <div key="s" className="flex flex-wrap items-center gap-1">
                   <span className="badge">{statusLabel[task.status]}</span>
                   {task.reviewResult === "approved" && task.status === "done" && (
-                    <span className="badge text-emerald-700 dark:text-emerald-400">Verified</span>
+                    <ApprovedBadge at={task.reviewedAt ? fmtDateTime(task.reviewedAt, tz) : undefined} />
                   )}
                   {task.reviewResult === "rejected" && task.status !== "done" && (
                     <span className="badge text-red-600" title={task.reviewNote ?? undefined}>

@@ -29,7 +29,14 @@ const ICONS: Record<string, string> = {
   "Urgency levels": "pi-bell",
 };
 
-export type LinkTab = { label: string; href: string; count?: number; alarm?: boolean };
+export type LinkTab = {
+  label: string;
+  href: string;
+  count?: number;
+  alarm?: boolean;
+  /** Tabs marked `end` sit together at the far right of the tab row. */
+  end?: boolean;
+};
 
 /**
  * Page-level tabs that are links. The tab you pick turns active right away, and a small spinner turns in front
@@ -47,11 +54,13 @@ export function LinkTabs({ tabs, active }: { tabs: LinkTab[]; active: number }) 
     setCurrent(active);
   }
 
+  const firstEnd = tabs.findIndex((t) => t.end);
   return (
     <div className="relative" aria-busy={loading}>
       <TabMenu
-        model={tabs.map((t) => ({
+        model={tabs.map((t, i) => ({
           label: t.label,
+          className: i === firstEnd ? "tab-end-first" : undefined,
           template: (item, options) => (
             <a
               role="menuitem"

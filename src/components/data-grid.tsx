@@ -2,7 +2,8 @@
 
 import { Column } from "primereact/column";
 import { DataTable, type DataTableExpandedRows, type DataTableRowToggleEvent } from "primereact/datatable";
-import { Children, isValidElement, useMemo, useState, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Children, isValidElement, useEffect, useMemo, useState, type ReactNode } from "react";
 import { InputText } from "@/components/ui";
 
 export type GridRow = {
@@ -40,6 +41,8 @@ const asSortValue = (text: string): string | number => {
 };
 
 const PAGE = 20;
+/** How long a removed row takes to fade and collapse (keep in step with `row-leaving` in globals.css). */
+const LEAVE_MS = 350;
 
 /**
  * A PrimeReact DataTable for rows whose cells are built on the server: click a header to sort, search the rows,
@@ -89,7 +92,38 @@ export function DataGrid({
       }),
     [rows],
   );
-  const shown = query.trim() ? prepared.filter((r) => r._search.includes(query.trim().toLowerCase())) : prepared;
+
+  // A row that disappears after an action (finish, delete, ...) is kept for a moment as a "ghost" that fades and
+  // collapses, so the removal can be seen. Changing the list itself (another tab, filter or page) shows no ghosts.
+  const pathname = usePathname();
+  const view = `${pathname}?${useSearchParams().toString()}`;
+  type Prepared = (typeof prepared)[number];
+  const [seen, setSeen] = useState({ view, rows: prepared });
+  const [ghosts, setGhosts] = useState<{ row: Prepared; at: number }[]>([]);
+  if (seen.rows !== prepared) {
+    const keys = new Set(prepared.map((r) => String(r.key)));
+    const gone =
+      seen.view === view
+        ? seen.rows.flatMap((r, at) => (keys.has(String(r.key)) ? [] : [{ row: r, at }]))
+        : [];
+    setSeen({ view, rows: prepared });
+    setGhosts(gone);
+  }
+  useEffect(() => {
+    if (!ghosts.length) return;
+    const t = setTimeout(() => setGhosts([]), LEAVE_MS);
+    return () => clearTimeout(t);
+  }, [ghosts]);
+
+  const withGhosts = useMemo(() => {
+    const list: (Prepared & { _leaving?: boolean })[] = [...prepared];
+    for (const g of [...ghosts].sort((a, b) => a.at - b.at)) {
+      list.splice(Math.min(g.at, list.length), 0, { ...g.row, _leaving: true });
+    }
+    return list;
+  }, [prepared, ghosts]);
+  const q = query.trim().toLowerCase();
+  const shown = q ? withGhosts.filter((r) => r._search.includes(q)) : withGhosts;
   const searchable = !plain && !noHeader && (alwaysSearch || rows.length > 8);
 
   const toggle = (key: string | number) =>
@@ -114,7 +148,7 @@ export function DataGrid({
           />
           {toolbar ?? (
             <span className="text-xs text-muted">
-              {shown.length === rows.length ? `${rows.length} rows` : `${shown.length} of ${rows.length}`}
+              {shown.length === rows.length ? `${rows.length} rows` : `${shown.length - ghosts.length} of ${rows.length}`}
             </span>
           )}
         </div>
@@ -137,7 +171,9 @@ export function DataGrid({
           const row = e.data as GridRow;
           if (row.details) toggle(row.key);
         }}
-        rowClassName={(row: GridRow) => `${row.details ? "cursor-pointer" : ""} ${row.tone ? `row-${row.tone}` : ""}`}
+        rowClassName={(row: GridRow & { _leaving?: boolean }) =>
+          `${row.details ? "cursor-pointer" : ""} ${row.tone ? `row-${row.tone}` : ""} ${row._leaving ? "row-leaving" : ""}`
+        }
         tableStyle={{ minWidth: "100%" }}
       >
         {expandable && <Column expander={(row: GridRow) => !!row.details} style={{ width: "3rem" }} />}
@@ -151,14 +187,29 @@ export function DataGrid({
               className={header.className}
               sortable={!noHeader && header.label !== ""}
               sortField={`_sort.c${i}`}
-              body={(row: GridRow) => row.cells[i]}
+              body={(row: GridRow & { _leaving?: boolean }) => (row._leaving ? <GhostCell>{row.cells[i]}</GhostCell> : row.cells[i])}
             />
           );
         })}
         {hasActions && (
-          <Column body={(row: GridRow) => <div className="flex items-center justify-end gap-2">{row.actions}</div>} style={{ width: actionsWidth }} />
+          <Column
+            body={(row: GridRow & { _leaving?: boolean }) => {
+              const buttons = <div className="flex items-center justify-end gap-2">{row.actions}</div>;
+              return row._leaving ? <GhostCell>{buttons}</GhostCell> : buttons;
+            }}
+            style={{ width: actionsWidth }}
+          />
         )}
       </DataTable>
+    </div>
+  );
+}
+
+/** The content of a cell in a row that is leaving: it collapses in height while the row fades (see globals.css). */
+function GhostCell({ children }: { children: ReactNode }) {
+  return (
+    <div className="ghost-cell">
+      <div className="ghost-inner">{children}</div>
     </div>
   );
 }

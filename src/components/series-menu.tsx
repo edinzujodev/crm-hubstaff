@@ -40,9 +40,10 @@ export function SeriesMenu({
       {editing && (
         <Modal title="Edit recurring task" onClose={close}>
           <p className="mb-3 text-xs text-muted">
-            Applies to the current copy and every copy made after it. Finished copies stay as they were.
+            Title and client change on every copy, past and future. Assignee and the repeat settings change on every
+            copy that is not finished, and on the ones made later. The due date is this copy&apos;s; later copies follow it.
           </p>
-          <EditForm task={task} clients={clients} users={users} projects={projects} onDone={close} />
+          <EditForm task={task} clients={clients} users={users} projects={projects} onDone={close} series />
         </Modal>
       )}
     </>

@@ -96,12 +96,15 @@ export function EditForm({
   users,
   projects,
   onDone,
+  series = false,
 }: {
   task: TaskFields;
   clients: Option[];
   users: Option[];
   projects: ProjectOption[];
   onDone: () => void;
+  /** Editing the recurring task itself: nothing is locked, and the change carries to the copies made after. */
+  series?: boolean;
 }) {
   const [clientId, setClientId] = useState(task.clientId ? String(task.clientId) : "");
   const [due, setDue] = useState(task.dueDate ?? "");
@@ -121,11 +124,12 @@ export function EditForm({
   }, [state, onDone]);
 
   // One copy of a repeating task: what defines the whole series is changed on the recurring task, not here.
-  const locked = !!task.seriesId || !!task.repeat;
+  const locked = !series && (!!task.seriesId || !!task.repeat);
   const hint = locked ? "You can't change this for one occurrence" : undefined;
 
   return (
     <form action={action} className="space-y-3">
+      {series && <input type="hidden" name="editSeries" value="1" />}
       {/* Disabled fields are not submitted, so locked values go along as hidden fields. */}
       {locked && <input type="hidden" name="title" value={task.title} />}
       {locked && <input type="hidden" name="clientId" value={clientId} />}
@@ -185,10 +189,13 @@ export function EditForm({
           Due
           <DateInput name="dueDate" required value={due} onChange={(e) => setDue(e.target.value)} />
         </label>
-        <div className="col-span-2 flex flex-col gap-1 text-xs text-muted" title={hint}>
+        <div
+          className="col-span-2 flex flex-col gap-1 text-xs text-muted"
+          title={hint ?? (series ? "You can't change the type of a recurring task" : undefined)}
+        >
           Type of task
           <SelectButton
-            disabled={locked}
+            disabled={locked || series}
             value={repeat || "once"}
             options={[
               { label: "One-time", value: "once" },

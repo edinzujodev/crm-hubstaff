@@ -852,7 +852,11 @@ export async function updateTask(
       .parse(Object.fromEntries(formData));
     const { projectId, projectName, projectKind, ...input } = parsed;
     // One copy of a repeating task can't change what defines the series: title, client, project and how it repeats.
-    const inSeries = !!task.seriesId || !!task.repeat;
+    // Editing the recurring task itself (from its own menu) may change all of them.
+    const editSeries = formData.get("editSeries") === "1";
+    const inSeries = !editSeries && (!!task.seriesId || !!task.repeat);
+    // Not even the recurring task itself can switch between one-time, weekly and monthly.
+    if (editSeries) input.repeat = task.repeat ?? undefined;
     if (inSeries) {
       input.title = task.title;
       input.clientId = task.clientId!;
@@ -895,18 +899,55 @@ export async function updateTask(
       })
       .where(eq(schema.tasks.id, taskId));
 
+    // Editing the recurring task itself: title, client and project reach every copy, past and future (finished
+    // ones too); assignee and the repeat settings reach the copies that are not finished. The due date is only
+    // this copy's, and the copies made later follow from it.
+    const others = editSeries
+      ? await db
+          .select()
+          .from(schema.tasks)
+          .where(and(eq(schema.tasks.seriesId, task.seriesId ?? task.id), isNull(schema.tasks.deletedAt), ne(schema.tasks.id, taskId)))
+      : [];
+    for (const t of others) {
+      const open = t.status !== "done";
+      await db
+        .update(schema.tasks)
+        .set({
+          title: input.title,
+          clientId: input.clientId,
+          projectId: project.id,
+          ...(open ? { assigneeId: input.assigneeId ?? null, teamId } : {}),
+          // A copy that carries the repeat settings follows them; its own due date decides the monthly day.
+          ...(open && t.repeat
+            ? {
+                repeat: input.repeat ?? null,
+                repeatDay: input.repeat === "monthly" && t.dueDate ? Number(t.dueDate.slice(8, 10)) : null,
+                repeatShow,
+                repeatLeadDays,
+              }
+            : {}),
+        })
+        .where(eq(schema.tasks.id, t.id));
+    }
+
+    const client = await db.query.clients.findFirst({ where: eq(schema.clients.id, input.clientId) });
+    let hubstaffError: string | undefined;
+    const rename = async (t: schema.Task, repeat: "weekly" | "monthly" | null, dueDate: string | null) => {
+      if (!t.hubstaffTaskId) return;
+      const summary = hubstaffSummary({ id: t.id, title: input.title, repeat, dueDate }, client?.name);
+      const res = await renameInHubstaff(t.hubstaffTaskId, () => summary);
+      hubstaffError ??= res.hubstaffError;
+    };
     const changed =
       task.title !== input.title ||
       task.clientId !== input.clientId ||
       task.dueDate !== (input.dueDate ?? null) ||
       task.repeat !== (input.repeat ?? null);
-    if (!task.hubstaffTaskId || !changed) return {};
-    const client = await db.query.clients.findFirst({ where: eq(schema.clients.id, input.clientId) });
-    const summary = hubstaffSummary(
-      { id: task.id, title: input.title, repeat: input.repeat ?? null, dueDate: input.dueDate ?? null },
-      client?.name,
-    );
-    return renameInHubstaff(task.hubstaffTaskId, () => summary);
+    if (changed) await rename(task, input.repeat ?? null, input.dueDate ?? null);
+    for (const t of others) {
+      if (task.title !== input.title || task.clientId !== input.clientId) await rename(t, t.repeat ? (input.repeat ?? null) : null, t.dueDate);
+    }
+    return hubstaffError ? { hubstaffError } : {};
   });
 }
 
