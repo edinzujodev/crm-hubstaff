@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
@@ -75,6 +76,15 @@ export function ProfileMenu({
             <span className="badge mt-1">{role}</span>
           </div>
         </div>
+        <Link
+          href="/profile"
+          onClick={() => setOpen(false)}
+          className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/10"
+        >
+          <i className="pi pi-user text-xs" aria-hidden />
+          My profile
+          <i className="pi pi-angle-right ml-auto text-xs text-muted" aria-hidden />
+        </Link>
         {children}
       </div>
     </div>

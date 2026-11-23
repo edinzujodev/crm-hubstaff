@@ -60,7 +60,7 @@ export async function signOut() {
   redirect("/login");
 }
 
-const optionalText = (max: number) =>
+const profileText = (max: number) =>
   z
     .string()
     .trim()
@@ -70,15 +70,15 @@ const optionalText = (max: number) =>
 
 const profile = z.object({
   name: z.string().trim().min(1, "Name is required").max(120, "Keep the name under 120 characters"),
-  jobTitle: optionalText(120),
-  phone: optionalText(40).refine((v) => v === null || /^[+\d][\d\s()/.-]{4,}$/.test(v), "That doesn't look like a phone number"),
+  jobTitle: profileText(120),
+  phone: profileText(40).refine((v) => v === null || /^[+\d][\d\s()/.-]{4,}$/.test(v), "That doesn't look like a phone number"),
   birthDate: z
     .string()
     .optional()
     .transform((v) => v || null)
     .refine((v) => v === null || (/^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "1900-01-01" && v <= localDay(new Date(), config.timeZone)), "Pick a birth date in the past"),
-  address: optionalText(300),
-  bio: optionalText(1000),
+  address: profileText(300),
+  bio: profileText(1000),
 });
 
 /** The signed-in person edits their own profile. Email, role and team stay with the super admin and team leaders. */
