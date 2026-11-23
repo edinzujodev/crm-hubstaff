@@ -67,7 +67,6 @@ async function ProfileContent() {
             phone: me.phone ?? "",
             birthDate: me.birthDate ?? "",
             address: me.address ?? "",
-            bio: me.bio ?? "",
           }}
         />
       </section>

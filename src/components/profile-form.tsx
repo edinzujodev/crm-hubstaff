@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, InputText, InputTextarea } from "@/components/ui";
+import { Button, InputText } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
 import { notify } from "@/lib/toast";
 import { useActionState, useEffect, useState } from "react";
@@ -12,7 +12,6 @@ export type ProfileValues = {
   phone: string;
   birthDate: string;
   address: string;
-  bio: string;
 };
 
 /** The person's own details. Saving shows a toast; the form tells you when there is something to save. */
@@ -63,17 +62,6 @@ export function ProfileForm({ initial, today }: { initial: ProfileValues; today:
         <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
           Address
           <InputText {...field("address")} maxLength={300} placeholder="Street, city" className="w-full text-foreground" />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-muted sm:col-span-2">
-          About you
-          <InputTextarea
-            {...field("bio")}
-            rows={3}
-            autoResize
-            maxLength={1000}
-            placeholder="A few words for your colleagues"
-            className="w-full text-foreground"
-          />
         </label>
       </div>
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">

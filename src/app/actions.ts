@@ -78,7 +78,6 @@ const profile = z.object({
     .transform((v) => v || null)
     .refine((v) => v === null || (/^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "1900-01-01" && v <= localDay(new Date(), config.timeZone)), "Pick a birth date in the past"),
   address: profileText(300),
-  bio: profileText(1000),
 });
 
 /** The signed-in person edits their own profile. Email, role and team stay with the super admin and team leaders. */
