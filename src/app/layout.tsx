@@ -17,6 +17,7 @@ import { Toaster } from "@/components/toaster";
 import { PrimeProvider } from "@/components/prime-provider";
 import { ProfileMenu } from "@/components/profile-menu";
 import { SyncButton } from "@/components/sync-button";
+import { IdleSignOut } from "@/components/idle-sign-out";
 import { hubstaffMode, config } from "@/lib/config";
 import { getAuth } from "@/lib/auth";
 import { authMode } from "@/lib/session";
@@ -40,6 +41,7 @@ async function Account() {
   const roleLabel = { super_admin: "Super admin", leader: "Team leader", worker: "Member" }[auth.role];
   return (
     <ProfileMenu name={auth.user.name} email={auth.user.email} role={roleLabel}>
+      <IdleSignOut />
       <section className="space-y-2 border-t border-border pt-3">
         <h2 className="text-xs font-medium text-muted">Hubstaff</h2>
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -2,9 +2,27 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { db, schema } from "@/db";
-import { SESSION_COOKIE, SESSION_DAYS } from "@/lib/session-cookie";
+import { IDLE_MINUTES, SESSION_COOKIE, SESSION_DAYS } from "@/lib/session-cookie";
 
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
+
+const IDLE_MS = IDLE_MINUTES * 60 * 1000;
+const MAX_AGE_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
+
+/**
+ * How sessions end: `expires_at` is the idle deadline. Sign-in sets it IDLE_MINUTES ahead and every bit of activity
+ * the open app reports (touchSession) pushes it forward again. Separately, no session outlives SESSION_DAYS from
+ * `created_at`; the cookie expires then too.
+ */
+function setCookie(jar: Awaited<ReturnType<typeof cookies>>, token: string, expires: Date) {
+  jar.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires,
+  });
+}
 
 /**
  * Signs a person in: stores a session and sets its cookie. Replaces any session this browser already had.
@@ -14,15 +32,9 @@ const hash = (token: string) => createHash("sha256").update(token).digest("hex")
 export async function createSession(userId: number, { mfaPending = false }: { mfaPending?: boolean } = {}) {
   await destroySession();
   const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + (mfaPending ? 10 * 60 * 1000 : SESSION_DAYS * 24 * 60 * 60 * 1000));
+  const expiresAt = new Date(Date.now() + (mfaPending ? 10 * 60 * 1000 : IDLE_MS));
   await db.insert(schema.authSessions).values({ id: hash(token), userId, expiresAt, mfaPending });
-  (await cookies()).set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  });
+  setCookie(await cookies(), token, mfaPending ? expiresAt : new Date(Date.now() + MAX_AGE_MS));
 }
 
 /** The live session behind a cookie token and its person, pending or not. */
@@ -31,8 +43,45 @@ export async function sessionByToken(token: string) {
     .select({ session: schema.authSessions, user: schema.users })
     .from(schema.authSessions)
     .innerJoin(schema.users, eq(schema.authSessions.userId, schema.users.id))
-    .where(and(eq(schema.authSessions.id, hash(token)), gt(schema.authSessions.expiresAt, sql`now()`)));
+    .where(
+      and(
+        eq(schema.authSessions.id, hash(token)),
+        gt(schema.authSessions.expiresAt, sql`now()`),
+        gt(schema.authSessions.createdAt, new Date(Date.now() - MAX_AGE_MS)),
+      ),
+    );
   return row ?? null;
+}
+
+/**
+ * The person is using the app: pushes this browser's idle deadline IDLE_MINUTES ahead (never past the session's
+ * SESSION_DAYS limit). Returns the new deadline, or null when there is no live, fully signed-in session.
+ */
+export async function touchSession(): Promise<Date | null> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const now = Date.now();
+  const [row] = await db
+    .update(schema.authSessions)
+    .set({
+      expiresAt: sql`least(${new Date(now + IDLE_MS)}::timestamptz, ${schema.authSessions.createdAt} + ${`${SESSION_DAYS} days`}::interval)`,
+    })
+    .where(
+      and(
+        eq(schema.authSessions.id, hash(token)),
+        eq(schema.authSessions.mfaPending, false),
+        gt(schema.authSessions.expiresAt, sql`now()`),
+        gt(schema.authSessions.createdAt, new Date(now - MAX_AGE_MS)),
+      ),
+    )
+    .returning({ expiresAt: schema.authSessions.expiresAt });
+  return row?.expiresAt ?? null;
+}
+
+/** When this browser's session runs out if nothing else happens, or null if it already has. Changes nothing. */
+export async function sessionDeadline(): Promise<Date | null> {
+  const row = await cookieSession();
+  return row && !row.session.mfaPending ? row.session.expiresAt : null;
 }
 
 async function cookieSession() {
@@ -57,18 +106,11 @@ export async function completePendingSession() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return;
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await db
     .update(schema.authSessions)
-    .set({ mfaPending: false, mfaFailures: 0, expiresAt })
+    .set({ mfaPending: false, mfaFailures: 0, expiresAt: new Date(Date.now() + IDLE_MS) })
     .where(eq(schema.authSessions.id, hash(token)));
-  jar.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  });
+  setCookie(jar, token, new Date(Date.now() + MAX_AGE_MS));
 }
 
 /** One more wrong authenticator code on a pending session. Returns how many wrong codes it has now. */

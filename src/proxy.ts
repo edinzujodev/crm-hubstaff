@@ -25,6 +25,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Not the login pages, the sign-in routes, the scheduler's sync route (it has its own secret) or static files.
-  matcher: ["/((?!login|api/auth|api/sync|themes|_next/static|_next/image|favicon.ico).*)"],
+  // Not the login pages, the sign-in routes, the scheduler's sync route (it has its own secret), the idle check (it
+  // answers 401 itself instead of a redirect a fetch can't use) or static files.
+  matcher: ["/((?!login|api/auth|api/sync|api/session|themes|_next/static|_next/image|favicon.ico).*)"],
 };
