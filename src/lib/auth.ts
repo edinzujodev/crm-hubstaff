@@ -3,6 +3,7 @@ import { eq, inArray, or, type SQL } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/current-user";
+import { needsSetup } from "@/lib/session";
 
 /**
  * super_admin: everything. leader: the person a team names as its leader; adds tasks and manages their team.
@@ -54,11 +55,16 @@ export async function requireRole(...roles: Role[]): Promise<Auth> {
   return auth;
 }
 
-/** For pages: sends people without one of the roles back to the task list. */
+/**
+ * For pages: signed out goes to /login, an unfinished setup to /welcome, and people without one of the roles (when
+ * any are given) back to the dashboard. The proxy does the same routing, but it doesn't run when a server action
+ * redirects or refreshes, so pages check it themselves too.
+ */
 export async function pageGuard(...roles: Role[]): Promise<Auth> {
   const auth = await getAuth();
   if (!auth) redirect("/login");
-  if (!roles.includes(auth.role)) redirect("/");
+  if (needsSetup(auth.user)) redirect("/welcome");
+  if (roles.length && !roles.includes(auth.role)) redirect("/");
   return auth;
 }
 

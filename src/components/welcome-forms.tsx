@@ -61,10 +61,22 @@ function Field({ label, hint, children, optional }: { label: string; hint?: stri
   );
 }
 
-/** Step 1: scan the QR code with an authenticator app, then type the code it shows. */
-export function TotpSetupForm({ qrSvg, secret, account }: { qrSvg: string; secret: string; account: string }) {
+/** Step 1: scan the QR code with an authenticator app, then type the code it shows. Goes to `next` once it's on. */
+export function TotpSetupForm({
+  qrSvg,
+  secret,
+  account,
+  next,
+  label,
+}: {
+  qrSvg: string;
+  secret: string;
+  account: string;
+  next: string;
+  label: string;
+}) {
   const [state, action, pending] = useActionState(confirmTotpSetup, null);
-  useNextOnSuccess(state, "/welcome?step=2");
+  useNextOnSuccess(state, next);
   const [copied, setCopied] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [lastState, setLastState] = useState(state);
@@ -129,7 +141,7 @@ export function TotpSetupForm({ qrSvg, secret, account }: { qrSvg: string; secre
           </span>
         </p>
       </Body>
-      <StepFooter pending={pending} label="Next step" />
+      <StepFooter pending={pending} label={label} />
     </form>
   );
 }

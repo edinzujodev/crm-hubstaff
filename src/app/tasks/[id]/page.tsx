@@ -17,7 +17,7 @@ import { DeleteTaskButton } from "@/components/delete-task-button";
 import { RestoreTaskButton } from "@/components/restore-task-button";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
-import { canManageTask, canViewTask, getAuth } from "@/lib/auth";
+import { canManageTask, canViewTask, getAuth, pageGuard } from "@/lib/auth";
 import { canReviewTask, reviewsByTask } from "@/lib/review";
 import { ReviewHistory } from "@/components/review-history";
 import { periodLabel, taskName } from "@/lib/recurring";
@@ -87,6 +87,7 @@ async function TaskDetail({
 }) {
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
+  await pageGuard();
   const me = await getCurrentUser();
   const [row] = await db
     .select({

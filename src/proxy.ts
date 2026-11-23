@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/session-cookie";
-import { sessionByToken } from "@/lib/session";
+import { needsSetup, sessionByToken } from "@/lib/session";
 
 /**
  * Routes people to the right place before a page loads:
@@ -20,8 +20,7 @@ export async function proxy(request: NextRequest) {
   const row = await sessionByToken(token);
   if (!row) return NextResponse.next(); // expired or unknown: the page sends them to /login
   if (row.session.mfaPending) return NextResponse.redirect(new URL("/login/verify", request.url));
-  const needsSetup = !row.user.onboardedAt || !row.user.totpEnabledAt;
-  if (needsSetup && path !== "/welcome") return NextResponse.redirect(new URL("/welcome", request.url));
+  if (needsSetup(row.user) && path !== "/welcome") return NextResponse.redirect(new URL("/welcome", request.url));
   return NextResponse.next();
 }
 

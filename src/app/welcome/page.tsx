@@ -77,19 +77,37 @@ async function WelcomeContent({ searchParams }: { searchParams: Promise<{ step?:
     redirect("/dashboard");
   }
 
-  // Two-step verification always comes first, also for someone who finished the rest before (e.g. after a reset).
+  // Two-step verification always comes first.
   const step = !me.totpEnabledAt ? 0 : wanted === "3" ? 2 : 1;
+
+  // Someone who finished the setup before and only needs the authenticator again (e.g. after a super admin reset
+  // it) gets just that, without the "Get started" steps, and goes straight to the dashboard afterwards.
+  if (me.onboardedAt) {
+    return (
+      <AuthShell
+        wide
+        side={
+          <>
+            <AuthLogo />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-semibold">Welcome back</h2>
+              <p className="text-sm text-white/70">Set up two-step verification again to continue.</p>
+            </div>
+          </>
+        }
+      >
+        <div className="space-y-1 px-6 pb-6 pt-10 text-center sm:pt-12">
+          <h1 className="text-xl font-semibold tracking-tight">{STEPS[0]!.title}</h1>
+          <p className="text-sm text-muted">{STEPS[0]!.sub}</p>
+        </div>
+        <TotpSetupForm {...await totpSetup(me)} next="/dashboard" label="Continue" />
+      </AuthShell>
+    );
+  }
 
   let body: React.ReactNode;
   if (step === 0) {
-    // A secret is made the first time this step opens and kept until the first code confirms it.
-    let secret = me.totpSecret;
-    if (!secret) {
-      secret = newTotpSecret();
-      await db.update(schema.users).set({ totpSecret: secret }).where(eq(schema.users.id, me.id));
-    }
-    const qrSvg = await QRCode.toString(totpUri(secret, me.email), { type: "svg", margin: 0, errorCorrectionLevel: "M" });
-    body = <TotpSetupForm qrSvg={qrSvg} secret={groupSecret(secret)} account={me.email} />;
+    body = <TotpSetupForm {...await totpSetup(me)} next="/welcome?step=2" label="Next step" />;
   } else if (step === 1) {
     body = (
       <AboutForm
@@ -130,6 +148,17 @@ async function WelcomeContent({ searchParams }: { searchParams: Promise<{ step?:
       {body}
     </AuthShell>
   );
+}
+
+/** What the authenticator step shows. A secret is made the first time it opens and kept until the first code confirms it. */
+async function totpSetup(me: { id: number; email: string; totpSecret: string | null }) {
+  let secret = me.totpSecret;
+  if (!secret) {
+    secret = newTotpSecret();
+    await db.update(schema.users).set({ totpSecret: secret }).where(eq(schema.users.id, me.id));
+  }
+  const qrSvg = await QRCode.toString(totpUri(secret, me.email), { type: "svg", margin: 0, errorCorrectionLevel: "M" });
+  return { qrSvg, secret: groupSecret(secret), account: me.email };
 }
 
 function Done({ name }: { name: string }) {

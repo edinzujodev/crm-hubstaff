@@ -1,12 +1,11 @@
 import { DashboardSkeleton } from "@/components/page-skeleton";
 import { TableSkeleton } from "@/components/page-skeleton";
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { DashboardGrid, type GridItem } from "@/components/dashboard/dashboard-grid";
 import type { Lookups } from "@/components/dashboard/widget-form";
 import { WidgetBody } from "@/components/dashboard/widgets";
-import { getAuth } from "@/lib/auth";
+import { pageGuard } from "@/lib/auth";
 import { WIDGETS, isWidgetType, parseLayouts, parseConfig, type AnyConfig, type WidgetType } from "@/lib/dashboard/config";
 import { getWidgets } from "@/lib/dashboard/data";
 import { autoTitle, getDirectory, resolveScope } from "@/lib/dashboard/scope";
@@ -15,8 +14,7 @@ export const metadata = { title: "Dashboard · Client tracker" };
 
 async function Dashboard() {
   await connection();
-  const auth = await getAuth();
-  if (!auth) redirect("/login");
+  const auth = await pageGuard();
   const [rows, dir] = await Promise.all([getWidgets(auth), getDirectory()]);
 
   // What the pickers offer is narrowed to the role here; the server actions check it again on save.

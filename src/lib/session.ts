@@ -88,6 +88,11 @@ export async function destroySession() {
   jar.delete(SESSION_COOKIE);
 }
 
+/** Two-step verification or the first-sign-in details are still missing: the person belongs on /welcome. */
+export function needsSetup(user: { onboardedAt: Date | null; totpEnabledAt: Date | null }) {
+  return !user.onboardedAt || !user.totpEnabledAt;
+}
+
 /** An approved person: their email is on the Team page. Case doesn't matter. */
 export async function findApprovedUser(email: string) {
   const wanted = email.trim().toLowerCase();

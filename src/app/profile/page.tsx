@@ -4,8 +4,7 @@ import { connection } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ProfileForm } from "@/components/profile-form";
-import { getAuth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { pageGuard } from "@/lib/auth";
 import { authMode } from "@/lib/session";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
@@ -31,8 +30,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 async function ProfileContent() {
   await connection();
-  const auth = await getAuth();
-  if (!auth) redirect("/login");
+  const auth = await pageGuard();
   const me = auth.user;
 
   const team = me.teamId ? await db.query.teams.findFirst({ where: eq(schema.teams.id, me.teamId) }) : undefined;

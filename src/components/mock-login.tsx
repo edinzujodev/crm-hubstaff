@@ -14,14 +14,6 @@ export function MockLogin({ accounts }: { accounts: Account[] }) {
   const [state, action, pending] = useActionState(mockSignIn, null);
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
-        <p className="font-medium">Simulated Google sign-in</p>
-        <p className="text-muted">
-          Google isn&apos;t connected yet, so this stands in for it. Pick who you are. It only works on your own
-          computer and turns off once Google is set up.
-        </p>
-      </div>
-
       <form action={action} className="space-y-2">
         <p className="text-xs text-muted">Approved accounts</p>
         {accounts.map((a) => (

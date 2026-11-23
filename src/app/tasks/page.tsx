@@ -1,6 +1,5 @@
 import { ListSkeleton } from "@/components/page-skeleton";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { TaskScopeToggle } from "@/components/task-scope-toggle";
 import { ApprovedBadge, BlockedBadge, OnReviewBadge, ReturnedBadge } from "@/components/approved-badge";
@@ -26,7 +25,7 @@ import { DataGrid } from "@/components/data-grid";
 import { TabCard } from "@/components/tab-card";
 import { TimerControls } from "@/components/timer-controls";
 import { config } from "@/lib/config";
-import { assignableUsers, canManageTask, getAuth, taskScope } from "@/lib/auth";
+import { assignableUsers, canManageTask, pageGuard, taskScope } from "@/lib/auth";
 import { canReviewTask } from "@/lib/review";
 import { ReviewActions } from "@/components/review-actions";
 import { NextPeriodButton } from "@/components/next-period-button";
@@ -252,10 +251,9 @@ async function TaskList({
   filter: Promise<{ show?: string; scope?: string; state?: string; team?: string; person?: string }>;
 }) {
   const [auth, { show, scope: scopeParam, state: stateParam, team: teamParam, person: personParam }] = await Promise.all([
-    getAuth(),
+    pageGuard(),
     filter,
   ]);
-  if (!auth) redirect("/login");
   const me = auth.user;
   const [tasks, clients, users, openSessions, projects, series, templates] =
     await Promise.all([
