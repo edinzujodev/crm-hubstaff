@@ -10,7 +10,7 @@ import { authMode } from "@/lib/session";
 
 const ERRORS: Record<string, string> = {
   not_approved: "That Google account isn't on the approved list. Ask a super admin to add your email on the Teams page.",
-  domain: "That account isn't on the company domain.",
+  domain: "Use your company Google account. Personal Google accounts can't sign in.",
   unverified: "Google says that email isn't verified.",
   cancelled: "Sign-in was cancelled.",
   failed: "Sign-in failed. Try again.",

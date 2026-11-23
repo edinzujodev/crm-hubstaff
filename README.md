@@ -161,7 +161,9 @@ the end of that day in `APP_TIME_ZONE`.
 
 Until these are set, development shows a **simulated** Google account chooser (local only; it never works in production).
 
-1. Google Cloud Console → *APIs & Services* → *Credentials* → *Create credentials* → *OAuth client ID* → type *Web application*.
+1. Google Cloud Console, signed in with the company Workspace account: create a project, then *Google Auth Platform* →
+   *Branding* (app name, support email) and *Audience* → user type **Internal** (only people in your Workspace can sign in).
+   Then *Clients* (or *APIs & Services* → *Credentials*) → *Create client* → type *Web application*.
 2. Add the authorized redirect URI: `http://localhost:3000/api/auth/callback/google` (and your real address, e.g.
    `https://tracker.yourfirm.com/api/auth/callback/google`, when deployed).
 3. Put the client ID and secret in `.env`:
@@ -169,7 +171,7 @@ Until these are set, development shows a **simulated** Google account chooser (l
 ```
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
-# Optional: only accept this email domain, e.g. yourfirm.com
+# Only accept accounts managed by this Google Workspace domain, e.g. yourfirm.com
 AUTH_ALLOWED_DOMAIN=
 # Optional: the public address, when the app runs behind a proxy
 APP_URL=

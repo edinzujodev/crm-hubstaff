@@ -45,8 +45,12 @@ export async function GET(request: Request) {
   }
   if (!claims.email || !claims.email_verified) return fail(request, "unverified");
 
-  const domain = process.env.AUTH_ALLOWED_DOMAIN?.toLowerCase();
-  if (domain && !claims.email.toLowerCase().endsWith(`@${domain}`)) return fail(request, "domain");
+  // `hd` is only set for accounts managed by a Google Workspace organisation. Checking it (and not just the
+  // email's ending) keeps out a personal Google account that was registered with a company address.
+  const domain = process.env.AUTH_ALLOWED_DOMAIN?.trim().toLowerCase();
+  if (domain && (claims.hd?.toLowerCase() !== domain || !claims.email.toLowerCase().endsWith(`@${domain}`))) {
+    return fail(request, "domain");
+  }
 
   const user = await findApprovedUser(claims.email);
   if (!user) return fail(request, "not_approved");
