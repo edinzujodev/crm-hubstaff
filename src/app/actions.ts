@@ -6,7 +6,16 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireCurrentUser } from "@/lib/current-user";
-import { authMode, createSession, destroySession, findApprovedUser } from "@/lib/session";
+import {
+  authMode,
+  completePendingSession,
+  countFailedCode,
+  createSession,
+  destroySession,
+  findApprovedUser,
+  pendingSession,
+} from "@/lib/session";
+import { verifyTotp } from "@/lib/totp";
 import { APPROACHING_KEY, CRITICAL_KEY } from "@/lib/urgency-settings";
 import { canManageTask, requireAuth, requireRole, requireTask } from "@/lib/auth";
 import { hubstaff } from "@/lib/hubstaff";
@@ -41,6 +50,11 @@ export async function mockSignIn(_prev: unknown, formData: FormData): Promise<{ 
   if (authMode() !== "mock") return { error: "Simulated sign-in is turned off." };
   const user = await findApprovedUser(String(formData.get("email") ?? ""));
   if (!user) return { error: "That account isn't on the approved list. Ask a super admin to add your email on the Teams page." };
+  // Like Google sign-in: with two-step verification set up, the authenticator code comes next.
+  if (user.totpEnabledAt) {
+    await createSession(user.id, { mfaPending: true });
+    redirect("/login/verify");
+  }
   await createSession(user.id);
   redirect("/");
 }
@@ -86,6 +100,93 @@ export async function updateProfile(_prev: unknown, formData: FormData): Promise
     const auth = await requireAuth();
     const input = profile.parse(Object.fromEntries(formData));
     await db.update(schema.users).set(input).where(eq(schema.users.id, auth.user.id));
+    return undefined;
+  });
+}
+
+const MAX_CODE_TRIES = 5;
+
+/**
+ * Second step of signing in: the code from the authenticator app. Five wrong codes end the pending session, so
+ * the person has to go through Google again.
+ */
+export async function verifySignInCode(_prev: unknown, formData: FormData): Promise<{ error: string } | null> {
+  const pending = await pendingSession();
+  if (!pending) redirect("/login");
+  const { session, user } = pending;
+  const step = user.totpSecret && user.totpEnabledAt ? verifyTotp(user.totpSecret, String(formData.get("code") ?? ""), user.totpLastStep) : null;
+  if (step === null) {
+    const failures = await countFailedCode(session.id);
+    if (failures >= MAX_CODE_TRIES) {
+      await destroySession();
+      redirect("/login?error=too_many_codes");
+    }
+    const left = MAX_CODE_TRIES - failures;
+    return { error: `That code isn't right. Check the app and try again (${left} ${left === 1 ? "try" : "tries"} left).` };
+  }
+  await db.update(schema.users).set({ totpLastStep: step }).where(eq(schema.users.id, user.id));
+  await completePendingSession();
+  redirect("/");
+}
+
+/** Onboarding step 1: the first code from the app proves it was set up right, and turns two-step verification on. */
+export async function confirmTotpSetup(_prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const user = await db.query.users.findFirst({ where: eq(schema.users.id, auth.user.id) });
+    if (!user?.totpSecret) throw new Error("Reload the page to get a new QR code.");
+    if (user.totpEnabledAt) return undefined;
+    const step = verifyTotp(user.totpSecret, String(formData.get("code") ?? ""), null);
+    if (step === null) throw new Error("That code isn't right. Type the 6 digits the app shows now; they change every 30 seconds.");
+    await db.update(schema.users).set({ totpEnabledAt: new Date(), totpLastStep: step }).where(eq(schema.users.id, user.id));
+    return undefined;
+  });
+}
+
+/** Onboarding step 2: about you. */
+export async function saveOnboardingAbout(_prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const input = profile.pick({ name: true, phone: true, birthDate: true, address: true }).parse(Object.fromEntries(formData));
+    await db.update(schema.users).set(input).where(eq(schema.users.id, auth.user.id));
+    return undefined;
+  });
+}
+
+const companyStep = z.object({
+  jobTitle: z.string().trim().min(1, "Add your job title").max(120, "Keep it under 120 characters"),
+  startedOn: z
+    .string()
+    .optional()
+    .transform((v) => v || null)
+    .refine((v) => v === null || (/^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "1950-01-01" && v <= localDay(new Date(), config.timeZone)), "Pick a start date that isn't in the future"),
+});
+
+/** Onboarding step 3: you at the company. Finishing it ends the setup; from then on the app opens normally. */
+export async function finishOnboarding(_prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const input = companyStep.parse(Object.fromEntries(formData));
+    await db
+      .update(schema.users)
+      .set({ ...input, onboardedAt: auth.user.onboardedAt ?? new Date() })
+      .where(eq(schema.users.id, auth.user.id));
+    return undefined;
+  });
+}
+
+/**
+ * A super admin turns off someone's two-step verification, e.g. after a lost phone. Their sessions end; at the
+ * next sign-in they set up the app again.
+ */
+export async function resetTwoFactor(userId: number): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin");
+    await db
+      .update(schema.users)
+      .set({ totpSecret: null, totpEnabledAt: null, totpLastStep: null })
+      .where(eq(schema.users.id, userId));
+    await db.delete(schema.authSessions).where(eq(schema.authSessions.userId, userId));
     return undefined;
   });
 }

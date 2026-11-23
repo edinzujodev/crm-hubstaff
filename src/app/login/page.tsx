@@ -7,7 +7,7 @@ import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { LoginIllustration } from "@/components/login-illustration";
 import { MockLogin } from "@/components/mock-login";
 import { getAuth } from "@/lib/auth";
-import { authMode } from "@/lib/session";
+import { authMode, pendingSession } from "@/lib/session";
 
 const ERRORS: Record<string, string> = {
   not_approved: "That Google account isn't on the approved list. Ask a super admin to add your email on the Teams page.",
@@ -15,6 +15,7 @@ const ERRORS: Record<string, string> = {
   unverified: "Google says that email isn't verified.",
   cancelled: "Sign-in was cancelled.",
   failed: "Sign-in failed. Try again.",
+  too_many_codes: "Too many wrong codes. Sign in with Google again to get a new try.",
 };
 
 function Logo({ className = "" }: { className?: string }) {
@@ -31,6 +32,7 @@ function Logo({ className = "" }: { className?: string }) {
 async function LoginContent({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   await connection();
   if (await getAuth()) redirect("/");
+  if (await pendingSession()) redirect("/login/verify");
   const error = (await searchParams).error;
   const mode = authMode();
   const users = await db.select().from(schema.users).orderBy(schema.users.name);
