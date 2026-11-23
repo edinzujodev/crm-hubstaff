@@ -20,6 +20,8 @@ export function IdleSignOut() {
     const signedOut = () => {
       stopped = true;
       clearTimeout(timer);
+      // A full page load on purpose: it drops everything the client router cached while signed in.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/login");
     };
 

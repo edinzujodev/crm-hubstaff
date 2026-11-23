@@ -40,8 +40,9 @@ async function Account() {
   const users = quickSwitch ? await db.select().from(schema.users).orderBy(asc(schema.users.name)) : [];
   const roleLabel = { super_admin: "Super admin", leader: "Team leader", worker: "Member" }[auth.role];
   return (
+    <>
+    <IdleSignOut />
     <ProfileMenu name={auth.user.name} email={auth.user.email} role={roleLabel}>
-      <IdleSignOut />
       <section className="space-y-2 border-t border-border pt-3">
         <h2 className="text-xs font-medium text-muted">Hubstaff</h2>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -63,6 +64,7 @@ async function Account() {
         <Button className="w-full justify-center" severity="secondary" outlined>Sign out</Button>
       </form>
     </ProfileMenu>
+    </>
   );
 }
 
