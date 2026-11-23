@@ -12,6 +12,14 @@ import { localDay } from "@/lib/format";
 
 const ROLE_LABEL = { super_admin: "Super admin", leader: "Team leader", worker: "Member" } as const;
 
+/** A yyyy-mm-dd day as "3 Mar 2024". */
+function fmtDate(day: string) {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }).format(
+    new Date(Date.UTC(y!, m! - 1, d!)),
+  );
+}
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -83,6 +91,7 @@ async function ProfileContent() {
           <Fact label="Hubstaff user id">
             <span className="font-mono">{me.hubstaffUserId ?? "Not linked"}</span>
           </Fact>
+          <Fact label="Started">{me.startedOn ? fmtDate(me.startedOn) : "—"}</Fact>
         </dl>
       </section>
 
@@ -109,6 +118,20 @@ async function ProfileContent() {
           ) : (
             <span className="text-xs text-muted">Google sign-in isn&apos;t set up yet (development sign-in).</span>
           )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+          <dl>
+            <Fact label="Two-step verification">
+              {me.totpEnabledAt ? (
+                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <i className="pi pi-shield text-xs" aria-hidden /> On · authenticator app since {fmtDate(localDay(me.totpEnabledAt, config.timeZone))}
+                </span>
+              ) : (
+                "Off"
+              )}
+            </Fact>
+          </dl>
+          <span className="text-xs text-muted">New phone? Ask your super admin to reset it, then set it up again.</span>
         </div>
       </section>
     </div>

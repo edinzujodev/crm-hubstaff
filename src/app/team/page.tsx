@@ -70,6 +70,7 @@ async function TeamContent({ show }: { show?: string }) {
     role: u.role,
     hubstaffUserId: u.hubstaffUserId,
     isLeader: leaderIds.has(u.id),
+    twoFactor: !!u.totpEnabledAt,
   }));
   const missingIds = people.filter((p) => p.hubstaffUserId === null).length;
 

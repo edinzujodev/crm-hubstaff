@@ -3,7 +3,8 @@
 import { Button, InputText, Select } from "@/components/ui";
 import Link from "next/link";
 import { useState } from "react";
-import { setHubstaffUserId } from "@/app/actions";
+import { resetTwoFactor, setHubstaffUserId } from "@/app/actions";
+import { notify } from "@/lib/toast";
 import { DataGrid } from "@/components/data-grid";
 import { Avatar } from "@/components/avatar";
 import { RoleSelect } from "@/components/role-select";
@@ -17,7 +18,39 @@ export type Person = {
   role: "super_admin" | "member";
   hubstaffUserId: number | null;
   isLeader: boolean;
+  /** Two-step verification (authenticator app) is set up. */
+  twoFactor: boolean;
 };
+
+/** Two-step status, with a reset for a lost phone: they set up the app again at their next sign-in. */
+function TwoFactorCell({ person }: { person: Person }) {
+  const [pending, setPending] = useState(false);
+  if (!person.twoFactor) return <span className="text-xs text-muted">Not set up</span>;
+  return (
+    <span className="flex items-center gap-2">
+      <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+        <i className="pi pi-shield text-xs" aria-hidden /> On
+      </span>
+      <Button
+        type="button"
+        size="small"
+        severity="secondary"
+        text
+        disabled={pending}
+        title="For a lost or new phone: signs them out; they set up the app again at their next sign-in"
+        onClick={async () => {
+          if (!confirm(`Reset two-step verification for ${person.name}? They are signed out and set up their authenticator app again at their next sign-in.`)) return;
+          setPending(true);
+          const r = await resetTwoFactor(person.id);
+          setPending(false);
+          notify(r.ok ? { message: `Two-step verification reset for ${person.name}` } : { message: "Couldn't reset it", detail: r.error, tone: "error" });
+        }}
+      >
+        Reset
+      </Button>
+    </span>
+  );
+}
 
 type Team = { id: number; name: string };
 
@@ -100,7 +133,7 @@ export function PeopleList({
         headers={[
           "Person",
           "Team",
-          ...(admin ? ["Role", "Hubstaff user id"] : []),
+          ...(admin ? ["Role", "Hubstaff user id", "Two-step"] : []),
         ]}
         empty={
           <>
@@ -179,6 +212,7 @@ export function PeopleList({
                       Save
                     </Button>
                   </form>,
+                  <TwoFactorCell key="2fa" person={p} />,
                 ]
               : []),
           ],
