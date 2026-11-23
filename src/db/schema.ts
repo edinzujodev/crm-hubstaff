@@ -30,6 +30,12 @@ export const users = pgTable("users", {
   dashboardLayout: text("dashboard_layout").notNull().default("2"),
   // Set once the person's dashboard has been given its starter widgets, so removing them all stays removed.
   dashboardSeededAt: timestamp("dashboard_seeded_at", { withTimezone: true }),
+  // Profile details the person fills in themselves on /profile. All optional.
+  jobTitle: text("job_title"),
+  phone: text("phone"),
+  birthDate: date("birth_date"),
+  address: text("address"),
+  bio: text("bio"),
 });
 
 // One widget on a person's dashboard. Dashboards are personal; `config` holds the widget's settings

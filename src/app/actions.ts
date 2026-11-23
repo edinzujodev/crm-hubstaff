@@ -60,6 +60,37 @@ export async function signOut() {
   redirect("/login");
 }
 
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Keep it under ${max} characters`)
+    .optional()
+    .transform((v) => v || null);
+
+const profile = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120, "Keep the name under 120 characters"),
+  jobTitle: optionalText(120),
+  phone: optionalText(40).refine((v) => v === null || /^[+\d][\d\s()/.-]{4,}$/.test(v), "That doesn't look like a phone number"),
+  birthDate: z
+    .string()
+    .optional()
+    .transform((v) => v || null)
+    .refine((v) => v === null || (/^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "1900-01-01" && v <= localDay(new Date(), config.timeZone)), "Pick a birth date in the past"),
+  address: optionalText(300),
+  bio: optionalText(1000),
+});
+
+/** The signed-in person edits their own profile. Email, role and team stay with the super admin and team leaders. */
+export async function updateProfile(_prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const input = profile.parse(Object.fromEntries(formData));
+    await db.update(schema.users).set(input).where(eq(schema.users.id, auth.user.id));
+    return undefined;
+  });
+}
+
 const newTask = z.object({
   title: z.string().trim().min(1, "Title is required"),
   clientId: z.coerce.number({ error: "Pick a client" }).int().positive("Pick a client"),

@@ -22,6 +22,7 @@ export function DateInput({
   required,
   disabled,
   className,
+  max,
   onChange,
 }: {
   name?: string;
@@ -30,6 +31,8 @@ export function DateInput({
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  /** Latest date that can be picked (yyyy-mm-dd), e.g. today for a birth date. */
+  max?: string;
   onChange?: (e: { target: { value: string } }) => void;
 }) {
   const [inner, setInner] = useState(defaultValue ?? "");
@@ -43,6 +46,7 @@ export function DateInput({
         showButtonBar
         disabled={disabled}
         required={required}
+        maxDate={toDate(max) ?? undefined}
         className={className}
         appendTo={typeof document === "undefined" ? undefined : document.body}
         onChange={(e) => {
