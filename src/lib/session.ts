@@ -47,7 +47,8 @@ export async function sessionByToken(token: string) {
       and(
         eq(schema.authSessions.id, hash(token)),
         gt(schema.authSessions.expiresAt, sql`now()`),
-        gt(schema.authSessions.createdAt, new Date(Date.now() - MAX_AGE_MS)),
+        // The clock is the database's: reading Date.now() here would break prerendering of the pages that call this.
+        gt(schema.authSessions.createdAt, sql`now() - ${`${SESSION_DAYS} days`}::interval`),
       ),
     );
   return row ?? null;
