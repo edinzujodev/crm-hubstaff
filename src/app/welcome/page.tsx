@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { eq } from "drizzle-orm";
 import QRCode from "qrcode";
 import { db, schema } from "@/db";
-import { AuthLogo, AuthShell } from "@/components/auth-shell";
+import { AuthLogo, AuthShell, AuthShellLoading } from "@/components/auth-shell";
 import { LoginIllustration } from "@/components/login-illustration";
 import { AboutForm, CompanyForm, TotpSetupForm } from "@/components/welcome-forms";
 import { getAuth } from "@/lib/auth";
@@ -183,7 +183,7 @@ function Done({ name }: { name: string }) {
 /** First sign-in: two-step verification, then a few details about the person, then the dashboard. */
 export default function WelcomePage({ searchParams }: PageProps<"/welcome">) {
   return (
-    <Suspense>
+    <Suspense fallback={<AuthShellLoading wide />}>
       <WelcomeContent searchParams={searchParams} />
     </Suspense>
   );

@@ -13,6 +13,21 @@ export function AuthLogo({ className = "", withName = true }: { className?: stri
 }
 
 /**
+ * What an AuthShell page shows while it loads. It must cover the window as well, otherwise the app's sidebar shows
+ * through for a moment between steps.
+ */
+export function AuthShellLoading({ wide }: { wide?: boolean }) {
+  return (
+    <AuthShell wide={wide} side={<AuthLogo />}>
+      <div className="flex flex-1 items-center justify-center p-12" role="status">
+        <i className="pi pi-spin pi-spinner text-2xl text-muted" aria-hidden />
+        <span className="sr-only">Loading…</span>
+      </div>
+    </AuthShell>
+  );
+}
+
+/**
  * The full-window frame of the sign-in and first-sign-in screens: a dark panel on the left (`side`) and the
  * content on the right. It covers the app's sidebar, which stays underneath. Without `side` the content gets the
  * whole card.
