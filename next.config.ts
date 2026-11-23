@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Set by `next upgrade --agent=security`: this app is kept on patched releases when advisories are published.
+    agentUpgrade: "security",
+  },
   // The dashboard is the landing page; the task list lives at /tasks.
   async redirects() {
     return [

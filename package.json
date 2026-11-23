@@ -19,7 +19,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "drizzle-orm": "^0.45.4",
-    "next": "16.4.4",
+    "next": "16.4.6",
     "postgres": "^4.0.0",
     "primeicons": "^8.0.2",
     "primereact": "^10.9.9",
@@ -35,7 +35,7 @@
     "dotenv": "^18.0.9",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
-    "eslint-config-next": "16.4.4",
+    "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"
