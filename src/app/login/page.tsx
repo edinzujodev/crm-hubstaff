@@ -20,7 +20,7 @@ const ERRORS: Record<string, string> = {
 function Logo({ className = "" }: { className?: string }) {
   return (
     <span className={`flex items-center gap-3 ${className}`}>
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#2563eb] shadow-sm">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#18181b] shadow-sm">
         <i className="pi pi-check-square text-lg" aria-hidden />
       </span>
       <span className="text-lg font-semibold tracking-tight">Client tracker</span>
@@ -47,7 +47,7 @@ async function LoginContent({ searchParams }: { searchParams: Promise<{ [key: st
 
   return (
     <div className="space-y-6">
-      <Heading title="Sign in to Client tracker" sub="Use your company Google account. No password needed here." />
+      <Heading title="Sign in to Client tracker" sub="Use your company Google account to continue." />
 
       {typeof error === "string" && ERRORS[error] && (
         <p role="alert" className="flex gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-700 dark:text-red-300">
@@ -59,10 +59,8 @@ async function LoginContent({ searchParams }: { searchParams: Promise<{ [key: st
       {mode === "google" && (
         <div className="space-y-4">
           <GoogleSignInButton />
-          <p className="text-center text-xs text-muted">
-            Only people your admin added can sign in.
-            <br />
-            Can&apos;t get in? Ask your super admin to add your email on the Teams page.
+          <p className="text-balance text-center text-xs text-muted">
+            Only people your admin has added can sign in. Can&apos;t get in? Ask your super admin.
           </p>
         </div>
       )}
@@ -104,7 +102,7 @@ function ContentSkeleton() {
 }
 
 /**
- * The sign-in screen: a blue panel with the app's name and picture, and the Google button next to it.
+ * The sign-in screen: a dark panel with the app's name and picture, and the Google button next to it.
  * It covers the whole window (the sidebar of the layout sits underneath and stays hidden).
  */
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -113,7 +111,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="flex min-h-full items-center justify-center p-4 sm:p-8">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-surface shadow-xl ring-1 ring-border md:min-h-[560px] md:grid-cols-2">
           {/* Brand panel */}
-          <section className="relative flex flex-col gap-6 overflow-hidden bg-linear-to-br from-[#4f8ff7] to-[#2563eb] p-8 text-white sm:p-10">
+          <section className="relative flex flex-col gap-6 overflow-hidden bg-linear-to-br from-[#3f3f46] to-[#18181b] p-8 text-white sm:p-10">
             <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10" />
             <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/5" />
             <Logo className="relative" />

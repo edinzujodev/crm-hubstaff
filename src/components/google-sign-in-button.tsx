@@ -10,7 +10,7 @@ export function GoogleSignInButton() {
       href="/api/auth/google"
       onClick={() => setGoing(true)}
       aria-busy={going}
-      className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-foreground shadow-sm transition hover:bg-[#f8fafc] hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3b82f6] aria-busy:pointer-events-none aria-busy:opacity-70 dark:hover:bg-white/5"
+      className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-foreground shadow-sm transition hover:bg-[#f8fafc] hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground aria-busy:pointer-events-none aria-busy:opacity-70 dark:hover:bg-white/5"
     >
       {going ? (
         <i className="pi pi-spin pi-spinner text-base text-muted" aria-hidden />
