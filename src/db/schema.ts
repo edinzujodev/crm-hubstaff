@@ -36,6 +36,15 @@ export const users = pgTable("users", {
   birthDate: date("birth_date"),
   address: text("address"),
   bio: text("bio"),
+  // The day the person started working at the company (optional, set during onboarding or on /profile).
+  startedOn: date("started_on"),
+  // Set when the person finished the first-sign-in setup (/welcome). Until then every page sends them there.
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
+  // Two-step verification with an authenticator app (TOTP, RFC 6238). The secret is base32; it is only in use once
+  // totp_enabled_at is set. totp_last_step is the last accepted 30-second step, so a code can't be used twice.
+  totpSecret: text("totp_secret"),
+  totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
+  totpLastStep: integer("totp_last_step"),
 });
 
 // One widget on a person's dashboard. Dashboards are personal; `config` holds the widget's settings
@@ -72,6 +81,10 @@ export const authSessions = pgTable(
       .references((): AnyPgColumn => users.id),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Signed in with Google but the authenticator code is still missing: the session lets the person reach
+    // /login/verify and nothing else. mfa_failures counts wrong codes; too many ends the session.
+    mfaPending: boolean("mfa_pending").notNull().default(false),
+    mfaFailures: integer("mfa_failures").notNull().default(0),
   },
   (t) => [index("auth_sessions_user_idx").on(t.userId)],
 );

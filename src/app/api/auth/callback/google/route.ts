@@ -55,6 +55,11 @@ export async function GET(request: Request) {
   const user = await findApprovedUser(claims.email);
   if (!user) return fail(request, "not_approved");
 
+  // With two-step verification set up, Google alone isn't enough: the authenticator code comes next.
+  if (user.totpEnabledAt) {
+    await createSession(user.id, { mfaPending: true });
+    return Response.redirect(new URL("/login/verify", request.url));
+  }
   await createSession(user.id);
   return Response.redirect(new URL("/", request.url));
 }
