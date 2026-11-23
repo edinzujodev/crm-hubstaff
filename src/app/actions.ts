@@ -126,7 +126,7 @@ export async function verifySignInCode(_prev: unknown, formData: FormData): Prom
   }
   await db.update(schema.users).set({ totpLastStep: step }).where(eq(schema.users.id, user.id));
   await completePendingSession();
-  redirect("/");
+  redirect("/dashboard");
 }
 
 /** Onboarding step 1: the first code from the app proves it was set up right, and turns two-step verification on. */
