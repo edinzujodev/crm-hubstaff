@@ -378,14 +378,6 @@ async function TaskDetail({
               : "Monthly, repeats"
             : "One-time"}
         </InfoItem>
-        {blockRows.length > 0 && (
-          <InfoItem icon="pi-ban" label="Time blocked">
-            {fmtSpan(blockedTotal)}{" "}
-            <span className="text-muted">
-              · {blockRows.length} {blockRows.length === 1 ? "time" : "times"}
-            </span>
-          </InfoItem>
-        )}
         <InfoItem icon="pi-briefcase" label="Client">
           {task.clientId ? (
             <Link
@@ -414,6 +406,21 @@ async function TaskDetail({
                 ? ` ${task.dueDate.slice(0, 4)}`
                 : "")
             : "—"}
+        </InfoItem>
+        <InfoItem icon="pi-plus-circle" label="Created">
+          {fmtDateTime(task.createdAt, tz)}
+        </InfoItem>
+        <InfoItem icon="pi-check" label="Finished">
+          {task.status === "done" && task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}
+        </InfoItem>
+        <InfoItem icon="pi-clock" label="Hubstaff">
+          {task.hubstaffTaskId ? (
+            `Task #${task.hubstaffTaskId}`
+          ) : (
+            <span className="text-muted" title="It is created in Hubstaff the first time you press Start">
+              Not created yet
+            </span>
+          )}
         </InfoItem>
       </section>
 
@@ -642,29 +649,6 @@ async function TaskDetail({
 
           {tab === "reviews" && (
             <>
-              <section className="card grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-4">
-                <InfoItem icon="pi-plus-circle" label="Created">
-                  {fmtDateTime(task.createdAt, tz)}
-                </InfoItem>
-                <InfoItem icon="pi-check" label="Finished">
-                  {task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}
-                </InfoItem>
-                <InfoItem icon="pi-check-circle" label="Reviewed by">
-                  {reviewer?.name ?? "—"}
-                </InfoItem>
-                <InfoItem icon="pi-clock" label="Hubstaff">
-                  {task.hubstaffTaskId ? (
-                    `Task #${task.hubstaffTaskId}`
-                  ) : (
-                    <span
-                      className="text-muted"
-                      title="It is created in Hubstaff the first time you press Start"
-                    >
-                      Not created yet
-                    </span>
-                  )}
-                </InfoItem>
-              </section>
               {reviews.length > 0 ? (
                 <section className="card space-y-3 p-4">
                   <h2 className="font-semibold">

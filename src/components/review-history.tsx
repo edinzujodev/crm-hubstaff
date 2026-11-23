@@ -23,7 +23,7 @@ export function ReviewHistory({ reviews, tz }: { reviews: ReviewEntry[]; tz: str
             </span>
             <span className="text-muted">
               {" "}
-              · {r.reviewerName ?? "—"} · {fmtDateTime(r.at, tz)}
+              · by {r.reviewerName ?? "someone"} · {fmtDateTime(r.at, tz)}
             </span>
           </p>
           {r.note && <p className="mt-1 whitespace-pre-wrap">{r.note}</p>}
