@@ -147,8 +147,11 @@ export async function findApprovedUser(email: string) {
 /**
  * "google" once GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set. Until then, outside production,
  * "mock" shows a stand-in account chooser. In production without Google nobody can sign in.
+ * In development, DEV_LOGIN=1 brings the stand-in back while Google is configured.
  */
 export function authMode(): "google" | "mock" | "none" {
+  // DEV_LOGIN=1 keeps the one-click sign-in for testing even with Google set up. Never in production.
+  if (process.env.DEV_LOGIN === "1" && process.env.NODE_ENV !== "production") return "mock";
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) return "google";
   return process.env.NODE_ENV === "production" ? "none" : "mock";
 }
