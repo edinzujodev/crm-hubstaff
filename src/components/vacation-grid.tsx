@@ -60,13 +60,13 @@ export function VacationGrid({
   const off = (d: string) => holidays.has(d);
   // A line before each Monday (except the first column) keeps the weeks apart.
   const weekStart = (d: string, i: number) => i > 0 && new Date(`${d}T00:00:00Z`).getUTCDay() === 1;
-  const cols = { gridTemplateColumns: `repeat(${days.length}, minmax(1.5rem, 1fr))` };
+  const cols = { gridTemplateColumns: `repeat(${days.length}, minmax(1.75rem, 1fr))` };
 
   return (
     <div>
       <div className="flex">
         {/* Names */}
-        <div className="w-32 shrink-0 border-r border-border sm:w-36 2xl:w-48">
+        <div className="w-32 shrink-0 border-r border-border sm:w-48">
           <div className="flex h-12 items-end border-b border-border px-4 pb-2 text-xs font-medium text-muted">People</div>
           {rows.map((r) => (
             <div key={r.id} className="flex h-11 items-center gap-2.5 border-b border-border px-3 last:border-b-0 sm:px-4">
@@ -105,7 +105,7 @@ export function VacationGrid({
                 {days.map((d, i) => {
                   const e = off(d) ? undefined : r.entries.find((x) => x.startDate <= d && x.endDate >= d);
                   return (
-                    <div key={d} className={`flex items-center justify-center p-[2px] ${off(d) ? "bg-foreground/[0.035]" : ""} ${weekStart(d, i) ? "border-l border-border" : ""}`}>
+                    <div key={d} className={`flex items-center justify-center p-[3px] ${off(d) ? "bg-foreground/[0.035]" : ""} ${weekStart(d, i) ? "border-l border-border" : ""}`}>
                       {e ? (
                         <span
                           title={`${r.name} · ${e.kind === "out" ? "Out" : KIND_LABEL[e.kind]}${e.halfDay ? " (half day)" : ""} · ${fmtShortDay(d)} · ${STATUS_LABEL[e.status]}${e.note ? ` · ${e.note}` : ""}`}
