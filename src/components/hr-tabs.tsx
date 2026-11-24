@@ -1,15 +1,21 @@
 import { Suspense } from "react";
 import { ListSkeleton } from "@/components/page-skeleton";
-import { TabCard } from "@/components/tab-card";
-import type { LinkTab } from "@/components/link-tabs";
 import { getAuth, type Auth } from "@/lib/auth";
-import { waitingRequests } from "@/lib/hr";
 
-export type HrTab = "calendar" | "vacations" | "time-off" | "approvals" | "people" | "teams" | "holidays";
+export type HrTab = "calendar" | "vacations" | "approvals" | "people" | "teams" | "holidays";
+
+const TITLES: Record<HrTab, string> = {
+  calendar: "Calendar",
+  vacations: "Vacations",
+  approvals: "Approvals",
+  people: "People",
+  teams: "Teams",
+  holidays: "Holidays",
+};
 
 /**
- * The HR section's tabs around a page. Everyone has the calendar, their own time off and the holidays; team
- * leaders and super admins also approve requests and look after people and teams.
+ * The box around an HR page: its title with the page's filters (`toolbar`) on the right, and the page's buttons
+ * (`actions`) above it. The HR menu on the left (app/hr/layout.tsx) moves between the pages.
  */
 export async function HrTabs({
   auth,
@@ -26,25 +32,18 @@ export async function HrTabs({
   padded?: boolean;
   children: React.ReactNode;
 }) {
-  const manager = auth.role === "super_admin" || auth.role === "leader";
-  const waiting = manager ? (await waitingRequests(auth)).length : 0;
-  const tabs: (LinkTab & { key: HrTab })[] = [
-    { key: "calendar", label: "Calendar", href: "/hr" },
-    { key: "vacations", label: "Vacations", href: "/hr/vacations" },
-    { key: "time-off", label: "Time off", href: "/hr/time-off" },
-    ...(manager
-      ? [
-          { key: "approvals" as const, label: "Approvals", href: "/hr/approvals", count: waiting || undefined, alarm: waiting > 0 },
-          { key: "people" as const, label: "People", href: "/hr/people" },
-          { key: "teams" as const, label: auth.role === "super_admin" ? "Teams" : "Your team", href: "/hr/teams" },
-        ]
-      : []),
-    { key: "holidays", label: "Holidays", href: "/hr/holidays", end: true },
-  ];
+  const title = active === "teams" && auth.role !== "super_admin" ? "Your team" : TITLES[active];
   return (
-    <TabCard tabs={tabs} active={Math.max(0, tabs.findIndex((t) => t.key === active))} actions={actions} toolbar={toolbar} padded={padded}>
-      {children}
-    </TabCard>
+    <div className="space-y-3">
+      {actions && <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>}
+      <div className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
+          <h2 className="text-base font-semibold">{title}</h2>
+          {toolbar && <div className="flex flex-wrap items-center justify-end gap-2">{toolbar}</div>}
+        </div>
+        <div className={padded ? "p-4" : undefined}>{children}</div>
+      </div>
+    </div>
   );
 }
 

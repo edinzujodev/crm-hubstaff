@@ -68,20 +68,23 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
   // The legend explains vacation and sick leave always, the other kinds once they appear.
   const kinds = [...TIME_OFF_KINDS.filter((k) => k === "vacation" || k === "sick" || shownKinds.has(k)), ...(shownKinds.has("out") ? (["out"] as const) : [])];
 
+  const form = {
+    me: { id: auth.user.id, name: auth.user.name },
+    people: people.map((p) => ({ id: p.id, name: p.name })),
+    daysOff: [...daysOff],
+    vacationLeft: Math.max(0, balance.left - balance.pending),
+    selfApproves: auth.role === "super_admin",
+  };
+
   return (
     <HrTabs
       auth={auth}
       active="vacations"
       actions={
-        <TimeOffButton
-          label="Request time off"
-          icon="pi-plus"
-          me={{ id: auth.user.id, name: auth.user.name }}
-          people={people.map((p) => ({ id: p.id, name: p.name }))}
-          daysOff={[...daysOff]}
-          vacationLeft={Math.max(0, balance.left - balance.pending)}
-          selfApproves={auth.role === "super_admin"}
-        />
+        <>
+          <TimeOffButton {...form} label="Add sick leave" icon="pi-heart" kind="sick" outlined />
+          <TimeOffButton {...form} label="Request time off" icon="pi-plus" />
+        </>
       }
       toolbar={
         <>
@@ -110,7 +113,7 @@ export default function VacationsPage({ searchParams }: PageProps<"/hr/vacations
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Vacations</h1>
-      <HrSuspense actions={["Request time off"]}>
+      <HrSuspense actions={["Add sick leave", "Request time off"]}>
         <VacationsContent params={params} />
       </HrSuspense>
     </div>

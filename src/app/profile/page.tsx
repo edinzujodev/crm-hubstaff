@@ -5,7 +5,7 @@ import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { BalanceTiles, fmtNum } from "@/components/balance-tiles";
 import { DataGrid } from "@/components/data-grid";
-import { KindBadge, StatusBadge } from "@/components/time-off";
+import { CancelTimeOffButton, KindBadge, StatusBadge } from "@/components/time-off";
 import { fmtRange } from "@/lib/days";
 import { daysOffBetween } from "@/lib/holidays";
 import { countDays } from "@/lib/leave-days";
@@ -140,6 +140,11 @@ async function ProfileContent() {
               </span>,
               <StatusBadge key="s" status={t.status} />,
             ],
+            // Requests still waiting, and time off that hasn't started yet, can be called off.
+            actions:
+              t.status === "pending" || (t.status === "approved" && (t.startDate > today || t.kind === "sick")) ? (
+                <CancelTimeOffButton id={t.id} />
+              ) : undefined,
           }))}
         />
       </section>

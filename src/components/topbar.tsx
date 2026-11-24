@@ -25,7 +25,6 @@ const DETAIL: Record<string, string> = {
 };
 /** The pages inside HR (/hr/<page>), and what one item under them is called. */
 const HR_PAGES: Record<string, string> = {
-  "time-off": "Time off",
   vacations: "Vacations",
   approvals: "Approvals",
   people: "People",
