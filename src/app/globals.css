@@ -38,6 +38,12 @@ html[data-theme="blue"] {
     --viz-axis: #383835;
   }
 
+/* Keep room for the scrollbar on every page, so short and long pages are equally wide and nothing shifts sideways
+   when you move between them. */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* PrimeReact's green theme, tuned to noir so it matches the rest of the app. */
 html:root {
   --primary-color: #18181b;

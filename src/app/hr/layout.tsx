@@ -47,7 +47,7 @@ function NavSkeleton() {
 export default function HrLayout({ children }: LayoutProps<"/hr">) {
   return (
     <div className="flex flex-col gap-5 md:flex-row md:items-start">
-      <aside className="md:sticky md:top-20 md:w-44 md:shrink-0">
+      <aside className="md:sticky md:top-16 md:w-44 md:shrink-0">
         <Suspense fallback={<NavSkeleton />}>
           <HrNav />
         </Suspense>

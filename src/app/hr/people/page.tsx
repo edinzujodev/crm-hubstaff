@@ -8,9 +8,9 @@ import { pageGuard } from "@/lib/auth";
 
 function Tile({ label, value, tone, hint }: { label: string; value: number; tone?: "warn"; hint?: string }) {
   return (
-    <div className="card p-4" title={hint}>
+    <div className="px-4 py-3" title={hint}>
       <p className="text-xs text-muted">{label}</p>
-      <p className={`mt-1 font-mono text-2xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}>{value}</p>
+      <p className={`mt-0.5 font-mono text-xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -41,8 +41,8 @@ async function PeopleContent() {
   const missingIds = people.filter((p) => p.hubstaffUserId === null).length;
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-3 sm:grid-cols-3">
+    <HrTabs auth={auth} active="people" actions={admin ? <AddMemberButton /> : undefined}>
+      <section className="grid grid-cols-3 divide-x divide-border border-b border-border">
         <Tile label="People" value={people.length} />
         <Tile label={admin ? "Teams" : "Teams you lead"} value={admin ? allTeams.length : auth.ledTeamIds.length} />
         {admin && (
@@ -54,10 +54,8 @@ async function PeopleContent() {
           />
         )}
       </section>
-      <HrTabs auth={auth} active="people" actions={admin ? <AddMemberButton /> : undefined}>
-        <PeopleList people={people} teams={teamOptions} admin={admin} />
-      </HrTabs>
-    </div>
+      <PeopleList people={people} teams={teamOptions} admin={admin} />
+    </HrTabs>
   );
 }
 

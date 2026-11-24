@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { ListSkeleton } from "@/components/page-skeleton";
-import { getAuth, type Auth } from "@/lib/auth";
+import { TableSkeleton } from "@/components/page-skeleton";
+import type { Auth } from "@/lib/auth";
 
 export type HrTab = "calendar" | "vacations" | "approvals" | "people" | "teams" | "holidays";
 
@@ -14,8 +14,9 @@ const TITLES: Record<HrTab, string> = {
 };
 
 /**
- * The box around an HR page: its title with the page's filters (`toolbar`) on the right, and the page's buttons
- * (`actions`) above it. The HR menu on the left (app/hr/layout.tsx) moves between the pages.
+ * The box around an HR page: its title on the left; the page's filters (`toolbar`) and buttons (`actions`) on the
+ * right of the same row. Every HR page's box starts at the same height, so switching pages in the HR menu on the
+ * left (app/hr/layout.tsx) doesn't make the page jump.
  */
 export async function HrTabs({
   auth,
@@ -34,40 +35,41 @@ export async function HrTabs({
 }) {
   const title = active === "teams" && auth.role !== "super_admin" ? "Your team" : TITLES[active];
   return (
-    <div className="space-y-3">
-      {actions && <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>}
-      <div className="card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
-          <h2 className="text-base font-semibold">{title}</h2>
-          {toolbar && <div className="flex flex-wrap items-center justify-end gap-2">{toolbar}</div>}
-        </div>
-        <div className={padded ? "p-4" : undefined}>{children}</div>
-      </div>
+    <div className="card overflow-hidden">
+      <HrBoxHeader title={title}>
+        {toolbar}
+        {actions}
+      </HrBoxHeader>
+      <div className={padded ? "p-4" : undefined}>{children}</div>
+    </div>
+  );
+}
+
+function HrBoxHeader({ title, children }: { title: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <div className="flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
+      <h2 className="text-base font-semibold">{title}</h2>
+      <div className="flex flex-wrap items-center justify-end gap-2">{children}</div>
     </div>
   );
 }
 
 type Actions = string[] | ((auth: Auth) => string[] | undefined);
 
-/**
- * The loading state of an HR page. `actions` are the labels of the buttons the page shows above its box, so the
- * skeleton keeps room for them and the page doesn't jump down when it loads. When the buttons depend on the
- * person's role, pass a function: the skeleton then waits for the (cached, quick) sign-in check to pick them.
- */
-export function HrSuspense({ actions, rows, children }: { actions?: Actions; rows?: number; children: React.ReactNode }) {
-  if (typeof actions !== "function") {
-    return <Suspense fallback={<ListSkeleton rows={rows} actions={actions} />}>{children}</Suspense>;
-  }
+/** The loading state of an HR page: the same box, so nothing moves when the page arrives. */
+export function HrSuspense({ rows = 6, children }: { actions?: Actions; rows?: number; children: React.ReactNode }) {
   return (
-    <Suspense fallback={<ListSkeleton rows={rows} />}>
-      <RoleSkeleton actions={actions} rows={rows}>
-        {children}
-      </RoleSkeleton>
+    <Suspense
+      fallback={
+        <div className="card overflow-hidden" role="status" aria-label="Loading">
+          <HrBoxHeader title={<span className="block h-5 w-28 animate-pulse rounded bg-foreground/10" />}>
+            <span className="block h-9 w-36 animate-pulse rounded-md bg-foreground/10" />
+          </HrBoxHeader>
+          <TableSkeleton rows={rows} />
+        </div>
+      }
+    >
+      {children}
     </Suspense>
   );
-}
-
-async function RoleSkeleton({ actions, rows, children }: { actions: (auth: Auth) => string[] | undefined; rows?: number; children: React.ReactNode }) {
-  const auth = await getAuth();
-  return <Suspense fallback={<ListSkeleton rows={rows} actions={auth ? actions(auth) : undefined} />}>{children}</Suspense>;
 }
