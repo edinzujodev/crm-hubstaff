@@ -60,6 +60,13 @@ function Legend({ tone, label }: { tone: string; label: string }) {
   );
 }
 
+/** "Edin Zujo" -> "Edin Z.": short enough for a calendar cell, still tells two Edins apart. */
+function shortName(name: string) {
+  const [first, ...rest] = name.trim().split(/\s+/);
+  const last = rest.at(-1);
+  return last ? `${first} ${last[0]}.` : first!;
+}
+
 /** A birthday or start date in this month's year; 29 February falls on the 28th in other years. */
 function sameDayIn(year: number, day: string) {
   const [m, d] = [Number(day.slice(5, 7)), Number(day.slice(8))];
@@ -196,7 +203,7 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
       type: "time-off",
       start: t.startDate,
       end: t.endDate,
-      title: `${u.name.split(/\s+/)[0]} · ${what}${t.halfDay ? " (½)" : ""}`,
+      title: `${shortName(u.name)} · ${what}${t.halfDay ? " (½)" : ""}`,
       tone: full ? KIND_TONE[t.kind] : undefined,
       tentative: t.status === "pending",
       details: [

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireAuth, requireRole, type Auth } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { isDay } from "@/lib/days";
+import { fmtDays, isDay } from "@/lib/days";
 import { localDay } from "@/lib/format";
 import { builtInHolidays, daysOffBetween } from "@/lib/holidays";
 import { run, type Result } from "@/lib/result";
@@ -82,7 +82,7 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
         const wanted = countDays(input, daysOff, `${y}-01-01`, `${y}-12-31`);
         if (wanted > b.left - b.pending) {
           throw new Error(
-            `That's ${wanted} vacation days in ${y}, but only ${Math.max(0, b.left - b.pending)} are left${b.pending ? " after the requests still waiting" : ""}.`,
+            `That's ${fmtDays(wanted)} of vacation in ${y}, but you only have ${fmtDays(Math.max(0, b.left - b.pending))} left${b.pending ? " after the requests still waiting" : ""}.`,
           );
         }
       }
