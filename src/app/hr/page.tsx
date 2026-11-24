@@ -1,54 +1,17 @@
-import Link from "next/link";
 import { and, asc, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { HrCalendar, NewEventButton, type CalendarItem } from "@/components/hr-calendar";
 import type { EventTeamOption } from "@/components/event-form";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
+import { MonthSwitch, WhoSwitch } from "@/components/hr-switches";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { fmtMonth, monthBounds, shiftMonth, ymd } from "@/lib/days";
+import { monthBounds, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
 import { holidaysBetween } from "@/lib/holidays";
 import { describeRepeat, occurrences } from "@/lib/recurrence";
 import { canManagePerson, KIND_LABEL, KIND_TONE } from "@/lib/time-off";
-
-function MonthSwitch({ month, current, team }: { month: string; current: string; team: boolean }) {
-  const q = (m: string) => `/hr?m=${m}${team ? "&who=team" : ""}`;
-  const link = "flex h-8 w-8 items-center justify-center rounded-md hover:bg-foreground/5";
-  return (
-    <span className="flex items-center gap-1 text-sm">
-      <Link href={q(shiftMonth(month, -1))} className={link} aria-label="Previous month">
-        <i className="pi pi-chevron-left text-xs" aria-hidden />
-      </Link>
-      <span className="min-w-32 text-center font-semibold">{fmtMonth(month)}</span>
-      <Link href={q(shiftMonth(month, 1))} className={link} aria-label="Next month">
-        <i className="pi pi-chevron-right text-xs" aria-hidden />
-      </Link>
-      {month !== current && (
-        <Link href={q(current)} className="ml-1 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-foreground/5">
-          Today
-        </Link>
-      )}
-    </span>
-  );
-}
-
-function WhoSwitch({ month, team, hasTeam }: { month: string; team: boolean; hasTeam: boolean }) {
-  if (!hasTeam) return null;
-  const tab = (on: boolean) =>
-    `rounded-md px-2.5 py-1 text-xs font-medium ${on ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`;
-  return (
-    <span className="flex items-center gap-0.5 rounded-lg border border-border p-0.5">
-      <Link href={`/hr?m=${month}`} className={tab(!team)}>
-        Everyone
-      </Link>
-      <Link href={`/hr?m=${month}&who=team`} className={tab(team)}>
-        My team
-      </Link>
-    </span>
-  );
-}
 
 function Legend({ tone, label }: { tone: string; label: string }) {
   return (
@@ -234,8 +197,8 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
       actions={eventTeams.length ? <NewEventButton teams={eventTeams} /> : undefined}
       toolbar={
         <>
-          <WhoSwitch month={month} team={teamOnly} hasTeam={myTeams.length > 0} />
-          <MonthSwitch month={month} current={today.slice(0, 7)} team={teamOnly} />
+          <WhoSwitch base="/hr" month={month} team={teamOnly} hasTeam={myTeams.length > 0} />
+          <MonthSwitch base="/hr" month={month} current={today.slice(0, 7)} team={teamOnly} />
         </>
       }
     >
