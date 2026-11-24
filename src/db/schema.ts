@@ -455,6 +455,10 @@ export const holidays = pgTable(
 );
 
 // Company or team events on the HR calendar. team_id null: the whole company.
+// How an event repeats. daily and weekly use repeat_days (0 = Sunday … 6 = Saturday; daily with none: every day);
+// monthly is the same day each month (the last day in shorter months), yearly the same date each year.
+export const eventRepeat = pgEnum("event_repeat", ["none", "daily", "weekly", "monthly", "yearly"]);
+
 export const events = pgTable(
   "events",
   {
@@ -467,6 +471,10 @@ export const events = pgTable(
     // "HH:MM" in the app's time zone; null for an all-day event.
     startTime: text("start_time"),
     endTime: text("end_time"),
+    repeat: eventRepeat("repeat").notNull().default("none"),
+    repeatDays: integer("repeat_days").array(),
+    // The last day a repeat can start on; null repeats forever.
+    repeatUntil: date("repeat_until"),
     teamId: integer("team_id").references((): AnyPgColumn => teams.id, { onDelete: "cascade" }),
     createdById: integer("created_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

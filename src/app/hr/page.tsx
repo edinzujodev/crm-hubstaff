@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { HrCalendar, NewEventButton, type CalendarItem } from "@/components/hr-calendar";
@@ -10,6 +10,7 @@ import { config } from "@/lib/config";
 import { fmtMonth, monthBounds, shiftMonth, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
 import { holidaysBetween } from "@/lib/holidays";
+import { describeRepeat, occurrences } from "@/lib/recurrence";
 import { canManagePerson, KIND_LABEL, KIND_TONE } from "@/lib/time-off";
 
 function MonthSwitch({ month, current, team }: { month: string; current: string; team: boolean }) {
@@ -97,7 +98,8 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
       .where(
         and(
           lte(schema.events.startDate, to),
-          gte(schema.events.endDate, from),
+          // A repeating event can show up long after its first day; occurrences() picks the dates below.
+          or(gte(schema.events.endDate, from), ne(schema.events.repeat, "none")),
           admin && !teamOnly
             ? undefined
             : myTeams.length
@@ -135,32 +137,41 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
   const canEdit = (teamId: number | null) => admin || (teamId !== null && auth.role === "leader" && auth.ledTeamIds.includes(teamId));
   for (const e of events) {
     const time = e.startTime ? `${e.startTime}${e.endTime ? `–${e.endTime}` : ""}` : null;
-    items.push({
-      key: `e-${e.id}`,
-      type: "event",
-      start: e.startDate,
-      end: e.endDate,
-      title: time && e.startDate === e.endDate ? `${e.startTime} ${e.title}` : e.title,
-      details: [
-        time ? `Time: ${time}` : "All day",
-        e.location ? `Place: ${e.location}` : "",
-        `For: ${e.teamId ? (teamName.get(e.teamId) ?? "a team") : "the whole company"}`,
-        e.description ?? "",
-      ].filter(Boolean),
-      event: canEdit(e.teamId)
-        ? {
-            id: e.id,
-            title: e.title,
-            description: e.description,
-            location: e.location,
-            startDate: e.startDate,
-            endDate: e.endDate,
-            startTime: e.startTime,
-            endTime: e.endTime,
-            teamId: e.teamId,
-          }
-        : undefined,
-    });
+    const repeats = describeRepeat(e);
+    const editable = canEdit(e.teamId)
+      ? {
+          id: e.id,
+          title: e.title,
+          description: e.description,
+          location: e.location,
+          startDate: e.startDate,
+          endDate: e.endDate,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          teamId: e.teamId,
+          repeat: e.repeat,
+          repeatDays: e.repeatDays,
+          repeatUntil: e.repeatUntil,
+        }
+      : undefined;
+    for (const o of occurrences(e, from, to)) {
+      items.push({
+        key: `e-${e.id}-${o.start}`,
+        type: "event",
+        start: o.start,
+        end: o.end,
+        title: time && o.start === o.end ? `${e.startTime} ${e.title}` : e.title,
+        repeats: !!repeats,
+        details: [
+          time ? `Time: ${time}` : "All day",
+          repeats ? `Repeats: ${repeats}` : "",
+          e.location ? `Place: ${e.location}` : "",
+          `For: ${e.teamId ? (teamName.get(e.teamId) ?? "a team") : "the whole company"}`,
+          e.description ?? "",
+        ].filter(Boolean),
+        event: editable,
+      });
+    }
   }
 
   for (const u of users) {

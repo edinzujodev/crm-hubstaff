@@ -1,10 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { InputSwitch } from "primereact/inputswitch";
 import { Button, Checkbox, InputText, InputTextarea, Select } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
 import { deleteEvent, saveEvent } from "@/app/hr/actions";
 import { notify } from "@/lib/toast";
+import { describeRepeat, REPEAT_LABEL, WEEKDAY_CHIPS, type Repeat } from "@/lib/recurrence";
+import { weekday } from "@/lib/days";
 
 export type EventData = {
   id: number;
@@ -16,7 +19,103 @@ export type EventData = {
   startTime: string | null;
   endTime: string | null;
   teamId: number | null;
+  repeat: Repeat;
+  repeatDays: number[] | null;
+  repeatUntil: string | null;
 };
+
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+/** The repeat settings: how often, on which days, and until when. */
+function RepeatFields({
+  startDate,
+  initial,
+}: {
+  startDate: string;
+  initial?: Pick<EventData, "repeat" | "repeatDays" | "repeatUntil">;
+}) {
+  const [on, setOn] = useState(!!initial && initial.repeat !== "none");
+  const [repeat, setRepeat] = useState<Exclude<Repeat, "none">>(initial && initial.repeat !== "none" ? initial.repeat : "weekly");
+  // Daily: every day unless some are picked. Weekly: the picked days, or the first day's weekday.
+  const [days, setDays] = useState<number[]>(initial?.repeatDays ?? []);
+  const [until, setUntil] = useState(initial?.repeatUntil ?? "");
+  const shownDays = repeat === "daily" ? (days.length ? days : ALL_DAYS) : days.length ? days : startDate ? [weekday(startDate)] : [];
+  const toggle = (d: number) => {
+    const next = shownDays.includes(d) ? shownDays.filter((x) => x !== d) : [...shownDays, d];
+    if (next.length) setDays(next.length === 7 && repeat === "daily" ? [] : next);
+  };
+  const summary = describeRepeat({ startDate, repeat: on ? repeat : "none", repeatDays: shownDays, repeatUntil: until || null });
+  const seg = (active: boolean) =>
+    `flex-1 cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+      active ? "border-primary bg-primary text-(--primary-fg)" : "border-border hover:bg-foreground/5"
+    }`;
+
+  return (
+    <div className="space-y-3 rounded-lg bg-foreground/[0.04] p-3">
+      <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+        Repeat event
+        <InputSwitch checked={on} onChange={(e) => setOn(!!e.value)} />
+      </label>
+      <input type="hidden" name="repeat" value={on ? repeat : "none"} />
+      {on && (
+        <>
+          <div className="flex gap-1.5" role="radiogroup" aria-label="How often">
+            {(["daily", "weekly", "monthly", "yearly"] as const).map((r) => (
+              <button key={r} type="button" role="radio" aria-checked={repeat === r} className={seg(repeat === r)} onClick={() => setRepeat(r)}>
+                {REPEAT_LABEL[r]}
+              </button>
+            ))}
+          </div>
+          {(repeat === "daily" || repeat === "weekly") && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted">On these days</p>
+              <div className="flex flex-wrap gap-1.5">
+                {WEEKDAY_CHIPS.map((c) => {
+                  const active = shownDays.includes(c.day);
+                  return (
+                    <button
+                      key={c.day}
+                      type="button"
+                      aria-pressed={active}
+                      title={c.long}
+                      onClick={() => toggle(c.day)}
+                      className={`w-11 cursor-pointer rounded-md border py-1 text-xs font-medium ${
+                        active ? "border-primary bg-primary text-(--primary-fg)" : "border-border text-muted hover:bg-foreground/5"
+                      }`}
+                    >
+                      {c.short}
+                    </button>
+                  );
+                })}
+              </div>
+              {repeat === "daily" && (
+                <div className="flex gap-3 text-xs">
+                  <button type="button" className="cursor-pointer font-medium text-muted hover:text-foreground hover:underline" onClick={() => setDays([])}>
+                    Every day
+                  </button>
+                  <button type="button" className="cursor-pointer font-medium text-muted hover:text-foreground hover:underline" onClick={() => setDays([1, 2, 3, 4, 5])}>
+                    Working days
+                  </button>
+                </div>
+              )}
+              <input type="hidden" name="repeatDays" value={repeat === "daily" && !days.length ? "" : shownDays.join(",")} />
+            </div>
+          )}
+          <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+            Repeat until <span className="font-normal">(optional, empty: no end)</span>
+            <DateInput name="repeatUntil" value={until} onChange={(e) => setUntil(e.target.value)} className="w-full" />
+          </label>
+          {summary && (
+            <p className="flex items-center gap-2 text-sm">
+              <i className="pi pi-replay text-xs text-muted" aria-hidden />
+              {summary}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 /** Where an event can go: the whole company (super admin) and the teams the person leads. */
 export type EventTeamOption = { id: number | null; name: string };
@@ -57,7 +156,7 @@ export function EventForm({
           <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required className="w-full" />
         </label>
         <label className={field}>
-          Until <span className="sr-only">(optional)</span>
+          Ends on <span className="sr-only">(optional)</span>
           <DateInput name="endDate" value={endDate} onChange={(e) => setEnd(e.target.value)} className="w-full" />
         </label>
       </div>
@@ -77,6 +176,8 @@ export function EventForm({
           </label>
         </div>
       )}
+      <RepeatFields startDate={startDate} initial={event} />
+      {event && event.repeat !== "none" && <p className="text-xs text-muted">Changes apply to every repeat of this event.</p>}
       <label className={field}>
         For
         <Select name="teamId" defaultValue={event ? String(event.teamId ?? "") : String(teams[0]?.id ?? "")} className="w-full">
@@ -109,7 +210,7 @@ export function EventForm({
             disabled={deleting}
             label={deleting ? "Deleting…" : "Delete"}
             onClick={async () => {
-              if (!confirm(`Delete “${event.title}”?`)) return;
+              if (!confirm(event.repeat !== "none" ? `Delete “${event.title}” and every repeat of it?` : `Delete “${event.title}”?`)) return;
               setDeleting(true);
               const r = await deleteEvent(event.id);
               setDeleting(false);

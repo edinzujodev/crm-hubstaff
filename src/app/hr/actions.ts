@@ -5,7 +5,8 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireAuth, requireRole, type Auth } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { fmtDays, isDay } from "@/lib/days";
+import { fmtDays, isDay, weekday } from "@/lib/days";
+import { REPEATS } from "@/lib/recurrence";
 import { localDay } from "@/lib/format";
 import { builtInHolidays, daysOffBetween } from "@/lib/holidays";
 import { run, type Result } from "@/lib/result";
@@ -253,8 +254,27 @@ const eventInput = z
       .string()
       .optional()
       .transform((v) => (v ? Number(v) : null)),
+    repeat: z.enum(REPEATS).default("none"),
+    // "1,3,5": weekdays, 0 = Sunday.
+    repeatDays: z
+      .string()
+      .optional()
+      .transform((v) => [...new Set((v ?? "").split(",").filter(Boolean).map(Number))].sort())
+      .refine((v) => v.every((d) => Number.isInteger(d) && d >= 0 && d <= 6), "Pick days of the week"),
+    repeatUntil: z
+      .string()
+      .optional()
+      .transform((v) => v || null)
+      .refine((v) => v === null || isDay(v), "Pick the day the repeat ends"),
   })
-  .transform((v) => ({ ...v, endDate: v.endDate && isDay(v.endDate) ? v.endDate : v.startDate }))
+  .transform((v) => {
+    const endDate = v.endDate && isDay(v.endDate) ? v.endDate : v.startDate;
+    // Only daily and weekly repeats use days of the week; a weekly repeat without any is on the first day's weekday.
+    const repeatDays =
+      v.repeat === "weekly" ? (v.repeatDays.length ? v.repeatDays : [weekday(v.startDate)]) : v.repeat === "daily" && v.repeatDays.length && v.repeatDays.length < 7 ? v.repeatDays : null;
+    return { ...v, endDate, repeatDays, repeatUntil: v.repeat === "none" ? null : v.repeatUntil };
+  })
+  .refine((v) => !v.repeatUntil || v.repeatUntil >= v.startDate, { message: "The repeat can't end before the first day" })
   .refine((v) => v.endDate >= v.startDate, { message: "The event can't end before it starts" })
   .refine((v) => !v.endTime || v.startTime, { message: "Add a start time too" })
   .refine((v) => !(v.startTime && v.endTime && v.startDate === v.endDate && v.endTime <= v.startTime), {

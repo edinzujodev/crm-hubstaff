@@ -14,6 +14,8 @@ export type CalendarItem = {
   title: string;
   /** Lines shown when the item is opened. */
   details?: string[];
+  /** A repeating event: gets a small repeat mark. */
+  repeats?: boolean;
   /** Pending time off: shown faded. */
   tentative?: boolean;
   /** Extra classes for the chip (time-off kinds have their own colours). */
@@ -54,6 +56,7 @@ function Chip({ item, onOpen }: { item: CalendarItem; onOpen: (i: CalendarItem) 
     >
       <i className={`pi ${TYPE_ICON[item.type]} shrink-0 text-[9px]`} aria-hidden />
       <span className="truncate">{item.title}</span>
+      {item.repeats && <i className="pi pi-replay ml-auto shrink-0 text-[8px] opacity-70" aria-label="Repeats" />}
     </button>
   );
 }
