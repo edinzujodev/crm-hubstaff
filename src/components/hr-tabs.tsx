@@ -5,7 +5,7 @@ import type { LinkTab } from "@/components/link-tabs";
 import { getAuth, type Auth } from "@/lib/auth";
 import { waitingRequests } from "@/lib/hr";
 
-export type HrTab = "calendar" | "time-off" | "approvals" | "people" | "teams" | "holidays";
+export type HrTab = "calendar" | "vacations" | "time-off" | "approvals" | "people" | "teams" | "holidays";
 
 /**
  * The HR section's tabs around a page. Everyone has the calendar, their own time off and the holidays; team
@@ -30,6 +30,7 @@ export async function HrTabs({
   const waiting = manager ? (await waitingRequests(auth)).length : 0;
   const tabs: (LinkTab & { key: HrTab })[] = [
     { key: "calendar", label: "Calendar", href: "/hr" },
+    { key: "vacations", label: "Vacations", href: "/hr/vacations" },
     { key: "time-off", label: "Time off", href: "/hr/time-off" },
     ...(manager
       ? [

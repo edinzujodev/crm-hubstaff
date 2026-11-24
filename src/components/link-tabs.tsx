@@ -29,6 +29,7 @@ const ICONS: Record<string, string> = {
   Templates: "pi-clone",
   "Urgency levels": "pi-bell",
   Calendar: "pi-calendar",
+  Vacations: "pi-table",
   "Time off": "pi-sun",
   Approvals: "pi-check-circle",
   Holidays: "pi-star",
