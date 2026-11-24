@@ -134,7 +134,7 @@ export async function destroySession() {
 
 /** Two-step verification or the first-sign-in details are still missing: the person belongs on /welcome. */
 export function needsSetup(user: { onboardedAt: Date | null; totpEnabledAt: Date | null }) {
-  return !user.onboardedAt || !user.totpEnabledAt;
+  return !user.onboardedAt || (!user.totpEnabledAt && twoFactorRequired());
 }
 
 /** An approved person: their email is in HR → People. Case doesn't matter. */
@@ -155,6 +155,14 @@ export function authMode(): "google" | "mock" | "none" {
   if (process.env.DEV_LOGIN === "1" && process.env.NODE_ENV !== "production") return "mock";
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) return "google";
   return process.env.NODE_ENV === "production" ? "none" : "mock";
+}
+
+/**
+ * Two-step verification only applies to real Google sign-in. With the stand-in sign-in (testing, or no Google set
+ * up yet) nobody is asked for a code or sent to set up an authenticator. authMode() is never "mock" in production.
+ */
+export function twoFactorRequired() {
+  return authMode() === "google";
 }
 
 /** The address Google sends people back to. Set APP_URL when the app is behind a proxy or on a real domain. */

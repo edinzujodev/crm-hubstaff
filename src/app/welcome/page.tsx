@@ -11,6 +11,7 @@ import { AboutForm, CompanyForm, TotpSetupForm } from "@/components/welcome-form
 import { getAuth } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
+import { twoFactorRequired } from "@/lib/session";
 import { groupSecret, newTotpSecret, totpUri } from "@/lib/totp";
 
 const STEPS = [
@@ -70,15 +71,18 @@ async function WelcomeContent({ searchParams }: { searchParams: Promise<{ step?:
   const wanted = (await searchParams).step;
   const today = localDay(new Date(), config.timeZone);
 
+  // Without Google sign-in there is no two-step verification, so that step counts as done.
+  const secured = !!me.totpEnabledAt || !twoFactorRequired();
+
   // Everything done: the "all set" screen right after the last step (finishing refreshes this page while it still
   // shows step 3, so any step in the link counts), otherwise straight to the dashboard.
-  if (me.onboardedAt && me.totpEnabledAt) {
+  if (me.onboardedAt && secured) {
     if (wanted) return <Done name={me.name} />;
     redirect("/dashboard");
   }
 
   // Two-step verification always comes first.
-  const step = !me.totpEnabledAt ? 0 : wanted === "3" ? 2 : 1;
+  const step = !secured ? 0 : wanted === "3" ? 2 : 1;
 
   // Someone who finished the setup before and only needs the authenticator again (e.g. after a super admin reset
   // it) gets just that, without the "Get started" steps, and goes straight to the dashboard afterwards.

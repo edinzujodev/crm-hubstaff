@@ -50,11 +50,7 @@ export async function mockSignIn(_prev: unknown, formData: FormData): Promise<{ 
   if (authMode() !== "mock") return { error: "Simulated sign-in is turned off." };
   const user = await findApprovedUser(String(formData.get("email") ?? ""));
   if (!user) return { error: "That account isn't on the approved list. Ask a super admin to add your email in HR → People." };
-  // Like Google sign-in: with two-step verification set up, the authenticator code comes next.
-  if (user.totpEnabledAt) {
-    await createSession(user.id, { mfaPending: true });
-    redirect("/login/verify");
-  }
+  // No authenticator code with the stand-in sign-in: two-step verification only applies to Google (twoFactorRequired).
   await createSession(user.id);
   redirect("/");
 }
