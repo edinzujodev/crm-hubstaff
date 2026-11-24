@@ -121,7 +121,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full font-sans">
+      {/* Browser extensions (Grammarly) add attributes to <body> before React loads. Without this the mismatch counts
+          as a runtime error, and in dev every rebuild then hard-reloads the page. */}
+      <body className="min-h-full font-sans" suppressHydrationWarning>
         <PrimeProvider>
         <div className="flex min-h-screen flex-col md:flex-row">
           <aside className="sidebar relative z-40 flex flex-col gap-5 border-b border-border bg-surface px-3 py-3 text-foreground md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r md:pb-5 md:pt-0">
