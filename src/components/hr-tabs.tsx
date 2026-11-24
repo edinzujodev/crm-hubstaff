@@ -1,6 +1,8 @@
+import { Suspense } from "react";
+import { ListSkeleton } from "@/components/page-skeleton";
 import { TabCard } from "@/components/tab-card";
 import type { LinkTab } from "@/components/link-tabs";
-import type { Auth } from "@/lib/auth";
+import { getAuth, type Auth } from "@/lib/auth";
 import { waitingRequests } from "@/lib/hr";
 
 export type HrTab = "calendar" | "time-off" | "approvals" | "people" | "teams" | "holidays";
@@ -43,4 +45,29 @@ export async function HrTabs({
       {children}
     </TabCard>
   );
+}
+
+type Actions = string[] | ((auth: Auth) => string[] | undefined);
+
+/**
+ * The loading state of an HR page. `actions` are the labels of the buttons the page shows above its box, so the
+ * skeleton keeps room for them and the page doesn't jump down when it loads. When the buttons depend on the
+ * person's role, pass a function: the skeleton then waits for the (cached, quick) sign-in check to pick them.
+ */
+export function HrSuspense({ actions, rows, children }: { actions?: Actions; rows?: number; children: React.ReactNode }) {
+  if (typeof actions !== "function") {
+    return <Suspense fallback={<ListSkeleton rows={rows} actions={actions} />}>{children}</Suspense>;
+  }
+  return (
+    <Suspense fallback={<ListSkeleton rows={rows} />}>
+      <RoleSkeleton actions={actions} rows={rows}>
+        {children}
+      </RoleSkeleton>
+    </Suspense>
+  );
+}
+
+async function RoleSkeleton({ actions, rows, children }: { actions: (auth: Auth) => string[] | undefined; rows?: number; children: React.ReactNode }) {
+  const auth = await getAuth();
+  return <Suspense fallback={<ListSkeleton rows={rows} actions={auth ? actions(auth) : undefined} />}>{children}</Suspense>;
 }

@@ -19,9 +19,30 @@ export function TableSkeleton({ rows = 6 }: { rows?: number }) {
   );
 }
 
-/** A list page while it loads: the tab row and a table inside the white box. */
-export function ListSkeleton({ rows = 6 }: { rows?: number }) {
+/**
+ * Grey stand-ins for the page buttons above a TabCard. They use the real button classes around the real labels
+ * (kept invisible), so the row is exactly as tall and as wide as the buttons that replace it.
+ */
+export function ActionsSkeleton({ labels }: { labels: string[] }) {
   return (
+    <div className="flex flex-wrap items-center justify-end gap-2" aria-hidden>
+      {labels.map((label) => (
+        <span key={label} className="p-button p-component relative gap-2 !border-transparent !bg-transparent">
+          <i className="pi pi-plus invisible text-sm" />
+          <span className="invisible">{label}</span>
+          <Skeleton className="!absolute inset-0" width="100%" height="100%" />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A list page while it loads: the tab row and a table inside the white box. Pass `actions` (the labels of the
+ * buttons the page shows above the box) so the box doesn't jump down when they appear.
+ */
+export function ListSkeleton({ rows = 6, actions }: { rows?: number; actions?: string[] }) {
+  const box = (
     <div className="card overflow-hidden" role="status" aria-label="Loading">
       <div className="mx-4 flex gap-6 border-b border-border pb-3 pt-4">
         {[7, 8, 7, 8].map((w, i) => (
@@ -33,6 +54,13 @@ export function ListSkeleton({ rows = 6 }: { rows?: number }) {
         <Skeleton width="8rem" height="2.2rem" />
       </div>
       <TableSkeleton rows={rows} />
+    </div>
+  );
+  if (!actions?.length) return box;
+  return (
+    <div className="space-y-3">
+      <ActionsSkeleton labels={actions} />
+      {box}
     </div>
   );
 }

@@ -1,12 +1,10 @@
-import { ListSkeleton } from "@/components/page-skeleton";
 import Link from "next/link";
-import { Suspense } from "react";
 import { and, asc, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { HrCalendar, NewEventButton, type CalendarItem } from "@/components/hr-calendar";
 import type { EventTeamOption } from "@/components/event-form";
-import { HrTabs } from "@/components/hr-tabs";
+import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { fmtMonth, monthBounds, shiftMonth, ymd } from "@/lib/days";
@@ -262,9 +260,9 @@ export default function HrPage({ searchParams }: PageProps<"/hr">) {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">HR calendar</h1>
-      <Suspense fallback={<ListSkeleton />}>
+      <HrSuspense actions={(a) => (a.role === "super_admin" || a.ledTeamIds.length ? ["New event"] : undefined)}>
         <CalendarContent params={params} />
-      </Suspense>
+      </HrSuspense>
     </div>
   );
 }

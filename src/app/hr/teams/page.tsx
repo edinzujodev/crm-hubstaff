@@ -1,12 +1,10 @@
-import { ListSkeleton } from "@/components/page-skeleton";
 import { DataGrid } from "@/components/data-grid";
 import Link from "next/link";
-import { Suspense } from "react";
 import { asc } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { Avatar } from "@/components/avatar";
-import { HrTabs } from "@/components/hr-tabs";
+import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { TeamMenu } from "@/components/team-menu";
 import { NewTeamButton } from "@/components/team-popups";
 import { pageGuard } from "@/lib/auth";
@@ -93,9 +91,9 @@ export default function TeamsPage() {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Teams</h1>
-      <Suspense fallback={<ListSkeleton />}>
+      <HrSuspense actions={(a) => (a.role === "super_admin" ? ["+ New team"] : undefined)}>
         <TeamsContent />
-      </Suspense>
+      </HrSuspense>
     </div>
   );
 }

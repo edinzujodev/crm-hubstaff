@@ -1,10 +1,8 @@
-import { ListSkeleton } from "@/components/page-skeleton";
-import { Suspense } from "react";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { DataGrid } from "@/components/data-grid";
-import { HrTabs } from "@/components/hr-tabs";
+import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { fmtNum } from "@/components/balance-tiles";
 import { CancelTimeOffButton, KindBadge, StatusBadge, TimeOffButton } from "@/components/time-off";
 import { pageGuard } from "@/lib/auth";
@@ -96,9 +94,9 @@ export default function TimeOffPage() {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Time off</h1>
-      <Suspense fallback={<ListSkeleton />}>
+      <HrSuspense actions={["Add sick leave", "Request time off"]}>
         <TimeOffContent />
-      </Suspense>
+      </HrSuspense>
     </div>
   );
 }

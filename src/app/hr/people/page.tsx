@@ -1,9 +1,7 @@
-import { ListSkeleton } from "@/components/page-skeleton";
-import { Suspense } from "react";
 import { asc } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
-import { HrTabs } from "@/components/hr-tabs";
+import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { PeopleList, type Person } from "@/components/people-list";
 import { AddMemberButton } from "@/components/team-popups";
 import { pageGuard } from "@/lib/auth";
@@ -67,9 +65,9 @@ export default function PeoplePage() {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">People</h1>
-      <Suspense fallback={<ListSkeleton />}>
+      <HrSuspense actions={(a) => (a.role === "super_admin" ? ["+ Add member"] : undefined)}>
         <PeopleContent />
-      </Suspense>
+      </HrSuspense>
     </div>
   );
 }

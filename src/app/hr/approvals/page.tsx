@@ -1,5 +1,3 @@
-import { ListSkeleton } from "@/components/page-skeleton";
-import { Suspense } from "react";
 import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
@@ -7,7 +5,7 @@ import { AllowanceButton } from "@/components/allowance-button";
 import { Avatar } from "@/components/avatar";
 import { fmtNum } from "@/components/balance-tiles";
 import { DataGrid } from "@/components/data-grid";
-import { HrTabs } from "@/components/hr-tabs";
+import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { CancelTimeOffButton, DecideButtons, KindBadge, StatusBadge, TimeOffButton } from "@/components/time-off";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
@@ -216,9 +214,9 @@ export default function ApprovalsPage() {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Approvals</h1>
-      <Suspense fallback={<ListSkeleton />}>
+      <HrSuspense actions={["Add time off for someone"]}>
         <ApprovalsContent />
-      </Suspense>
+      </HrSuspense>
     </div>
   );
 }

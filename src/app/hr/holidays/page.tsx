@@ -1,12 +1,10 @@
-import { ListSkeleton } from "@/components/page-skeleton";
 import Link from "next/link";
-import { Suspense } from "react";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { DataGrid } from "@/components/data-grid";
 import { AddHolidayButton, HolidayButton } from "@/components/holiday-actions";
-import { HrTabs } from "@/components/hr-tabs";
+import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { fmtLongDay, fmtShortDay, isWeekend, ymd } from "@/lib/days";
@@ -119,9 +117,9 @@ export default function HolidaysPage({ searchParams }: PageProps<"/hr/holidays">
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Holidays</h1>
-      <Suspense fallback={<ListSkeleton />}>
+      <HrSuspense actions={(a) => (a.role === "super_admin" ? ["Add holiday"] : undefined)}>
         <HolidaysContent wanted={wanted} />
-      </Suspense>
+      </HrSuspense>
     </div>
   );
 }

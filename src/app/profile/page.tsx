@@ -1,10 +1,14 @@
 import { FormSkeleton } from "@/components/page-skeleton";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import Link from "next/link";
-import { BalanceTiles } from "@/components/balance-tiles";
+import { BalanceTiles, fmtNum } from "@/components/balance-tiles";
+import { DataGrid } from "@/components/data-grid";
+import { KindBadge, StatusBadge } from "@/components/time-off";
+import { fmtRange } from "@/lib/days";
+import { daysOffBetween } from "@/lib/holidays";
+import { countDays } from "@/lib/leave-days";
 import { ProfileForm } from "@/components/profile-form";
 import { pageGuard } from "@/lib/auth";
 import { authMode } from "@/lib/session";
@@ -37,10 +41,15 @@ async function ProfileContent() {
   const me = auth.user;
   const today = localDay(new Date(), config.timeZone);
 
-  const [team, balance] = await Promise.all([
+  const [team, balance, history] = await Promise.all([
     me.teamId ? db.query.teams.findFirst({ where: eq(schema.teams.id, me.teamId) }) : undefined,
     balanceFor(me.id, Number(today.slice(0, 4)), today),
+    db.select().from(schema.timeOff).where(eq(schema.timeOff.userId, me.id)).orderBy(desc(schema.timeOff.startDate)),
   ]);
+  // Public holidays inside the history don't count as days taken.
+  const daysOff = history.length
+    ? await daysOffBetween(history.at(-1)!.startDate, history.reduce((m, t) => (t.endDate > m ? t.endDate : m), today))
+    : new Set<string>();
   const leader =
     team?.leaderId && team.leaderId !== me.id
       ? await db.query.users.findFirst({ where: eq(schema.users.id, team.leaderId), columns: { name: true } })
@@ -100,17 +109,39 @@ async function ProfileContent() {
         </dl>
       </section>
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="font-semibold">Vacation</h2>
-            <p className="text-xs text-muted">Your days off this year. Ask for time off in HR.</p>
-          </div>
-          <Link href="/hr/time-off" className="text-sm font-medium text-primary hover:underline">
-            Time off →
-          </Link>
+      <section className="card space-y-4 p-5">
+        <div>
+          <h2 className="font-semibold">Vacation</h2>
+          <p className="text-xs text-muted">Your days off this year.</p>
         </div>
         <BalanceTiles b={balance} today={today} />
+      </section>
+
+      <section className="card overflow-hidden">
+        <div className="p-5 pb-3">
+          <h2 className="font-semibold">Time off history</h2>
+          <p className="text-xs text-muted">Every day off you have had or asked for, newest first.</p>
+        </div>
+        <DataGrid
+          flush
+          empty="You haven't taken any time off yet."
+          headers={["Dates", "Kind", { label: "Days", align: "right" }, "Status"]}
+          rows={history.map((t) => ({
+            key: t.id,
+            sort: [t.startDate, t.kind, null, t.status],
+            cells: [
+              <span key="d" className="whitespace-nowrap font-medium">
+                {fmtRange(t.startDate, t.endDate)}
+                {t.halfDay && <span className="text-muted"> · half day</span>}
+              </span>,
+              <KindBadge key="k" kind={t.kind} />,
+              <span key="n" className="font-mono tabular-nums">
+                {fmtNum(countDays(t, daysOff))}
+              </span>,
+              <StatusBadge key="s" status={t.status} />,
+            ],
+          }))}
+        />
       </section>
 
       <section className="card space-y-4 p-5">
