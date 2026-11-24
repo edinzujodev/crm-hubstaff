@@ -55,8 +55,11 @@ export function VacationGrid({
   /** The kinds to explain in the legend. */
   kinds: (TimeOffKind | "out")[];
 }) {
-  const days = eachDay(first, last);
-  const off = (d: string) => isWeekend(d) || holidays.has(d);
+  // Working days only: weekends are never time off, so they would only be empty columns.
+  const days = eachDay(first, last).filter((d) => !isWeekend(d));
+  const off = (d: string) => holidays.has(d);
+  // A line before each Monday (except the first column) keeps the weeks apart.
+  const weekStart = (d: string, i: number) => i > 0 && new Date(`${d}T00:00:00Z`).getUTCDay() === 1;
   const cols = { gridTemplateColumns: `repeat(${days.length}, minmax(1.5rem, 1fr))` };
 
   return (
@@ -80,11 +83,11 @@ export function VacationGrid({
         <div className="min-w-0 flex-1 overflow-x-auto">
           <div className="min-w-max">
             <div className="grid h-12 border-b border-border" style={cols}>
-              {days.map((d) => (
+              {days.map((d, i) => (
                 <div
                   key={d}
                   title={holidays.get(d) ?? fmtShortDay(d)}
-                  className={`flex flex-col items-center justify-end pb-1.5 text-[11px] leading-tight ${off(d) ? "bg-foreground/[0.035] text-muted" : ""}`}
+                  className={`flex flex-col items-center justify-end pb-1.5 text-[11px] leading-tight ${off(d) ? "bg-foreground/[0.035] text-muted" : ""} ${weekStart(d, i) ? "border-l border-border" : ""}`}
                 >
                   <span
                     className={`flex h-5 min-w-5 items-center justify-center rounded-full px-0.5 font-semibold tabular-nums ${
@@ -99,10 +102,10 @@ export function VacationGrid({
             </div>
             {rows.map((r) => (
               <div key={r.id} className="grid h-11 border-b border-border last:border-b-0" style={cols}>
-                {days.map((d) => {
+                {days.map((d, i) => {
                   const e = off(d) ? undefined : r.entries.find((x) => x.startDate <= d && x.endDate >= d);
                   return (
-                    <div key={d} className={`flex items-center justify-center p-[2px] ${off(d) ? "bg-foreground/[0.035]" : ""}`}>
+                    <div key={d} className={`flex items-center justify-center p-[2px] ${off(d) ? "bg-foreground/[0.035]" : ""} ${weekStart(d, i) ? "border-l border-border" : ""}`}>
                       {e ? (
                         <span
                           title={`${r.name} · ${e.kind === "out" ? "Out" : KIND_LABEL[e.kind]}${e.halfDay ? " (half day)" : ""} · ${fmtShortDay(d)} · ${STATUS_LABEL[e.status]}${e.note ? ` · ${e.note}` : ""}`}
@@ -137,7 +140,7 @@ export function VacationGrid({
             </p>
           </div>
         ))}
-        <p className="ml-auto self-end text-muted">Shaded columns: weekends and public holidays (★), never counted.</p>
+        <p className="ml-auto self-end text-muted">Working days only. Shaded: public holidays (★), never counted.</p>
       </div>
     </div>
   );
