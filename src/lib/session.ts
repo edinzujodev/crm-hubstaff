@@ -136,7 +136,7 @@ export function needsSetup(user: { onboardedAt: Date | null; totpEnabledAt: Date
   return !user.onboardedAt || !user.totpEnabledAt;
 }
 
-/** An approved person: their email is on the Team page. Case doesn't matter. */
+/** An approved person: their email is in HR → People. Case doesn't matter. */
 export async function findApprovedUser(email: string) {
   const wanted = email.trim().toLowerCase();
   if (!wanted) return null;

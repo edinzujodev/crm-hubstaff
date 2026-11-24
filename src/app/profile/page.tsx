@@ -80,7 +80,7 @@ async function ProfileContent() {
       <section className="card space-y-4 p-5">
         <div>
           <h2 className="font-semibold">Work</h2>
-          <p className="text-xs text-muted">Set by a super admin or your team leader on the Teams page.</p>
+          <p className="text-xs text-muted">Set by a super admin or your team leader in HR.</p>
         </div>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Fact label="Role">{ROLE_LABEL[auth.role]}</Fact>

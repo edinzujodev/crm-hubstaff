@@ -144,7 +144,7 @@ People sign in with Google. Only emails on the **Team** page can get in (the app
 
 | Role | Who | Can |
 | --- | --- | --- |
-| Super admin | Set on the Team page | Everything |
+| Super admin | Set in HR → People | Everything |
 | Team leader | The person a team names as its leader | Add tasks for their team, edit or delete the team's tasks, set the team's urgency levels, see the team's Critical list, reports and clients |
 | Worker | Everyone else | See and work on their own tasks |
 
@@ -153,7 +153,7 @@ is claimed by whoever starts it.
 
 ### Urgency
 
-Each team has two levels, set by its leader on the Team page: a task due in fewer than *Approaching* hours is
+Each team has two levels, set by its leader on the team's page (HR → Teams): a task due in fewer than *Approaching* hours is
 Approaching, and fewer than *Critical* hours (or overdue) is Critical. The default is 72h and 24h. A due date counts to
 the end of that day in `APP_TIME_ZONE`.
 
@@ -177,4 +177,4 @@ AUTH_ALLOWED_DOMAIN=
 APP_URL=
 ```
 
-4. Make sure each person's real Google email is on the Team page.
+4. Make sure each person's real Google email is in HR → People.

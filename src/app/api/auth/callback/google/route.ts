@@ -7,7 +7,7 @@ const fail = (request: Request, error: string) => Response.redirect(new URL(`/lo
 type IdToken = { iss: string; aud: string; exp: number; email?: string; email_verified?: boolean; hd?: string };
 
 // Step 2: Google sends the person back with a code. Exchange it, then let them in only if their
-// email is on the approved list (the Team page) and, if AUTH_ALLOWED_DOMAIN is set, on that domain.
+// email is on the approved list (HR → People) and, if AUTH_ALLOWED_DOMAIN is set, on that domain.
 export async function GET(request: Request) {
   await connection();
   const params = new URL(request.url).searchParams;

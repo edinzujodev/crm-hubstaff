@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       // Critical and Recurring are tabs on the task list now.
       { source: "/critical", destination: "/tasks?show=critical", permanent: false },
       { source: "/recurring", destination: "/tasks?show=recurring", permanent: false },
+      // People and Teams moved into the HR section.
+      { source: "/team", has: [{ type: "query", key: "show", value: "teams" }], destination: "/hr/teams", permanent: false },
+      { source: "/team", destination: "/hr/people", permanent: false },
+      { source: "/team/:id", destination: "/hr/teams/:id", permanent: false },
     ];
   },
   turbopack: {

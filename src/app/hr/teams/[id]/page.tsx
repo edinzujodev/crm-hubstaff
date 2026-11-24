@@ -19,7 +19,7 @@ import { config } from "@/lib/config";
 
 const Loading = () => <TableSkeleton rows={3} />;
 
-/** One team's tasks: counts, who has what, and the open tasks. The Team page itself is only for setting teams up. */
+/** One team's tasks: counts, who has what, and the open tasks. HR → Teams is only for setting teams up. */
 async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const auth = await pageGuard("super_admin", "leader");
@@ -28,7 +28,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   const team = await db.query.teams.findFirst({ where: eq(schema.teams.id, id) });
   if (!team) notFound();
   // A leader can only open their own team.
-  if (!canManageTeam(auth, id)) redirect("/team");
+  if (!canManageTeam(auth, id)) redirect("/hr/teams");
   const allUsers = await db.select().from(schema.users).orderBy(asc(schema.users.name));
   const leader = allUsers.find((u) => u.id === team.leaderId) ?? null;
   const admin = auth.role === "super_admin";
@@ -53,7 +53,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-6">
       <div>
-        <BackButton fallback="/team?show=teams" />
+        <BackButton fallback="/hr/teams" />
       </div>
       <header className="card flex flex-wrap items-start justify-between gap-3 p-4">
         <div>
@@ -156,7 +156,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-export default function TeamDetailPage({ params }: PageProps<"/team/[id]">) {
+export default function TeamDetailPage({ params }: PageProps<"/hr/teams/[id]">) {
   return (
     <Suspense fallback={<DetailSkeleton />}>
       <TeamDetail params={params} />

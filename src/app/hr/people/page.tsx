@@ -1,42 +1,24 @@
 import { ListSkeleton } from "@/components/page-skeleton";
-import { DataGrid } from "@/components/data-grid";
-import { TabCard } from "@/components/tab-card";
-import Link from "next/link";
 import { Suspense } from "react";
 import { asc } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
-import { Avatar } from "@/components/avatar";
-import { TeamMenu } from "@/components/team-menu";
+import { HrTabs } from "@/components/hr-tabs";
 import { PeopleList, type Person } from "@/components/people-list";
-import { AddMemberButton, NewTeamButton } from "@/components/team-popups";
+import { AddMemberButton } from "@/components/team-popups";
 import { pageGuard } from "@/lib/auth";
 
-function Tile({
-  label,
-  value,
-  tone,
-  hint,
-}: {
-  label: string;
-  value: number;
-  tone?: "warn";
-  hint?: string;
-}) {
+function Tile({ label, value, tone, hint }: { label: string; value: number; tone?: "warn"; hint?: string }) {
   return (
     <div className="card p-4" title={hint}>
       <p className="text-xs text-muted">{label}</p>
-      <p
-        className={`mt-1 font-mono text-2xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}
-      >
-        {value}
-      </p>
+      <p className={`mt-1 font-mono text-2xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}>{value}</p>
     </div>
   );
 }
 
-/** Setting teams up: who is in which team, and who leads it. Tasks live on each team's own page. */
-async function TeamContent({ show }: { show?: string }) {
+/** Everyone in the company (a team leader: their team), with their team, role and Hubstaff id. */
+async function PeopleContent() {
   await connection();
   const auth = await pageGuard("super_admin", "leader");
   const admin = auth.role === "super_admin";
@@ -44,22 +26,8 @@ async function TeamContent({ show }: { show?: string }) {
     db.select().from(schema.users).orderBy(asc(schema.users.name)),
     db.select().from(schema.teams).orderBy(asc(schema.teams.name)),
   ]);
-  // A team leader only sees their own team.
-  const teams = admin
-    ? allTeams
-    : allTeams.filter((t) => t.id === auth.ledTeam?.id);
-  const users = admin
-    ? allUsers
-    : allUsers.filter((u) => u.teamId === auth.ledTeam?.id);
-  const leaderIds = new Set(
-    allTeams.map((t) => t.leaderId).filter((id) => id !== null),
-  );
-  const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
-  const options = allUsers.map((u) => ({
-    id: u.id,
-    name: u.name,
-    teamName: u.teamId ? (teamName.get(u.teamId) ?? null) : null,
-  }));
+  const users = admin ? allUsers : allUsers.filter((u) => u.teamId !== null && auth.ledTeamIds.includes(u.teamId));
+  const leaderIds = new Set(allTeams.map((t) => t.leaderId).filter((id) => id !== null));
   const teamOptions = allTeams.map((t) => ({ id: t.id, name: t.name }));
 
   const people: Person[] = users.map((u) => ({
@@ -75,10 +43,10 @@ async function TeamContent({ show }: { show?: string }) {
   const missingIds = people.filter((p) => p.hubstaffUserId === null).length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <section className="grid gap-3 sm:grid-cols-3">
         <Tile label="People" value={people.length} />
-        <Tile label={admin ? "Teams" : "Your team"} value={teams.length} />
+        <Tile label={admin ? "Teams" : "Teams you lead"} value={admin ? allTeams.length : auth.ledTeamIds.length} />
         {admin && (
           <Tile
             label="No Hubstaff id"
@@ -88,128 +56,19 @@ async function TeamContent({ show }: { show?: string }) {
           />
         )}
       </section>
-
-      <TabCard
-        tabs={[
-          { label: "People", href: "/team", count: people.length },
-          {
-            label: admin ? "Teams" : "Your team",
-            href: "/team?show=teams",
-            count: teams.length,
-          },
-        ]}
-        active={show === "teams" ? 1 : 0}
-        actions={
-          admin ? (
-            show === "teams" ? (
-              <NewTeamButton users={options} />
-            ) : (
-              <AddMemberButton />
-            )
-          ) : undefined
-        }
-      >
-        {show !== "teams" && (
-          <section>
-            <PeopleList people={people} teams={teamOptions} admin={admin} />
-          </section>
-        )}
-
-        {show === "teams" && (
-          <section>
-            <DataGrid
-              flush
-              empty={
-                admin
-                  ? "No teams yet. Use “New team” to add the first one."
-                  : "You don't lead a team yet."
-              }
-              headers={["Team", "Leader", "Members"]}
-              rows={teams.map((t) => {
-                const members = allUsers.filter((u) => u.teamId === t.id);
-                const leader = allUsers.find((u) => u.id === t.leaderId);
-                return {
-                  key: t.id,
-                  cells: [
-                    <Link
-                      key="n"
-                      href={`/team/${t.id}`}
-                      className="font-medium hover:underline"
-                      title="Open this team"
-                    >
-                      {t.name}
-                    </Link>,
-                    leader ? (
-                      <span key="l" className="flex items-center gap-2">
-                        <Avatar name={leader.name} size="sm" />
-                        {leader.name}
-                      </span>
-                    ) : (
-                      <span key="l" className="text-muted">
-                        None yet
-                      </span>
-                    ),
-                    members.length ? (
-                      <span key="m" className="flex items-center gap-2">
-                        <span className="flex -space-x-2">
-                          {members.slice(0, 4).map((m) => (
-                            <span
-                              key={m.id}
-                              title={m.name}
-                              className="rounded-full ring-2 ring-surface"
-                            >
-                              <Avatar name={m.name} size="sm" />
-                            </span>
-                          ))}
-                        </span>
-                        <span className="text-muted">
-                          {members.length}{" "}
-                          {members.length === 1 ? "member" : "members"}
-                        </span>
-                      </span>
-                    ) : (
-                      <span key="m" className="text-muted">
-                        No members yet
-                      </span>
-                    ),
-                  ],
-                  actions: (
-                    <TeamMenu
-                      teamId={t.id}
-                      name={t.name}
-                      canManage={admin}
-                      team={{
-                        id: t.id,
-                        name: t.name,
-                        leaderId: t.leaderId,
-                        memberIds: members.map((m) => m.id),
-                      }}
-                      users={options}
-                    />
-                  ),
-                };
-              })}
-            />
-          </section>
-        )}
-      </TabCard>
+      <HrTabs auth={auth} active="people" actions={admin ? <AddMemberButton /> : undefined}>
+        <PeopleList people={people} teams={teamOptions} admin={admin} />
+      </HrTabs>
     </div>
   );
 }
 
-async function TeamLoader({ show }: { show: Promise<string | undefined> }) {
-  return <TeamContent show={await show} />;
-}
-
-export default function TeamPage({ searchParams }: PageProps<"/team">) {
-  const show = searchParams.then((p) =>
-    typeof p.show === "string" ? p.show : undefined,
-  );
+export default function PeoplePage() {
   return (
     <div className="space-y-6">
-      <h1 className="sr-only">Teams</h1>
+      <h1 className="sr-only">People</h1>
       <Suspense fallback={<ListSkeleton />}>
-        <TeamLoader show={show} />
+        <PeopleContent />
       </Suspense>
     </div>
   );

@@ -28,6 +28,10 @@ const ICONS: Record<string, string> = {
   Blocked: "pi-ban",
   Templates: "pi-clone",
   "Urgency levels": "pi-bell",
+  Calendar: "pi-calendar",
+  "Time off": "pi-sun",
+  Approvals: "pi-check-circle",
+  Holidays: "pi-star",
 };
 
 export type LinkTab = {

@@ -34,7 +34,7 @@ export function TeamMenu({
       <RowMenu
         label={`Actions for ${name}`}
         items={[
-          { label: "View", onSelect: () => router.push(`/team/${teamId}`) },
+          { label: "View", onSelect: () => router.push(`/hr/teams/${teamId}`) },
           ...(canManage
             ? [
                 { label: "Edit", onSelect: () => setEditing(true) },

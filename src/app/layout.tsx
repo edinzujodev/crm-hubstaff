@@ -78,7 +78,7 @@ async function NavLinks() {
     ["/leads", "Leads", "pi-bullseye", role === "super_admin"],
     ["/clients", "Clients", "pi-briefcase", role === "super_admin" || role === "leader"],
     ["/reports", "Reports", "pi-chart-bar", role === "super_admin" || role === "leader"],
-    ["/team", "Teams", "pi-users", role === "super_admin" || role === "leader"],
+    ["/hr", "HR", "pi-users", true],
     ["/config", "Config", "pi-cog", role === "super_admin" || role === "leader"],
   ];
   return (

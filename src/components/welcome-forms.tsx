@@ -230,7 +230,7 @@ export function CompanyForm({
               {team.leader && <span className="text-muted"> · led by {team.leader}</span>}
             </p>
           ) : (
-            <p className="mt-0.5 text-muted">Not in a team yet. Your team leader or super admin adds you on the Teams page.</p>
+            <p className="mt-0.5 text-muted">Not in a team yet. Your team leader or super admin adds you in HR.</p>
           )}
         </div>
         <ErrorNote state={state} />

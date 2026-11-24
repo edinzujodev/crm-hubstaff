@@ -1,11 +1,14 @@
+import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
   boolean,
+  check,
   date,
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   serial,
@@ -45,6 +48,8 @@ export const users = pgTable("users", {
   totpSecret: text("totp_secret"),
   totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
   totpLastStep: integer("totp_last_step"),
+  // Vacation days the person gets each year, unless leave_allowances sets that year differently.
+  annualLeaveDays: numeric("annual_leave_days", { precision: 4, scale: 1, mode: "number" }).notNull().default(20),
 });
 
 // One widget on a person's dashboard. Dashboards are personal; `config` holds the widget's settings
@@ -373,6 +378,105 @@ export const appState = pgTable("app_state", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ---- HR -------------------------------------------------------------------------------------------------------
+
+// vacation counts against the yearly allowance; the others don't. sick is recorded without approval. religious is
+// a religious holiday the person celebrates (they differ per person in BiH, so they aren't a day off for everyone).
+export const timeOffKind = pgEnum("time_off_kind", ["vacation", "sick", "personal", "unpaid", "religious"]);
+export const timeOffStatus = pgEnum("time_off_status", ["pending", "approved", "rejected", "cancelled"]);
+
+// Time off and sick days. The number of days isn't stored: it is counted from the dates (working days only, public
+// holidays skipped), so a holiday added later is taken into account.
+export const timeOff = pgTable(
+  "time_off",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
+    kind: timeOffKind("kind").notNull(),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    // Only for a single day: half of it.
+    halfDay: boolean("half_day").notNull().default(false),
+    note: text("note"),
+    status: timeOffStatus("status").notNull().default("pending"),
+    // Who entered it (the person, or their leader / a super admin on their behalf).
+    createdById: integer("created_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedById: integer("decided_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note"),
+  },
+  (t) => [
+    index("time_off_user_idx").on(t.userId),
+    index("time_off_dates_idx").on(t.startDate, t.endDate),
+    check("time_off_dates_order", sql`${t.endDate} >= ${t.startDate}`),
+  ],
+);
+
+// A person's vacation allowance for one year, when it differs from the default: users.annual_leave_days for the
+// year, plus what is left from the year before. A row here overrides either number for that year.
+export const leaveAllowances = pgTable(
+  "leave_allowances",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(),
+    // null: users.annual_leave_days.
+    days: numeric("days", { precision: 4, scale: 1, mode: "number" }),
+    // null: worked out from the year before.
+    carriedOver: numeric("carried_over", { precision: 4, scale: 1, mode: "number" }),
+    // Carried-over days not used by this day are lost (BiH: 30 June). null: 30 June.
+    carryOverUntil: date("carry_over_until"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("leave_allowances_user_year").on(t.userId, t.year)],
+);
+
+// Holidays on top of the built-in list (src/lib/holidays.ts). "custom" adds one; "hidden" takes a built-in one
+// off for that date.
+export const holidaySource = pgEnum("holiday_source", ["custom", "hidden"]);
+
+export const holidays = pgTable(
+  "holidays",
+  {
+    id: serial("id").primaryKey(),
+    date: date("date").notNull(),
+    name: text("name").notNull(),
+    // A day off for everyone (skipped when counting leave), or only shown on the calendar.
+    dayOff: boolean("day_off").notNull().default(true),
+    source: holidaySource("source").notNull().default("custom"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("holidays_date_idx").on(t.date)],
+);
+
+// Company or team events on the HR calendar. team_id null: the whole company.
+export const events = pgTable(
+  "events",
+  {
+    id: serial("id").primaryKey(),
+    title: text("title").notNull(),
+    description: text("description"),
+    location: text("location"),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    // "HH:MM" in the app's time zone; null for an all-day event.
+    startTime: text("start_time"),
+    endTime: text("end_time"),
+    teamId: integer("team_id").references((): AnyPgColumn => teams.id, { onDelete: "cascade" }),
+    createdById: integer("created_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("events_dates_idx").on(t.startDate, t.endDate),
+    check("events_dates_order", sql`${t.endDate} >= ${t.startDate}`),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Client = typeof clients.$inferSelect;
@@ -383,3 +487,7 @@ export type Task = typeof tasks.$inferSelect;
 export type WorkSession = typeof workSessions.$inferSelect;
 export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
 export type HubstaffActivity =typeof hubstaffActivities.$inferSelect;
+export type TimeOff = typeof timeOff.$inferSelect;
+export type LeaveAllowance = typeof leaveAllowances.$inferSelect;
+export type Holiday = typeof holidays.$inferSelect;
+export type HrEvent = typeof events.$inferSelect;
