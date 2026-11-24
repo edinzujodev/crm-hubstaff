@@ -4,29 +4,57 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import { Button, Checkbox, InputText } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
 import { Modal } from "@/components/modal";
-import { addBlockedPeriod, addHoliday, deleteBlockedPeriod, deleteHoliday, hideBuiltInHoliday } from "@/app/hr/actions";
+import { addBlockedPeriod, addHoliday, deleteBlockedPeriod, deleteHoliday, hideBuiltInHoliday, updateHoliday } from "@/app/hr/actions";
 import { notify } from "@/lib/toast";
 
-function AddHolidayForm({ onDone }: { onDone: () => void }) {
-  const [state, action, pending] = useActionState(addHoliday, null);
-  const [date, setDate] = useState("");
+/** A holiday as the edit form needs it. Built-in ones have no id. */
+export type HolidayEdit = { date: string; name: string; dayOff: boolean; source: "built-in" | "custom"; id?: number };
+
+/** Add a holiday, or change one (a built-in holiday is replaced by the changed copy for that year). */
+export function HolidayForm({ holiday, onDone }: { holiday?: HolidayEdit; onDone: () => void }) {
+  const save = holiday
+    ? updateHoliday.bind(
+        null,
+        holiday.source === "custom" ? { kind: "custom", id: holiday.id! } : { kind: "built-in", date: holiday.date, name: holiday.name },
+      )
+    : addHoliday;
+  const [state, action, pending] = useActionState(save, null);
+  const [date, setDate] = useState(holiday?.date ?? "");
+  const [removing, setRemoving] = useState(false);
   useEffect(() => {
     if (!state?.ok) return;
-    notify({ message: "Holiday added" });
+    notify({ message: holiday ? "Holiday saved" : "Holiday added" });
     onDone();
-  }, [state, onDone]);
+  }, [state, onDone, holiday]);
+
+  const remove = async () => {
+    if (!holiday) return;
+    const builtIn = holiday.source === "built-in";
+    if (!confirm(builtIn ? `Remove ${holiday.name} from ${holiday.date.slice(0, 4)}? You can bring it back on the Holidays page.` : `Delete ${holiday.name}?`)) return;
+    setRemoving(true);
+    const r = builtIn ? await hideBuiltInHoliday(holiday.date, holiday.name) : await deleteHoliday(holiday.id!);
+    setRemoving(false);
+    notify(r.ok ? { message: builtIn ? `${holiday.name} removed` : "Holiday deleted" } : { message: "Couldn't change it", detail: r.error, tone: "error" });
+    if (r.ok) onDone();
+  };
+
   return (
     <form action={action} className="space-y-4">
+      {holiday?.source === "built-in" && (
+        <p className="rounded-lg bg-foreground/5 px-3 py-2 text-xs text-muted">
+          A built-in holiday. Saving changes it for {holiday.date.slice(0, 4)} only; other years keep the usual date.
+        </p>
+      )}
       <label className="flex flex-col gap-1 text-xs font-medium text-muted">
         Date
         <DateInput name="date" value={date} onChange={(e) => setDate(e.target.value)} required className="w-full" />
       </label>
       <label className="flex flex-col gap-1 text-xs font-medium text-muted">
         Name
-        <InputText name="name" required maxLength={120} placeholder="e.g. Company day off" className="w-full text-foreground" />
+        <InputText name="name" defaultValue={holiday?.name} required maxLength={120} placeholder="e.g. Company day off" className="w-full text-foreground" />
       </label>
       <label className="flex items-start gap-2 text-sm">
-        <Checkbox name="dayOff" defaultChecked />
+        <Checkbox name="dayOff" defaultChecked={holiday ? holiday.dayOff : true} />
         <span>
           Day off for everyone
           <span className="block text-xs text-muted">Skipped when counting leave. Untick for a religious holiday people book themselves.</span>
@@ -37,8 +65,20 @@ function AddHolidayForm({ onDone }: { onDone: () => void }) {
           {state.error}
         </p>
       )}
-      <div className="flex justify-end">
-        <Button disabled={pending || !date} label={pending ? "Adding…" : "Add holiday"} />
+      <div className="flex items-center justify-between gap-2">
+        {holiday ? (
+          <Button
+            type="button"
+            text
+            severity="danger"
+            disabled={removing}
+            label={removing ? "Removing…" : holiday.source === "built-in" ? "Remove this year" : "Delete"}
+            onClick={remove}
+          />
+        ) : (
+          <span />
+        )}
+        <Button disabled={pending || !date} label={pending ? "Saving…" : holiday ? "Save" : "Add holiday"} />
       </div>
     </form>
   );
@@ -52,7 +92,25 @@ export function AddHolidayButton() {
       <Button icon="pi pi-plus" label="Add holiday" onClick={() => setOpen(true)} />
       {open && (
         <Modal title="Add a holiday" onClose={close}>
-          <AddHolidayForm onDone={close} />
+          <HolidayForm onDone={close} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/** The holiday's name as a button that opens its edit form (super admins). */
+export function EditHolidayButton({ holiday }: { holiday: HolidayEdit }) {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="cursor-pointer text-left font-medium hover:underline" title="Edit this holiday">
+        {holiday.name}
+      </button>
+      {open && (
+        <Modal title="Edit holiday" onClose={close}>
+          <HolidayForm holiday={holiday} onDone={close} />
         </Modal>
       )}
     </>

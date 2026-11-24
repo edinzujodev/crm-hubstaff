@@ -224,6 +224,36 @@ export async function addHoliday(_prev: unknown, formData: FormData): Promise<Re
   });
 }
 
+export type HolidayTarget = { kind: "custom"; id: number } | { kind: "built-in"; date: string; name: string };
+
+/**
+ * Changes a holiday. A custom one is updated; a built-in one can't be changed in place, so it is hidden for that
+ * date and the changed copy is added as a custom holiday (e.g. Bajram moved to the day that was announced).
+ */
+export async function updateHoliday(target: HolidayTarget, _prev: unknown, formData: FormData): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin");
+    const input = holidayInput.parse(Object.fromEntries(formData));
+    if (target.kind === "custom") {
+      const [row] = await db
+        .update(schema.holidays)
+        .set(input)
+        .where(and(eq(schema.holidays.id, target.id), eq(schema.holidays.source, "custom")))
+        .returning({ id: schema.holidays.id });
+      if (!row) throw new Error("That holiday no longer exists.");
+      return undefined;
+    }
+    const known =
+      isDay(target.date) && builtInHolidays(Number(target.date.slice(0, 4))).some((h) => h.date === target.date && h.name === target.name);
+    if (!known) throw new Error("That isn't a built-in holiday.");
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.holidays).values({ date: target.date, name: target.name, dayOff: false, source: "hidden" });
+      await tx.insert(schema.holidays).values({ ...input, source: "custom" });
+    });
+    return undefined;
+  });
+}
+
 /** Removes a custom holiday, or brings back a built-in one that was hidden. */
 export async function deleteHoliday(id: number): Promise<Result> {
   return run(async () => {
