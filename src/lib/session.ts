@@ -65,7 +65,8 @@ export async function touchSession(): Promise<Date | null> {
   const [row] = await db
     .update(schema.authSessions)
     .set({
-      expiresAt: sql`least(${new Date(now + IDLE_MS)}::timestamptz, ${schema.authSessions.createdAt} + ${`${SESSION_DAYS} days`}::interval)`,
+      // An ISO string, not a Date: postgres-js under Drizzle can't serialize a raw Date inside sql``.
+      expiresAt: sql`least(${new Date(now + IDLE_MS).toISOString()}::timestamptz, ${schema.authSessions.createdAt} + ${`${SESSION_DAYS} days`}::interval)`,
     })
     .where(
       and(
