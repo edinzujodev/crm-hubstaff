@@ -3,11 +3,14 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import Link from "next/link";
+import { BalanceTiles } from "@/components/balance-tiles";
 import { ProfileForm } from "@/components/profile-form";
 import { pageGuard } from "@/lib/auth";
 import { authMode } from "@/lib/session";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
+import { balanceFor } from "@/lib/time-off";
 
 const ROLE_LABEL = { super_admin: "Super admin", leader: "Team leader", worker: "Member" } as const;
 
@@ -32,8 +35,12 @@ async function ProfileContent() {
   await connection();
   const auth = await pageGuard();
   const me = auth.user;
+  const today = localDay(new Date(), config.timeZone);
 
-  const team = me.teamId ? await db.query.teams.findFirst({ where: eq(schema.teams.id, me.teamId) }) : undefined;
+  const [team, balance] = await Promise.all([
+    me.teamId ? db.query.teams.findFirst({ where: eq(schema.teams.id, me.teamId) }) : undefined,
+    balanceFor(me.id, Number(today.slice(0, 4)), today),
+  ]);
   const leader =
     team?.leaderId && team.leaderId !== me.id
       ? await db.query.users.findFirst({ where: eq(schema.users.id, team.leaderId), columns: { name: true } })
@@ -66,7 +73,7 @@ async function ProfileContent() {
           <p className="text-xs text-muted">Only you can change these. Your colleagues see your name and job title.</p>
         </div>
         <ProfileForm
-          today={localDay(new Date(), config.timeZone)}
+          today={today}
           initial={{
             name: me.name,
             jobTitle: me.jobTitle ?? "",
@@ -91,6 +98,19 @@ async function ProfileContent() {
           </Fact>
           <Fact label="Started">{me.startedOn ? fmtDate(me.startedOn) : "—"}</Fact>
         </dl>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="font-semibold">Vacation</h2>
+            <p className="text-xs text-muted">Your days off this year. Ask for time off in HR.</p>
+          </div>
+          <Link href="/hr/time-off" className="text-sm font-medium text-primary hover:underline">
+            Time off →
+          </Link>
+        </div>
+        <BalanceTiles b={balance} today={today} />
       </section>
 
       <section className="card space-y-4 p-5">

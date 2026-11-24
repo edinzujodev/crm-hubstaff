@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { DataGrid } from "@/components/data-grid";
 import { HrTabs } from "@/components/hr-tabs";
-import { BalanceTiles, fmtNum } from "@/components/balance-tiles";
+import { fmtNum } from "@/components/balance-tiles";
 import { CancelTimeOffButton, KindBadge, StatusBadge, TimeOffButton } from "@/components/time-off";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
@@ -44,54 +44,51 @@ async function TimeOffContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <BalanceTiles b={balance} today={today} />
-      <HrTabs
-        auth={auth}
-        active="time-off"
-        actions={
-          <>
-            <TimeOffButton {...formProps} label="Add sick leave" icon="pi-heart" kind="sick" outlined />
-            <TimeOffButton {...formProps} label="Request time off" icon="pi-plus" />
-          </>
-        }
-      >
-        <DataGrid
-          flush
-          empty="You haven't taken or asked for any time off yet."
-          headers={["Dates", "Kind", { label: "Days", align: "right" }, "Status", "Note"]}
-          rows={mine.map((t) => ({
-            key: t.id,
-            sort: [t.startDate, t.kind, null, t.status, null],
-            tone: t.status === "pending" ? "approaching" : undefined,
-            cells: [
-              <span key="d" className="whitespace-nowrap font-medium">
-                {fmtRange(t.startDate, t.endDate)}
-                {t.halfDay && <span className="text-muted"> · half day</span>}
-              </span>,
-              <KindBadge key="k" kind={t.kind} />,
-              <span key="n" className="font-mono tabular-nums">
-                {fmtNum(countDays(t, daysOff))}
-              </span>,
-              <span key="s" className="flex flex-col gap-0.5">
-                <StatusBadge status={t.status} />
-                {t.decidedById && t.status !== "pending" && t.decidedById !== auth.user.id && (
-                  <span className="text-xs text-muted">by {names.get(t.decidedById) ?? "someone"}</span>
-                )}
-              </span>,
-              <span key="note" className="text-sm">
-                {t.note && <span className="block text-muted">{t.note}</span>}
-                {t.decisionNote && <span className="block">“{t.decisionNote}”</span>}
-              </span>,
-            ],
-            actions:
-              t.status === "pending" || (t.status === "approved" && (t.startDate > today || t.kind === "sick")) ? (
-                <CancelTimeOffButton id={t.id} />
-              ) : undefined,
-          }))}
-        />
-      </HrTabs>
-    </div>
+    <HrTabs
+      auth={auth}
+      active="time-off"
+      actions={
+        <>
+          <TimeOffButton {...formProps} label="Add sick leave" icon="pi-heart" kind="sick" outlined />
+          <TimeOffButton {...formProps} label="Request time off" icon="pi-plus" />
+        </>
+      }
+    >
+      <DataGrid
+        flush
+        empty="You haven't taken or asked for any time off yet."
+        headers={["Dates", "Kind", { label: "Days", align: "right" }, "Status", "Note"]}
+        rows={mine.map((t) => ({
+          key: t.id,
+          sort: [t.startDate, t.kind, null, t.status, null],
+          tone: t.status === "pending" ? "approaching" : undefined,
+          cells: [
+            <span key="d" className="whitespace-nowrap font-medium">
+              {fmtRange(t.startDate, t.endDate)}
+              {t.halfDay && <span className="text-muted"> · half day</span>}
+            </span>,
+            <KindBadge key="k" kind={t.kind} />,
+            <span key="n" className="font-mono tabular-nums">
+              {fmtNum(countDays(t, daysOff))}
+            </span>,
+            <span key="s" className="flex flex-col gap-0.5">
+              <StatusBadge status={t.status} />
+              {t.decidedById && t.status !== "pending" && t.decidedById !== auth.user.id && (
+                <span className="text-xs text-muted">by {names.get(t.decidedById) ?? "someone"}</span>
+              )}
+            </span>,
+            <span key="note" className="text-sm">
+              {t.note && <span className="block text-muted">{t.note}</span>}
+              {t.decisionNote && <span className="block">“{t.decisionNote}”</span>}
+            </span>,
+          ],
+          actions:
+            t.status === "pending" || (t.status === "approved" && (t.startDate > today || t.kind === "sick")) ? (
+              <CancelTimeOffButton id={t.id} />
+            ) : undefined,
+        }))}
+      />
+    </HrTabs>
   );
 }
 
