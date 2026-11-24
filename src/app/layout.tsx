@@ -160,7 +160,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 </Suspense>
               </Topbar>
             </Suspense>
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 has-[[data-wide]]:max-w-[110rem]">{children}</main>
           </div>
         </div>
         </PrimeProvider>
