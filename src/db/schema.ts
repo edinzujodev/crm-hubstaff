@@ -454,6 +454,24 @@ export const holidays = pgTable(
   (t) => [index("holidays_date_idx").on(t.date)],
 );
 
+// Days nobody can take off (a launch, inventory, the busy season). Requests touching them are refused; sick leave
+// can still be recorded, and a super admin can still enter time off on them.
+export const blockedPeriods = pgTable(
+  "blocked_periods",
+  {
+    id: serial("id").primaryKey(),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    reason: text("reason").notNull(),
+    createdById: integer("created_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("blocked_periods_dates_idx").on(t.startDate, t.endDate),
+    check("blocked_periods_dates_order", sql`${t.endDate} >= ${t.startDate}`),
+  ],
+);
+
 // Company or team events on the HR calendar. team_id null: the whole company.
 // How an event repeats. daily and weekly use repeat_days (0 = Sunday … 6 = Saturday; daily with none: every day);
 // monthly is the same day each month (the last day in shorter months), yearly the same date each year.
@@ -498,4 +516,5 @@ export type HubstaffActivity =typeof hubstaffActivities.$inferSelect;
 export type TimeOff = typeof timeOff.$inferSelect;
 export type LeaveAllowance = typeof leaveAllowances.$inferSelect;
 export type Holiday = typeof holidays.$inferSelect;
+export type BlockedPeriod = typeof blockedPeriods.$inferSelect;
 export type HrEvent = typeof events.$inferSelect;

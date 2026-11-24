@@ -23,6 +23,7 @@ export function DateInput({
   disabled,
   className,
   max,
+  disabledDays,
   onChange,
 }: {
   name?: string;
@@ -33,6 +34,8 @@ export function DateInput({
   className?: string;
   /** Latest date that can be picked (yyyy-mm-dd), e.g. today for a birth date. */
   max?: string;
+  /** Days that can't be picked (yyyy-mm-dd). */
+  disabledDays?: string[];
   onChange?: (e: { target: { value: string } }) => void;
 }) {
   const [inner, setInner] = useState(defaultValue ?? "");
@@ -47,6 +50,7 @@ export function DateInput({
         disabled={disabled}
         required={required}
         maxDate={toDate(max) ?? undefined}
+        disabledDates={disabledDays?.map((d) => toDate(d)!).filter(Boolean)}
         className={className}
         appendTo={typeof document === "undefined" ? undefined : document.body}
         onChange={(e) => {

@@ -5,12 +5,12 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireAuth, requireRole, type Auth } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { fmtDays, isDay, weekday } from "@/lib/days";
+import { fmtDays, fmtRange, isDay, weekday } from "@/lib/days";
 import { REPEATS } from "@/lib/recurrence";
 import { localDay } from "@/lib/format";
-import { builtInHolidays, daysOffBetween } from "@/lib/holidays";
+import { blockedBetween, builtInHolidays, daysOffBetween } from "@/lib/holidays";
 import { run, type Result } from "@/lib/result";
-import { balanceFor, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval } from "@/lib/time-off";
+import { balanceFor, blockable, blockedClash, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval } from "@/lib/time-off";
 
 const today = () => localDay(new Date(), config.timeZone);
 
@@ -22,6 +22,13 @@ const optionalText = (max: number) =>
     .max(max, `Keep it under ${max} characters`)
     .optional()
     .transform((v) => v || null);
+
+/** Refuses planned time off on blocked days. A super admin sets the blocks, so they can still enter it. */
+async function checkNotBlocked(auth: Auth, t: { kind: (typeof schema.timeOffKind.enumValues)[number]; startDate: string; endDate: string }) {
+  if (!blockable(t.kind) || auth.role === "super_admin") return;
+  const clash = blockedClash(t, await blockedBetween(t.startDate, t.endDate));
+  if (clash) throw new Error(`Nobody can take time off ${fmtRange(clash.startDate, clash.endDate)}: ${clash.reason}.`);
+}
 
 async function personFor(auth: Auth, userId: number) {
   const person = await db.query.users.findFirst({ where: eq(schema.users.id, userId) });
@@ -57,6 +64,8 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
     const input = timeOffInput.parse(Object.fromEntries(formData));
     const person = await personFor(auth, input.userId ?? auth.user.id);
     const forSomeoneElse = person.id !== auth.user.id;
+
+    await checkNotBlocked(auth, input);
 
     const daysOff = await daysOffBetween(input.startDate, input.endDate);
     const days = countDays(input, daysOff);
@@ -116,6 +125,8 @@ export async function decideTimeOff(id: number, approve: boolean, note?: string)
     if (!person || !canDecide(auth, person)) throw new Error("You can't decide on this request.");
     const decisionNote = z.string().trim().max(500).optional().parse(note) || null;
     if (!approve && !decisionNote) throw new Error("Say why it's rejected, so they know.");
+    // Blocked after it was asked for: a team leader can only reject it now.
+    if (approve) await checkNotBlocked(auth, row);
     await db
       .update(schema.timeOff)
       .set({ status: approve ? "approved" : "rejected", decidedById: auth.user.id, decidedAt: new Date(), decisionNote })
@@ -229,6 +240,47 @@ export async function hideBuiltInHoliday(date: string, name: string): Promise<Re
     const known = isDay(date) && builtInHolidays(Number(date.slice(0, 4))).some((h) => h.date === date && h.name === name);
     if (!known) throw new Error("That isn't a built-in holiday.");
     await db.insert(schema.holidays).values({ date, name, dayOff: false, source: "hidden" });
+    return undefined;
+  });
+}
+
+// ---- Blocked days ---------------------------------------------------------------------------------------------
+
+const blockedInput = z
+  .object({
+    startDate: day("the first day"),
+    endDate: day("the last day"),
+    reason: z.string().trim().min(1, "Say why, so people know").max(200, "Keep it under 200 characters"),
+  })
+  .refine((v) => v.endDate >= v.startDate, { message: "The last day can't be before the first day" });
+
+/**
+ * Blocks days for time off. Returns how many requests already on those days are still standing, so the super
+ * admin can look at them (they aren't cancelled automatically).
+ */
+export async function addBlockedPeriod(_prev: unknown, formData: FormData): Promise<Result<{ affected: number }>> {
+  return run(async () => {
+    const auth = await requireRole("super_admin");
+    const raw = Object.fromEntries(formData);
+    const input = blockedInput.parse({ ...raw, endDate: raw.endDate || raw.startDate });
+    await db.insert(schema.blockedPeriods).values({ ...input, createdById: auth.user.id });
+    const affected = await db.$count(
+      schema.timeOff,
+      and(
+        inArray(schema.timeOff.status, ["pending", "approved"]),
+        inArray(schema.timeOff.kind, schema.timeOffKind.enumValues.filter(blockable)),
+        lte(schema.timeOff.startDate, input.endDate),
+        gte(schema.timeOff.endDate, input.startDate),
+      ),
+    );
+    return { affected };
+  });
+}
+
+export async function deleteBlockedPeriod(id: number): Promise<Result> {
+  return run(async () => {
+    await requireRole("super_admin");
+    await db.delete(schema.blockedPeriods).where(eq(schema.blockedPeriods.id, id));
     return undefined;
   });
 }

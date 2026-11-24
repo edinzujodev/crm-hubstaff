@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { and, asc, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
@@ -11,7 +12,6 @@ import { monthBounds, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
 import { holidaysBetween } from "@/lib/holidays";
 import { describeRepeat, occurrences } from "@/lib/recurrence";
-import { canManagePerson, KIND_LABEL, KIND_TONE } from "@/lib/time-off";
 
 function Legend({ tone, label }: { tone: string; label: string }) {
   return (
@@ -20,13 +20,6 @@ function Legend({ tone, label }: { tone: string; label: string }) {
       {label}
     </span>
   );
-}
-
-/** "Edin Zujo" -> "Edin Z.": short enough for a calendar cell, still tells two Edins apart. */
-function shortName(name: string) {
-  const [first, ...rest] = name.trim().split(/\s+/);
-  const last = rest.at(-1);
-  return last ? `${first} ${last[0]}.` : first!;
 }
 
 /** A birthday or start date in this month's year; 29 February falls on the 28th in other years. */
@@ -51,7 +44,7 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
   // The grid shows a few days of the months around this one too.
   const [from, to] = [ymd(year, Number(month.slice(5)) - 1, 23), ymd(year, Number(month.slice(5)) + 1, 7)];
 
-  const [users, teams, holidays, events, timeOff] = await Promise.all([
+  const [users, teams, holidays, events] = await Promise.all([
     db.select().from(schema.users).orderBy(asc(schema.users.name)),
     db.select({ id: schema.teams.id, name: schema.teams.name }).from(schema.teams).orderBy(asc(schema.teams.name)),
     holidaysBetween(from, to),
@@ -70,19 +63,8 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
               : isNull(schema.events.teamId),
         ),
       ),
-    db
-      .select()
-      .from(schema.timeOff)
-      .where(
-        and(
-          lte(schema.timeOff.startDate, to),
-          gte(schema.timeOff.endDate, from),
-          inArray(schema.timeOff.status, ["approved", "pending"]),
-        ),
-      ),
   ]);
   const inScope = (u: { teamId: number | null }) => !teamOnly || (u.teamId !== null && myTeams.includes(u.teamId));
-  const person = new Map(users.map((u) => [u.id, u]));
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
   const items: CalendarItem[] = [];
 
@@ -163,29 +145,6 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
     }
   }
 
-  for (const t of timeOff) {
-    const u = person.get(t.userId);
-    if (!u || !inScope(u)) continue;
-    // Everyone sees who is out; the reason only the person and whoever approves for them.
-    const full = canManagePerson(auth, u);
-    if (t.status === "pending" && !full) continue;
-    const what = full ? KIND_LABEL[t.kind] : "Out";
-    items.push({
-      key: `t-${t.id}`,
-      type: "time-off",
-      start: t.startDate,
-      end: t.endDate,
-      title: `${shortName(u.name)} · ${what}${t.halfDay ? " (½)" : ""}`,
-      tone: full ? KIND_TONE[t.kind] : undefined,
-      tentative: t.status === "pending",
-      details: [
-        `${u.name} is out${t.halfDay ? " for half a day" : ""}.`,
-        full ? `${what}${t.status === "pending" ? ", waiting for approval" : ""}.` : "",
-        full && t.note ? `Note: ${t.note}` : "",
-      ].filter(Boolean),
-    });
-  }
-
   const eventTeams: EventTeamOption[] = admin
     ? [{ id: null, name: "Whole company" }, ...teams]
     : teams.filter((t) => auth.ledTeamIds.includes(t.id));
@@ -216,8 +175,12 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
             <Legend tone="bg-amber-500/40" label="Religious holiday" />
             <Legend tone="bg-pink-500/40" label="Birthday" />
             <Legend tone="bg-indigo-500/40" label="Work anniversary" />
-            <Legend tone="bg-sky-500/40" label="Time off" />
-            <span className="ml-auto">Dashed: waiting for approval</span>
+            <span className="ml-auto">
+              Who is away:{" "}
+              <Link href="/hr/vacations" className="underline hover:text-foreground">
+                Vacations
+              </Link>
+            </span>
           </>
         }
       />

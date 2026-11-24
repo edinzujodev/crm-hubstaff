@@ -62,7 +62,7 @@ function Chip({ item, onOpen }: { item: CalendarItem; onOpen: (i: CalendarItem) 
 }
 
 /**
- * The HR month calendar: holidays, events, birthdays, work anniversaries and who is off. On phones the month turns
+ * The HR month calendar: holidays, events, birthdays and work anniversaries (who is away is on Vacations). On phones the month turns
  * into a list of the days that have something on them.
  */
 export function HrCalendar({

@@ -63,7 +63,7 @@ export function VacationGrid({
     <div>
       <div className="flex">
         {/* Names */}
-        <div className="w-32 shrink-0 border-r border-border sm:w-40 xl:w-48">
+        <div className="w-32 shrink-0 border-r border-border sm:w-36 2xl:w-48">
           <div className="flex h-12 items-end border-b border-border px-4 pb-2 text-xs font-medium text-muted">People</div>
           {rows.map((r) => (
             <div key={r.id} className="flex h-11 items-center gap-2.5 border-b border-border px-3 last:border-b-0 sm:px-4">

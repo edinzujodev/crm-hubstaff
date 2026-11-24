@@ -32,6 +32,17 @@ export const STATUS_LABEL: Record<TimeOffStatus, string> = {
 /** Sick leave counts as soon as it is entered; everything else is asked for and approved. */
 export const needsApproval = (kind: TimeOffKind) => kind !== "sick";
 
+/** Days nobody can take off, set by a super admin. */
+export type BlockedSpan = { startDate: string; endDate: string; reason: string };
+
+/** Blocked days stop time off that is planned; sick leave is recorded whatever the date. */
+export const blockable = (kind: TimeOffKind) => kind !== "sick";
+
+/** The first blocked period that touches the dates, if any. */
+export function blockedClash(t: { startDate: string; endDate: string }, blocked: BlockedSpan[]): BlockedSpan | undefined {
+  return blocked.find((b) => b.startDate <= t.endDate && b.endDate >= t.startDate);
+}
+
 type Span = { startDate: string; endDate: string; halfDay: boolean };
 
 /** The working days of a span (weekends and days off skipped), optionally only those inside [from, to]. */

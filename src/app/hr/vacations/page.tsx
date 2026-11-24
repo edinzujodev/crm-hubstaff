@@ -9,7 +9,7 @@ import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { monthBounds, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
-import { daysOffBetween, holidaysBetween } from "@/lib/holidays";
+import { blockedBetween, daysOffBetween, holidaysBetween } from "@/lib/holidays";
 import { managedPeople } from "@/lib/hr";
 import { TIME_OFF_KINDS, type TimeOffKind } from "@/lib/leave-days";
 import { balanceFor, canManagePerson } from "@/lib/time-off";
@@ -29,7 +29,7 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
   const myTeams = [...new Set([auth.user.teamId, ...auth.ledTeamIds].filter((t): t is number => t !== null))];
   const teamOnly = who === "team" && myTeams.length > 0;
 
-  const [users, teams, entries, holidays, balance, people, daysOff] = await Promise.all([
+  const [users, teams, entries, holidays, balance, people, daysOff, blocked] = await Promise.all([
     db
       .select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId, jobTitle: schema.users.jobTitle })
       .from(schema.users)
@@ -50,6 +50,7 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
     balanceFor(auth.user.id, year, today),
     managedPeople(auth),
     daysOffBetween(ymd(year - 1, 1, 1), ymd(year + 1, 12, 31)),
+    blockedBetween(today, ymd(year + 1, 12, 31)),
   ]);
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
   const shownKinds = new Set<TimeOffKind | "out">();
@@ -74,6 +75,7 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
     daysOff: [...daysOff],
     vacationLeft: Math.max(0, balance.left - balance.pending),
     selfApproves: auth.role === "super_admin",
+    blocked: blocked.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason })),
   };
 
   return (

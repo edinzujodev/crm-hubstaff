@@ -1,4 +1,4 @@
-import { and, gte, lte } from "drizzle-orm";
+import { and, asc, gte, lte } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { addDays, ymd } from "@/lib/days";
 
@@ -88,4 +88,13 @@ export async function holidaysBetween(from: string, to: string): Promise<Holiday
 /** The days off for everyone from `from` to `to`. */
 export async function daysOffBetween(from: string, to: string): Promise<Set<string>> {
   return new Set((await holidaysBetween(from, to)).filter((h) => h.dayOff).map((h) => h.date));
+}
+
+/** The blocked periods that touch `from`..`to`, earliest first. */
+export async function blockedBetween(from: string, to: string) {
+  return db
+    .select()
+    .from(schema.blockedPeriods)
+    .where(and(lte(schema.blockedPeriods.startDate, to), gte(schema.blockedPeriods.endDate, from)))
+    .orderBy(asc(schema.blockedPeriods.startDate));
 }

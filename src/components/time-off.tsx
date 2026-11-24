@@ -5,8 +5,11 @@ import { Button, Checkbox, InputTextarea, Select } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
 import { Modal } from "@/components/modal";
 import { cancelTimeOff, decideTimeOff, requestTimeOff } from "@/app/hr/actions";
-import { fmtDays } from "@/lib/days";
+import { eachDay, fmtDays, fmtRange } from "@/lib/days";
 import {
+  blockable,
+  blockedClash,
+  type BlockedSpan,
   countDays,
   KIND_LABEL,
   KIND_TONE,
@@ -57,10 +60,12 @@ type FormProps = {
   kind?: TimeOffKind;
   /** Whether the signed-in person's own entries are approved straight away (super admin). */
   selfApproves: boolean;
+  /** Days nobody can take off. A super admin (selfApproves) can still enter time off on them. */
+  blocked?: BlockedSpan[];
   onDone: () => void;
 };
 
-function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "vacation", selfApproves, onDone }: FormProps) {
+function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "vacation", selfApproves, blocked = [], onDone }: FormProps) {
   const [state, action, pending] = useActionState(requestTimeOff, null);
   const [userId, setUserId] = useState(String(me.id));
   const [kind, setKind] = useState<TimeOffKind>(initialKind);
@@ -84,6 +89,10 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
   const days = startDate && end >= startDate ? countDays({ startDate, endDate: end, halfDay: halfDay && single }, offSet) : null;
   const overLimit = forMe && kind === "vacation" && days !== null && days > vacationLeft;
   const instant = !needsApproval(kind) || !forMe || selfApproves;
+  const blocks = blockable(kind) ? blocked : [];
+  const clash = startDate && end >= startDate ? blockedClash({ startDate, endDate: end }, blocks) : undefined;
+  const refused = !!clash && !selfApproves;
+  const blockedDays = selfApproves ? [] : blocks.flatMap((b) => eachDay(b.startDate, b.endDate));
 
   return (
     <form action={action} className="space-y-4">
@@ -122,11 +131,11 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           First day
-          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required className="w-full" />
+          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required disabledDays={blockedDays} className="w-full" />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           Last day
-          <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} className="w-full" />
+          <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} disabledDays={blockedDays} className="w-full" />
         </label>
       </div>
       {single && (
@@ -140,6 +149,13 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
         <InputTextarea name="note" rows={2} maxLength={500} autoResize className="w-full text-foreground" placeholder="Optional" />
       </label>
 
+      {clash && (
+        <p className={`rounded-lg px-3 py-2 text-sm ${refused ? "bg-red-500/10 text-red-700 dark:text-red-300" : "bg-amber-500/10 text-amber-800 dark:text-amber-300"}`}>
+          <i className="pi pi-ban mr-1.5 text-xs" aria-hidden />
+          {fmtRange(clash.startDate, clash.endDate)} is blocked: {clash.reason}.
+          {refused ? " Nobody can take time off then." : " You can still enter it as a super admin."}
+        </p>
+      )}
       {days !== null && (
         <p
           className={`rounded-lg px-3 py-2 text-sm ${overLimit ? "bg-red-500/10 text-red-700 dark:text-red-300" : "bg-foreground/5"}`}
@@ -161,7 +177,7 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
       )}
       <div className="flex items-center justify-between gap-2 pt-1">
         <span className="text-xs text-muted">{instant ? "Goes on the calendar straight away." : "Waits for approval by your team leader or a super admin."}</span>
-        <Button disabled={pending || !startDate || days === 0}>{pending ? "Saving…" : instant ? "Add" : "Send request"}</Button>
+        <Button disabled={pending || !startDate || days === 0 || refused}>{pending ? "Saving…" : instant ? "Add" : "Send request"}</Button>
       </div>
     </form>
   );

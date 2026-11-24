@@ -4,7 +4,7 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import { Button, Checkbox, InputText } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
 import { Modal } from "@/components/modal";
-import { addHoliday, deleteHoliday, hideBuiltInHoliday } from "@/app/hr/actions";
+import { addBlockedPeriod, addHoliday, deleteBlockedPeriod, deleteHoliday, hideBuiltInHoliday } from "@/app/hr/actions";
 import { notify } from "@/lib/toast";
 
 function AddHolidayForm({ onDone }: { onDone: () => void }) {
@@ -85,6 +85,87 @@ export function HolidayButton({
         const r = action.kind === "delete" ? await deleteHoliday(action.id) : await hideBuiltInHoliday(action.date, action.name);
         setBusy(false);
         notify(r.ok ? { message: done } : { message: "Couldn't change it", detail: r.error, tone: "error" });
+      }}
+    />
+  );
+}
+
+function BlockDaysForm({ onDone }: { onDone: () => void }) {
+  const [state, action, pending] = useActionState(addBlockedPeriod, null);
+  const [startDate, setStart] = useState("");
+  const [endDate, setEnd] = useState("");
+  useEffect(() => {
+    if (!state?.ok) return;
+    const n = state.data.affected;
+    notify({
+      message: "Days blocked",
+      detail: n ? `${n} ${n === 1 ? "request is" : "requests are"} already on those days. They aren't cancelled; check them under Approvals.` : undefined,
+    });
+    onDone();
+  }, [state, onDone]);
+  const end = endDate || startDate;
+  return (
+    <form action={action} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+          First day
+          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required className="w-full" />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+          Last day
+          <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} className="w-full" />
+        </label>
+      </div>
+      <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+        Why
+        <InputText name="reason" required maxLength={200} placeholder="e.g. Product launch" className="w-full text-foreground" />
+      </label>
+      <p className="text-xs text-muted">
+        Nobody can ask for time off on these days, and team leaders can&apos;t approve requests for them. Sick leave can
+        still be recorded, and super admins can still enter time off.
+      </p>
+      {state && !state.ok && (
+        <p role="alert" className="text-sm text-red-600">
+          {state.error}
+        </p>
+      )}
+      <div className="flex justify-end">
+        <Button disabled={pending || !startDate} label={pending ? "Blocking…" : "Block days"} />
+      </div>
+    </form>
+  );
+}
+
+export function BlockDaysButton() {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <>
+      <Button icon="pi pi-ban" label="Block days" severity="secondary" outlined onClick={() => setOpen(true)} />
+      {open && (
+        <Modal title="Block days for time off" onClose={close}>
+          <BlockDaysForm onDone={close} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+export function UnblockButton({ id, what }: { id: number; what: string }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      size="small"
+      text
+      severity="danger"
+      disabled={busy}
+      label="Unblock"
+      onClick={async () => {
+        if (!confirm(`Unblock ${what}? People can ask for time off then again.`)) return;
+        setBusy(true);
+        const r = await deleteBlockedPeriod(id);
+        setBusy(false);
+        notify(r.ok ? { message: "Days unblocked" } : { message: "Couldn't unblock them", detail: r.error, tone: "error" });
       }}
     />
   );
