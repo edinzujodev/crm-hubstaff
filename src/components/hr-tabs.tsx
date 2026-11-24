@@ -31,7 +31,7 @@ export async function HrTabs({
     { key: "time-off", label: "Time off", href: "/hr/time-off" },
     ...(manager
       ? [
-          { key: "approvals" as const, label: "Approvals", href: "/hr/approvals", count: waiting, alarm: waiting > 0 },
+          { key: "approvals" as const, label: "Approvals", href: "/hr/approvals", count: waiting || undefined, alarm: waiting > 0 },
           { key: "people" as const, label: "People", href: "/hr/people" },
           { key: "teams" as const, label: auth.role === "super_admin" ? "Teams" : "Your team", href: "/hr/teams" },
         ]

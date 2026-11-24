@@ -75,7 +75,7 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
     if (!state?.ok) return;
     notify({
       message: state.data.status === "pending" ? "Request sent" : "Added to the calendar",
-      detail: state.data.status === "pending" ? "Your team leader will approve it." : undefined,
+      detail: state.data.status === "pending" ? "You'll see it here once it's approved." : undefined,
     });
     onDone();
   }, [state, onDone]);
@@ -160,7 +160,7 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
         </p>
       )}
       <div className="flex items-center justify-between gap-2 pt-1">
-        <span className="text-xs text-muted">{instant ? "Goes on the calendar straight away." : "Your team leader approves it."}</span>
+        <span className="text-xs text-muted">{instant ? "Goes on the calendar straight away." : "Waits for approval by your team leader or a super admin."}</span>
         <Button disabled={pending || !startDate || days === 0}>{pending ? "Saving…" : instant ? "Add" : "Send request"}</Button>
       </div>
     </form>
