@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Modal } from "@/components/modal";
 import { EventForm, type EventData, type EventTeamOption } from "@/components/event-form";
+import { HolidayForm, type HolidayEdit } from "@/components/holiday-actions";
 import { addDays, fmtRange, fmtShortDay, isWeekend, weekday } from "@/lib/days";
 
 export type CalendarItem = {
@@ -22,6 +23,8 @@ export type CalendarItem = {
   tone?: string;
   /** Set when the signed-in person may edit this event. */
   event?: EventData;
+  /** Set when the signed-in person may edit this holiday (super admins). */
+  holiday?: HolidayEdit;
 };
 
 const TYPE_TONE: Record<CalendarItem["type"], string> = {
@@ -86,9 +89,16 @@ export function HrCalendar({
 }) {
   const [open, setOpen] = useState<CalendarItem | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  // Everything on a day with more than fits in its cell.
+  const [more, setMore] = useState<{ day: string; items: CalendarItem[] } | null>(null);
   const close = useCallback(() => {
     setOpen(null);
     setAdding(null);
+    setMore(null);
+  }, []);
+  const openItem = useCallback((i: CalendarItem) => {
+    setMore(null);
+    setOpen(i);
   }, []);
   const canAdd = eventTeams.length > 0;
 
@@ -146,20 +156,13 @@ export function HrCalendar({
                 </div>
                 <div className="space-y-0.5">
                   {list.slice(0, MAX_IN_CELL).map((i) => (
-                    <Chip key={i.key} item={i} onOpen={setOpen} />
+                    <Chip key={i.key} item={i} onOpen={openItem} />
                   ))}
                   {list.length > MAX_IN_CELL && (
                     <button
                       type="button"
                       onClick={() =>
-                        setOpen({
-                          key: `more-${d}`,
-                          type: "event",
-                          start: d,
-                          end: d,
-                          title: fmtShortDay(d),
-                          details: list.map((i) => i.title),
-                        })
+                        setMore({ day: d, items: list })
                       }
                       className="cursor-pointer px-1.5 text-[11px] font-medium text-muted hover:text-foreground"
                     >
@@ -182,7 +185,7 @@ export function HrCalendar({
               <span className={`w-16 shrink-0 text-xs ${d === today ? "font-semibold text-foreground" : "text-muted"}`}>{fmtShortDay(d)}</span>
               <span className="min-w-0 flex-1 space-y-1">
                 {on(d).map((i) => (
-                  <Chip key={i.key} item={i} onOpen={setOpen} />
+                  <Chip key={i.key} item={i} onOpen={openItem} />
                 ))}
               </span>
             </li>
@@ -192,7 +195,16 @@ export function HrCalendar({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border px-4 py-3 text-xs text-muted">{legend}</div>
 
-      {open && !open.event && (
+      {more && (
+        <Modal title={fmtShortDay(more.day)} onClose={close}>
+          <div className="space-y-1">
+            {more.items.map((i) => (
+              <Chip key={i.key} item={i} onOpen={openItem} />
+            ))}
+          </div>
+        </Modal>
+      )}
+      {open && !open.event && !open.holiday && (
         <Modal title={open.title} onClose={close}>
           <p className="text-sm text-muted">{fmtRange(open.start, open.end)}</p>
           {open.details?.length ? (
@@ -211,6 +223,11 @@ export function HrCalendar({
               .
             </p>
           )}
+        </Modal>
+      )}
+      {open?.holiday && (
+        <Modal title="Edit holiday" onClose={close}>
+          <HolidayForm holiday={open.holiday} onDone={close} />
         </Modal>
       )}
       {open?.event && (

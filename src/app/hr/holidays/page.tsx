@@ -3,7 +3,7 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { DataGrid } from "@/components/data-grid";
-import { AddHolidayButton, BlockDaysButton, HolidayButton, UnblockButton } from "@/components/holiday-actions";
+import { AddHolidayButton, BlockDaysButton, EditHolidayButton, HolidayButton, UnblockButton } from "@/components/holiday-actions";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
@@ -72,9 +72,13 @@ async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined>
               {fmtShortDay(h.date)}
               {h.dayOff && isWeekend(h.date) && <span className="text-xs text-muted"> · weekend</span>}
             </span>,
-            <span key="n" className="font-medium">
-              {h.name}
-            </span>,
+            admin ? (
+              <EditHolidayButton key="n" holiday={{ date: h.date, name: h.name, dayOff: h.dayOff, source: h.source, id: h.id }} />
+            ) : (
+              <span key="n" className="font-medium">
+                {h.name}
+              </span>
+            ),
             h.dayOff ? (
               <span key="t" className="inline-flex rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-300">
                 Day off for everyone

@@ -76,6 +76,7 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
       end: h.date,
       title: h.name,
       details: [h.dayOff ? "Public holiday: a day off for everyone." : "Religious holiday."],
+      holiday: admin ? { date: h.date, name: h.name, dayOff: h.dayOff, source: h.source, id: h.id } : undefined,
     });
   }
 
