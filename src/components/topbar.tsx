@@ -13,7 +13,7 @@ const SECTIONS: Record<string, string> = {
   leads: "Leads",
   clients: "Clients",
   reports: "Reports",
-  team: "Teams",
+  hr: "HR",
   templates: "Templates",
   config: "Config",
 };
@@ -22,7 +22,14 @@ const DETAIL: Record<string, string> = {
   clients: "Client",
   leads: "Lead",
   recurring: "Series",
-  team: "Team",
+};
+/** The pages inside HR (/hr/<page>), and what one item under them is called. */
+const HR_PAGES: Record<string, string> = {
+  "time-off": "Time off",
+  approvals: "Approvals",
+  people: "People",
+  teams: "Teams",
+  holidays: "Holidays",
 };
 
 /** Where you are: Home › Tasks › Task name. Detail pages name themselves with <Crumb>; until then (or without it) kind and id. */
@@ -31,7 +38,11 @@ function Breadcrumb() {
   const named = useCrumb(pathname);
   const parts = pathname.split("/").filter(Boolean);
   const crumbs: { label: string; href?: string }[] = [{ label: "Home", href: "/dashboard" }];
-  if (parts[0]) {
+  if (parts[0] === "hr") {
+    crumbs.push({ label: "HR", href: parts[1] ? "/hr" : undefined });
+    if (parts[1]) crumbs.push({ label: HR_PAGES[parts[1]] ?? parts[1], href: parts[2] ? `/hr/${parts[1]}` : undefined });
+    if (parts[2]) crumbs.push({ label: named ?? `Team #${parts[2]}` });
+  } else if (parts[0]) {
     const section = SECTIONS[parts[0]] ?? parts[0];
     // There is no /recurring list page: recurring tasks are a tab on Tasks.
     const listHref = parts[0] === "recurring" ? "/tasks?show=recurring" : `/${parts[0]}`;
