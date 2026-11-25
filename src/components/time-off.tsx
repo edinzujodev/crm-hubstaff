@@ -185,8 +185,8 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
         </p>
       )}
       <div className="flex items-center justify-between gap-2 pt-1">
-        <span className="text-xs text-muted">{instant ? "Goes on the calendar straight away." : "Waits for approval by your team leader or a super admin."}</span>
-        <Button disabled={pending || !startDate || days === 0 || refused}>{pending ? "Saving…" : instant ? "Add" : "Send request"}</Button>
+        <span className="text-xs text-muted">{instant ? "Counts straight away." : "Needs approval."}</span>
+        <Button className="shrink-0 whitespace-nowrap" disabled={pending || !startDate || days === 0 || refused}>{pending ? "Saving…" : instant ? "Add" : "Send request"}</Button>
       </div>
     </form>
   );
