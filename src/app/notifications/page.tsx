@@ -23,6 +23,7 @@ async function NotificationsContent({ searchParams }: { searchParams: PageProps<
     totalCount(auth.user.id),
   ]);
   const more = items.length > shown;
+  const renderedAt = new Date().getTime();
   const base = unreadOnly ? "/notifications?show=unread" : "/notifications";
 
   return (
@@ -37,7 +38,7 @@ async function NotificationsContent({ searchParams }: { searchParams: PageProps<
       <NotificationFeed
         items={items.slice(0, shown)}
         unread={unread}
-        now={Date.now()}
+        now={renderedAt}
         timeZone={config.timeZone}
         empty={unreadOnly ? "You're all caught up." : "No notifications yet. Requests and decisions about time off show up here."}
       />
