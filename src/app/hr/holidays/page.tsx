@@ -5,7 +5,7 @@ import { db, schema } from "@/db";
 import { DataGrid } from "@/components/data-grid";
 import { AddHolidayButton, BlockDaysButton, EditHolidayButton, HolidayButton, UnblockButton } from "@/components/holiday-actions";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
-import { pageGuard } from "@/lib/auth";
+import { HR_ROLES, pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { fmtLongDay, fmtRange, fmtShortDay, isWeekend, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
@@ -29,7 +29,7 @@ function YearSwitch({ year }: { year: number }) {
 /** Public holidays (days off for everyone) and religious holidays (on the calendar, booked per person). */
 async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined> }) {
   await connection();
-  const auth = await pageGuard();
+  const auth = await pageGuard(...HR_ROLES);
   const admin = auth.role === "super_admin";
   const current = Number(localDay(new Date(), config.timeZone).slice(0, 4));
   const asked = Number(await wanted);

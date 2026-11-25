@@ -1,16 +1,16 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { HrNavLinks, type HrNavGroup } from "@/components/hr-nav";
-import { getAuth } from "@/lib/auth";
+import { canUseHr, getAuth } from "@/lib/auth";
 import { waitingRequests } from "@/lib/hr";
 
-/** Everyone plans with the calendar, vacations and holidays; team leaders and super admins also manage. */
+/** HR is for super admins and team leaders: planning (calendar, vacations, holidays) and managing people. */
 async function HrNav() {
   await connection();
   const auth = await getAuth();
-  if (!auth) return null;
-  const manager = auth.role === "super_admin" || auth.role === "leader";
-  const waiting = manager ? (await waitingRequests(auth)).length : 0;
+  // The pages send everyone else away; without access there is no menu to show.
+  if (!auth || !canUseHr(auth)) return null;
+  const waiting = (await waitingRequests(auth)).length;
   const groups: HrNavGroup[] = [
     {
       title: "Planning",
@@ -20,17 +20,15 @@ async function HrNav() {
         { href: "/hr/holidays", label: "Holidays", icon: "pi-star" },
       ],
     },
-  ];
-  if (manager) {
-    groups.push({
+    {
       title: "Manage",
       items: [
         { href: "/hr/approvals", label: "Approvals", icon: "pi-check-circle", count: waiting },
         { href: "/hr/people", label: "People", icon: "pi-users" },
         { href: "/hr/teams", label: auth.role === "super_admin" ? "Teams" : "Your team", icon: "pi-sitemap" },
       ],
-    });
-  }
+    },
+  ];
   return <HrNavLinks groups={groups} />;
 }
 

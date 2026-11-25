@@ -5,7 +5,7 @@ import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { MonthSwitch, WhoSwitch } from "@/components/hr-switches";
 import { TimeOffButton } from "@/components/time-off";
 import { VacationGrid, type GridEntry } from "@/components/vacation-grid";
-import { pageGuard } from "@/lib/auth";
+import { HR_ROLES, pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { monthBounds, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
@@ -20,7 +20,7 @@ import { balanceFor, canManagePerson } from "@/lib/time-off";
  */
 async function VacationsContent({ params }: { params: Promise<{ m?: string; who?: string }> }) {
   await connection();
-  const auth = await pageGuard();
+  const auth = await pageGuard(...HR_ROLES);
   const today = localDay(new Date(), config.timeZone);
   const { m, who } = await params;
   const month = m && /^\d{4}-(0[1-9]|1[0-2])$/.test(m) ? m : today.slice(0, 7);

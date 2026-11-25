@@ -5,7 +5,7 @@ import { Avatar } from "@/components/avatar";
 import type { CalendarItem } from "@/components/hr-calendar";
 import { DecideButtons, KindBadge, TimeOffButton } from "@/components/time-off";
 import { VacationGrid } from "@/components/vacation-grid";
-import type { Auth } from "@/lib/auth";
+import { canUseHr, type Auth } from "@/lib/auth";
 import { ORDER, TYPE_ICON, TYPE_TONE } from "@/lib/calendar-tones";
 import { config } from "@/lib/config";
 import { parseConfig } from "@/lib/dashboard/config";
@@ -206,9 +206,12 @@ export async function HrCalendarWidget({ auth, raw }: { auth: Auth; raw: unknown
       ) : (
         <AgendaView first={first} last={last} now={now} items={items} empty="Nothing on the calendar in this stretch." />
       )}
-      <Footer>
-        <MoreLink href="/hr">Open the HR calendar</MoreLink>
-      </Footer>
+      {/* HR itself is for super admins and team leaders: nobody else gets a link to it. */}
+      {canUseHr(auth) && (
+        <Footer>
+          <MoreLink href="/hr">Open the HR calendar</MoreLink>
+        </Footer>
+      )}
     </>
   );
 }
@@ -251,9 +254,11 @@ export async function HrAwayWidget({ auth, raw }: { auth: Auth; raw: unknown }) 
             />
           </div>
         )}
-        <Footer>
-          <MoreLink href={`/hr/vacations${team ? "?who=team" : ""}`}>Open the vacation planner</MoreLink>
-        </Footer>
+        {canUseHr(auth) && (
+          <Footer>
+            <MoreLink href={`/hr/vacations${team ? "?who=team" : ""}`}>Open the vacation planner</MoreLink>
+          </Footer>
+        )}
       </>
     );
   }
@@ -287,9 +292,11 @@ export async function HrAwayWidget({ auth, raw }: { auth: Auth; raw: unknown }) 
           ))}
         </ul>
       )}
-      <Footer>
-        <MoreLink href={`/hr/vacations${team ? "?who=team" : ""}`}>Open the vacation planner</MoreLink>
-      </Footer>
+      {canUseHr(auth) && (
+        <Footer>
+          <MoreLink href={`/hr/vacations${team ? "?who=team" : ""}`}>Open the vacation planner</MoreLink>
+        </Footer>
+      )}
     </>
   );
 }

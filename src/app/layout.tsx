@@ -19,7 +19,7 @@ import { ProfileMenu } from "@/components/profile-menu";
 import { SyncButton } from "@/components/sync-button";
 import { IdleSignOut } from "@/components/idle-sign-out";
 import { hubstaffMode, config } from "@/lib/config";
-import { getAuth } from "@/lib/auth";
+import { canUseHr, getAuth } from "@/lib/auth";
 import { authMode } from "@/lib/session";
 import { fmtDateTime } from "@/lib/format";
 import { lastSyncAt } from "@/lib/sync";
@@ -78,7 +78,7 @@ async function NavLinks() {
     ["/leads", "Leads", "pi-bullseye", role === "super_admin"],
     ["/clients", "Clients", "pi-briefcase", role === "super_admin" || role === "leader"],
     ["/reports", "Reports", "pi-chart-bar", role === "super_admin" || role === "leader"],
-    ["/hr", "HR", "pi-users", true],
+    ["/hr", "HR", "pi-users", canUseHr(auth)],
     ["/config", "Config", "pi-cog", role === "super_admin" || role === "leader"],
   ];
   return (

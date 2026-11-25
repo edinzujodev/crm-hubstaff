@@ -201,8 +201,8 @@ export function HrCalendar({
           {open.type === "religious" && (
             <p className="text-xs text-muted">
               Not a day off for everyone. Celebrating it? Book it as a religious holiday under{" "}
-              <Link href="/hr/vacations" className="underline">
-                Vacations
+              <Link href="/profile/time-off" className="underline">
+                Time off on your profile
               </Link>
               .
             </p>

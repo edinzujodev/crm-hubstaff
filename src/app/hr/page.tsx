@@ -4,7 +4,7 @@ import { HrCalendar, NewEventButton } from "@/components/hr-calendar";
 import type { EventTeamOption } from "@/components/event-form";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { MonthSwitch, WhoSwitch } from "@/components/hr-switches";
-import { pageGuard } from "@/lib/auth";
+import { HR_ROLES, pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { monthBounds, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
@@ -21,7 +21,7 @@ function Legend({ tone, label }: { tone: string; label: string }) {
 
 async function CalendarContent({ params }: { params: Promise<{ m?: string; who?: string }> }) {
   await connection();
-  const auth = await pageGuard();
+  const auth = await pageGuard(...HR_ROLES);
   const admin = auth.role === "super_admin";
   const today = localDay(new Date(), config.timeZone);
   const { m, who } = await params;
