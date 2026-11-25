@@ -137,6 +137,16 @@ export function autoTitle(type: WidgetType, cfg: AnyConfig, owner: string, dir: 
       return `Clients${range ? ` · ${range}` : ""}`;
     case "team-workload":
       return `Team workload${range ? ` · ${range}` : ""}`;
+    case "hr-my-leave":
+      return cfg.view === "calendar" ? "My time off" : cfg.length === "long" ? "My time off" : "My vacation days";
+    case "hr-calendar": {
+      const when = cfg.view === "calendar" ? (cfg.length === "long" ? "this month" : "this week") : cfg.length === "long" ? "next 30 days" : "next 7 days";
+      return `${cfg.scope === "team" ? "Team calendar" : "Company calendar"} · ${when}`;
+    }
+    case "hr-away": {
+      const when = cfg.view === "calendar" ? (cfg.length === "long" ? "this month" : "this week") : cfg.length === "long" ? "next 30 days" : "next 7 days";
+      return `${cfg.scope === "team" ? "Who's away in my team" : "Who's away"} · ${when}`;
+    }
     default:
       return WIDGETS[type].label;
   }

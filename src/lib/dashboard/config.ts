@@ -69,6 +69,10 @@ export const WIDGET_TYPES = [
   "team-workload",
   "working-now",
   "leads",
+  "hr-my-leave",
+  "hr-calendar",
+  "hr-away",
+  "hr-approvals",
 ] as const;
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 
@@ -80,6 +84,13 @@ const who = {
   userId: id.nullable().default(null),
   teamId: id.nullable().default(null),
 };
+
+/** HR widgets: a calendar or a list, and a short (a week) or long (a month) stretch of time. */
+export const HR_VIEWS = ["calendar", "list"] as const;
+export const HR_LENGTHS = ["short", "long"] as const;
+const hrView = (d: (typeof HR_VIEWS)[number]) => z.enum(HR_VIEWS).default(d);
+const hrLength = z.enum(HR_LENGTHS).default("short");
+const hrScope = z.enum(["everyone", "team"]).default("everyone");
 
 export const schemas = {
   "new-task": z.object({}),
@@ -112,6 +123,10 @@ export const schemas = {
   "team-workload": z.object({ teamId: id.nullable().default(null), range }),
   "working-now": z.object({ teamId: id.nullable().default(null) }),
   leads: z.object({}),
+  "hr-my-leave": z.object({ view: hrView("list"), length: hrLength }),
+  "hr-calendar": z.object({ view: hrView("calendar"), length: hrLength, scope: hrScope }),
+  "hr-away": z.object({ view: hrView("list"), length: hrLength, scope: hrScope }),
+  "hr-approvals": z.object({ length: hrLength }),
 } satisfies Record<WidgetType, z.ZodType>;
 
 export type ConfigOf<T extends WidgetType> = z.infer<(typeof schemas)[T]>;
@@ -180,6 +195,34 @@ const limitField: FieldDef = {
   label: "Show up to",
   number: true,
   options: [5, 10, 20, 50].map((n) => ({ value: String(n), label: `${n} rows` })),
+};
+
+const viewField: FieldDef = {
+  kind: "select",
+  key: "view",
+  label: "Show as",
+  options: [
+    { value: "calendar", label: "Calendar" },
+    { value: "list", label: "List" },
+  ],
+};
+const lengthField: FieldDef = {
+  kind: "select",
+  key: "length",
+  label: "Length",
+  options: [
+    { value: "short", label: "Short: one week" },
+    { value: "long", label: "Long: a month" },
+  ],
+};
+const scopeField: FieldDef = {
+  kind: "select",
+  key: "scope",
+  label: "Whose",
+  options: [
+    { value: "everyone", label: "The whole company" },
+    { value: "team", label: "My team" },
+  ],
 };
 
 export const WIDGETS: Record<WidgetType, WidgetDef> = {
@@ -433,6 +476,110 @@ export const WIDGETS: Record<WidgetType, WidgetDef> = {
     defaultSize: "m",
     fields: [],
     presets: [{ id: "leads", label: "Leads pipeline", description: "Where the pipeline stands.", config: {} }],
+  },
+  "hr-my-leave": {
+    label: "My vacation days",
+    description: "Vacation days left, and your time off as a list or on a calendar.",
+    roles: ALL,
+    defaultSize: "m",
+    fields: [viewField, lengthField],
+    presets: [
+      {
+        id: "short",
+        label: "Vacation days left",
+        description: "Days left this year and your next time off.",
+        config: { view: "list", length: "short" },
+      },
+      {
+        id: "long-list",
+        label: "My time off",
+        description: "Your balance in full, with everything coming up and waiting for approval.",
+        config: { view: "list", length: "long" },
+      },
+      {
+        id: "calendar",
+        label: "My time off calendar",
+        description: "This month with your days off, holidays and blocked days marked.",
+        config: { view: "calendar", length: "long" },
+      },
+    ],
+  },
+  "hr-calendar": {
+    label: "Company calendar",
+    description: "Events, holidays, blocked days, birthdays and work anniversaries.",
+    roles: ALL,
+    defaultSize: "l",
+    fields: [viewField, lengthField, scopeField],
+    presets: [
+      {
+        id: "week",
+        label: "This week",
+        description: "The company calendar for the current week.",
+        config: { view: "calendar", length: "short" },
+      },
+      {
+        id: "month",
+        label: "This month",
+        description: "The whole month, like the HR calendar.",
+        config: { view: "calendar", length: "long" },
+      },
+      {
+        id: "upcoming",
+        label: "Coming up",
+        description: "A list of what is on in the next 7 days.",
+        config: { view: "list", length: "short" },
+      },
+      {
+        id: "upcoming-long",
+        label: "Coming up this month",
+        description: "A list of what is on in the next 30 days.",
+        config: { view: "list", length: "long" },
+      },
+    ],
+  },
+  "hr-away": {
+    label: "Who's away",
+    description: "The vacation calendar: who is off, as a list or a planner.",
+    roles: ALL,
+    defaultSize: "m",
+    fields: [viewField, lengthField, scopeField],
+    presets: [
+      {
+        id: "week-list",
+        label: "Away this week",
+        description: "Who is off today and in the next 7 days.",
+        config: { view: "list", length: "short" },
+      },
+      {
+        id: "week",
+        label: "Vacation planner: this week",
+        description: "People and days of the current week.",
+        config: { view: "calendar", length: "short" },
+      },
+      {
+        id: "month",
+        label: "Vacation planner: this month",
+        description: "People and days of the whole month.",
+        config: { view: "calendar", length: "long" },
+      },
+      {
+        id: "team",
+        label: "My team's time off",
+        description: "Who in your team is off in the next 30 days.",
+        config: { view: "list", length: "long", scope: "team" },
+      },
+    ],
+  },
+  "hr-approvals": {
+    label: "Requests to approve",
+    description: "Time-off requests waiting for your decision.",
+    roles: LEADERS,
+    defaultSize: "m",
+    fields: [{ ...lengthField, options: [{ value: "short", label: "Short: the oldest few" }, { value: "long", label: "Long: all of them" }] }],
+    presets: [
+      { id: "short", label: "Requests to approve", description: "How many are waiting, and the oldest ones.", config: { length: "short" } },
+      { id: "long", label: "All requests to approve", description: "Every request waiting for you.", config: { length: "long" } },
+    ],
   },
 };
 
