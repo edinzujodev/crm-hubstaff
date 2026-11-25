@@ -6,6 +6,7 @@ import { Modal } from "@/components/modal";
 import { EventForm, type EventData, type EventTeamOption } from "@/components/event-form";
 import { HolidayForm, type HolidayEdit } from "@/components/holiday-actions";
 import { addDays, fmtRange, fmtShortDay, isWeekend, weekday } from "@/lib/days";
+import { ORDER, TYPE_ICON, TYPE_TONE } from "@/lib/calendar-tones";
 
 export type CalendarItem = {
   key: string;
@@ -27,25 +28,6 @@ export type CalendarItem = {
   holiday?: HolidayEdit;
 };
 
-const TYPE_TONE: Record<CalendarItem["type"], string> = {
-  holiday: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
-  religious: "bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  blocked: "bg-red-500/15 text-red-800 dark:text-red-300",
-  birthday: "bg-pink-500/15 text-pink-800 dark:text-pink-300",
-  anniversary: "bg-indigo-500/15 text-indigo-800 dark:text-indigo-300",
-  event: "bg-primary text-(--primary-fg)",
-  "time-off": "bg-sky-500/15 text-sky-800 dark:text-sky-300",
-};
-const TYPE_ICON: Record<CalendarItem["type"], string> = {
-  holiday: "pi-star",
-  religious: "pi-star",
-  blocked: "pi-ban",
-  birthday: "pi-gift",
-  anniversary: "pi-trophy",
-  event: "pi-calendar",
-  "time-off": "pi-sun",
-};
-const ORDER: CalendarItem["type"][] = ["holiday", "blocked", "event", "religious", "birthday", "anniversary", "time-off"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MAX_IN_CELL = 3;
 

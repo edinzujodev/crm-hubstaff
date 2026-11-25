@@ -14,6 +14,7 @@ import { longDay } from "@/lib/chart";
 import { config } from "@/lib/config";
 import { WIDGETS, parseConfig, type WidgetType } from "@/lib/dashboard/config";
 import { doneTasks, openTasks, resolveRange, timeReport } from "@/lib/dashboard/data";
+import { HrApprovalsWidget, HrAwayWidget, HrCalendarWidget, HrMyLeaveWidget } from "@/components/dashboard/hr-widgets";
 import { getDirectory, resolveScope, resolveTeam, type Scope } from "@/lib/dashboard/scope";
 import { fmtDateTime, fmtDay, fmtDuration, truncate } from "@/lib/format";
 import { isSessionStale } from "@/lib/report";
@@ -537,5 +538,13 @@ export async function WidgetBody({ type, raw, auth }: { type: WidgetType; raw: u
       return <WorkingNowWidget auth={auth} raw={raw} />;
     case "leads":
       return auth.role === "super_admin" ? <LeadsWidget /> : <Note>Only a super admin can see this widget.</Note>;
+    case "hr-my-leave":
+      return <HrMyLeaveWidget auth={auth} raw={raw} />;
+    case "hr-calendar":
+      return <HrCalendarWidget auth={auth} raw={raw} />;
+    case "hr-away":
+      return <HrAwayWidget auth={auth} raw={raw} />;
+    case "hr-approvals":
+      return <HrApprovalsWidget auth={auth} raw={raw} />;
   }
 }
