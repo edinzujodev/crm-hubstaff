@@ -2,14 +2,17 @@ import { Avatar } from "@/components/avatar";
 import { eachDay, fmtShortDay, isWeekend } from "@/lib/days";
 import { KIND_LABEL, STATUS_LABEL, type TimeOffKind, type TimeOffStatus } from "@/lib/leave-days";
 
-/** Solid for approved, a light box with a coloured border for pending. "out" is what colleagues see. */
+/**
+ * Solid for approved, a light box with a coloured border for pending. "out" is what colleagues see: it uses the
+ * vacation colours, so approved time off is one colour whatever the viewer may know about it.
+ */
 const SOLID: Record<TimeOffKind | "out", string> = {
   vacation: "bg-sky-500",
   sick: "bg-rose-500",
   personal: "bg-violet-500",
   unpaid: "bg-zinc-400 dark:bg-zinc-500",
   religious: "bg-amber-500",
-  out: "bg-zinc-400 dark:bg-zinc-500",
+  out: "bg-sky-500",
 };
 const PENDING: Record<TimeOffKind | "out", string> = {
   vacation: "border-2 border-sky-400 bg-sky-500/10",
@@ -17,7 +20,7 @@ const PENDING: Record<TimeOffKind | "out", string> = {
   personal: "border-2 border-violet-400 bg-violet-500/10",
   unpaid: "border-2 border-zinc-400 bg-zinc-500/10",
   religious: "border-2 border-amber-400 bg-amber-500/10",
-  out: "border-2 border-zinc-400 bg-zinc-500/10",
+  out: "border-2 border-sky-400 bg-sky-500/10",
 };
 
 export type GridEntry = {
@@ -125,18 +128,17 @@ export function VacationGrid({
 
       {/* Legend */}
       <div className="flex flex-wrap gap-x-8 gap-y-3 border-t border-border px-4 py-3 text-xs">
-        {kinds.map((k) => (
+        {/* "out" shares the vacation colours, so it has no entry of its own: vacation then reads "Time off". */}
+        {kinds.filter((k) => k !== "out").map((k) => (
           <div key={k} className="space-y-1">
-            <p className="font-medium text-muted">{k === "out" ? "Out (colleagues)" : KIND_LABEL[k]}</p>
+            <p className="font-medium text-muted">{k === "vacation" && kinds.includes("out") ? "Time off" : KIND_LABEL[k]}</p>
             <p className="flex items-center gap-3">
               <span className="flex items-center gap-1.5">
                 <span className={`h-2.5 w-2.5 rounded-full ${SOLID[k]}`} aria-hidden /> Approved
               </span>
-              {k !== "out" && (
-                <span className="flex items-center gap-1.5">
-                  <span className={`h-2.5 w-2.5 rounded-full ${PENDING[k]} border`} aria-hidden /> Pending
-                </span>
-              )}
+              <span className="flex items-center gap-1.5">
+                <span className={`h-2.5 w-2.5 rounded-full ${PENDING[k]} border`} aria-hidden /> Pending
+              </span>
             </p>
           </div>
         ))}
