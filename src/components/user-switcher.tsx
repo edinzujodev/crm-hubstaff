@@ -1,13 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { switchUser } from "@/app/actions";
 import { Select } from "@/components/ui";
 
 /** Development only: picking someone signs you in as them right away. */
 export function UserSwitcher({ users, currentId }: { users: { id: number; name: string }[]; currentId: number }) {
-  const router = useRouter();
   const [pending, start] = useTransition();
   return (
     <Select
@@ -19,8 +17,8 @@ export function UserSwitcher({ users, currentId }: { users: { id: number; name: 
         start(async () => {
           const data = new FormData();
           data.set("userId", e.target.value);
+          // Setting the session cookie re-renders the page in the same response; no extra refresh needed.
           await switchUser(data);
-          router.refresh();
         })
       }
     >

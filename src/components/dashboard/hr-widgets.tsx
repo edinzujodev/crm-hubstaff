@@ -444,7 +444,7 @@ export async function HrApprovalsWidget({ auth, raw }: { auth: Auth; raw: unknow
       ) : (
         <ul className="divide-y divide-border">
           {shown.map(({ request: t, person }) => (
-            <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm transition-opacity has-data-pending:opacity-50">
               <span className="flex min-w-0 items-center gap-2.5">
                 <Avatar name={person.name} size="sm" />
                 <span className="min-w-0">

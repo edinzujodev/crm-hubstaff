@@ -177,7 +177,7 @@ export function DataGrid({
           if (row.details) toggle(row.key);
         }}
         rowClassName={(row: GridRow & { _leaving?: boolean }) =>
-          `${row.details ? "cursor-pointer" : ""} ${row.tone ? `row-${row.tone}` : ""} ${row._leaving ? "row-leaving" : ""}`
+          `transition-opacity has-data-pending:opacity-50 ${row.details ? "cursor-pointer" : ""} ${row.tone ? `row-${row.tone}` : ""} ${row._leaving ? "row-leaving" : ""}`
         }
         tableStyle={{ minWidth: "100%" }}
       >

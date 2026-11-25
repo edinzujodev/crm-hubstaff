@@ -1,7 +1,6 @@
 "use client";
 
 import { Button, InputText, Select } from "@/components/ui";
-import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { createLead } from "@/app/actions";
 import { Modal } from "@/components/modal";
@@ -27,13 +26,10 @@ export function NewLeadForm({ users }: { users: Option[] }) {
 
 function LeadForm({ users, onDone }: { users: Option[]; onDone: () => void }) {
   const [state, action, pending] = useActionState(createLead, null);
-  const router = useRouter();
+  // createLead refreshes the page in the same response, so closing the popup is all that is left.
   useEffect(() => {
-    if (state?.ok) {
-      onDone();
-      router.refresh();
-    }
-  }, [state, router, onDone]);
+    if (state?.ok) onDone();
+  }, [state, onDone]);
 
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">

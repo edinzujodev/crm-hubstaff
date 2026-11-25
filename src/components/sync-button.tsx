@@ -14,10 +14,12 @@ export function SyncButton() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
+  const lastRun = useRef(0);
 
   async function sync(force: boolean) {
     if (busy.current) return;
     busy.current = true;
+    lastRun.current = Date.now();
     setPending(true);
     try {
       const res = await fetch(`/api/sync${force ? "?force=1" : ""}`, { method: "POST" });
@@ -34,12 +36,22 @@ export function SyncButton() {
     }
   }
 
+  // Background syncs only while the tab is visible: a hidden tab would redraw its page for nobody. Coming back
+  // to the tab catches up at once if a sync is due.
   useEffect(() => {
+    const due = () => Date.now() - lastRun.current >= AUTO_SYNC_MS;
     const first = setTimeout(() => void sync(false), FIRST_SYNC_DELAY_MS);
-    const every = setInterval(() => void sync(false), AUTO_SYNC_MS);
+    const every = setInterval(() => {
+      if (!document.hidden) void sync(false);
+    }, AUTO_SYNC_MS);
+    const onVisible = () => {
+      if (!document.hidden && due()) void sync(false);
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearTimeout(first);
       clearInterval(every);
+      document.removeEventListener("visibilitychange", onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

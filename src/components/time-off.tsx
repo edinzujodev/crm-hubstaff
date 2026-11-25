@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { Button, Checkbox, InputTextarea, Select } from "@/components/ui";
 import { DateInput, type DayMark } from "@/components/date-input";
 import { Modal } from "@/components/modal";
@@ -213,46 +213,96 @@ export function TimeOffButton({
   );
 }
 
+/**
+ * Cancelling time off, optimistically: `cancelled` turns true on the click and stays so until the server's answer
+ * (with the refreshed page) arrives. If the server refuses, it goes back to false by itself and a notice says why.
+ */
+function useCancelTimeOff(id: number) {
+  const [cancelled, setCancelled] = useOptimistic(false);
+  const [, startTransition] = useTransition();
+  const cancel = () => {
+    if (!confirm("Cancel this time off?")) return;
+    startTransition(async () => {
+      setCancelled(true);
+      const r = await cancelTimeOff(id);
+      notify(r.ok ? { message: "Time off cancelled" } : { message: "Couldn't cancel it", detail: r.error, tone: "error" });
+    });
+  };
+  return [cancelled, cancel] as const;
+}
+
+/** `data-pending` lets the row or card around it fade (has-data-pending:) until the server confirms. */
 export function CancelTimeOffButton({ id, label = "Cancel" }: { id: number; label?: string }) {
-  const [busy, setBusy] = useState(false);
+  const [cancelled, cancel] = useCancelTimeOff(id);
+  if (cancelled) {
+    return (
+      <span data-pending="" className="text-xs font-medium text-muted">
+        Cancelled
+      </span>
+    );
+  }
+  return <Button size="small" text severity="danger" label={label} onClick={cancel} />;
+}
+
+const PILL: Record<TimeOffStatus, [string, string]> = {
+  pending: ["Pending", "bg-amber-400 text-amber-950"],
+  approved: ["Approved", "bg-emerald-500 text-white"],
+  rejected: ["Rejected", "bg-red-500 text-white"],
+  cancelled: ["Cancelled", "bg-foreground/10 text-muted"],
+};
+
+/** A request's status pill, with Cancel under it when allowed; the pill shows "Cancelled" as soon as it's clicked. */
+export function RequestStatus({ id, status, cancellable }: { id: number; status: TimeOffStatus; cancellable: boolean }) {
+  const [cancelled, cancel] = useCancelTimeOff(id);
+  const [pill, tone] = PILL[cancelled ? "cancelled" : status];
   return (
-    <Button
-      size="small"
-      text
-      severity="danger"
-      disabled={busy}
-      label={busy ? "Cancelling…" : label}
-      onClick={async () => {
-        if (!confirm("Cancel this time off?")) return;
-        setBusy(true);
-        const r = await cancelTimeOff(id);
-        setBusy(false);
-        notify(r.ok ? { message: "Time off cancelled" } : { message: "Couldn't cancel it", detail: r.error, tone: "error" });
-      }}
-    />
+    <>
+      <span data-pending={cancelled ? "" : undefined} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${tone}`}>
+        {pill}
+      </span>
+      {cancellable && !cancelled && <Button size="small" text severity="danger" label="Cancel" onClick={cancel} />}
+    </>
   );
 }
 
-/** Approve straight away, or reject with a reason. */
+/**
+ * Approve straight away, or reject with a reason. The decision shows on the click (and the row fades through
+ * `data-pending`) while the server saves it; if that fails, the buttons come back and a notice says why.
+ */
 export function DecideButtons({ id, name }: { id: number; name: string }) {
-  const [busy, setBusy] = useState(false);
+  const [decided, setDecided] = useOptimistic<"approved" | "rejected" | null>(null);
+  const [, startTransition] = useTransition();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
-  const decide = async (approve: boolean) => {
-    setBusy(true);
-    const r = await decideTimeOff(id, approve, approve ? undefined : reason);
-    setBusy(false);
-    if (r.ok) setRejecting(false);
-    notify(
-      r.ok
-        ? { message: approve ? `Approved for ${name}` : `Rejected for ${name}` }
-        : { message: "Couldn't save the decision", detail: r.error, tone: "error" },
-    );
+  const decide = (approve: boolean) => {
+    setRejecting(false);
+    startTransition(async () => {
+      setDecided(approve ? "approved" : "rejected");
+      const r = await decideTimeOff(id, approve, approve ? undefined : reason);
+      notify(
+        r.ok
+          ? { message: approve ? `Approved for ${name}` : `Rejected for ${name}` }
+          : { message: "Couldn't save the decision", detail: r.error, tone: "error" },
+      );
+      // The reason is still there, so a failed rejection can be sent again.
+      if (!r.ok && !approve) setRejecting(true);
+    });
   };
+  if (decided) {
+    return (
+      <span
+        data-pending=""
+        className={`inline-flex items-center gap-1.5 text-xs font-medium ${decided === "approved" ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
+      >
+        <i className={`pi ${decided === "approved" ? "pi-check-circle" : "pi-times-circle"} text-xs`} aria-hidden />
+        {decided === "approved" ? "Approved" : "Rejected"}
+      </span>
+    );
+  }
   return (
     <span className="flex items-center gap-1.5">
-      <Button size="small" icon="pi pi-check" label="Approve" disabled={busy} onClick={() => decide(true)} />
-      <Button size="small" severity="secondary" outlined label="Reject" disabled={busy} onClick={() => setRejecting(true)} />
+      <Button size="small" icon="pi pi-check" label="Approve" onClick={() => decide(true)} />
+      <Button size="small" severity="secondary" outlined label="Reject" onClick={() => setRejecting(true)} />
       {rejecting && (
         <Modal title={`Reject ${name}'s request`} onClose={() => setRejecting(false)}>
           <label className="flex flex-col gap-1 text-xs font-medium text-muted">
@@ -261,7 +311,7 @@ export function DecideButtons({ id, name }: { id: number; name: string }) {
           </label>
           <div className="flex justify-end gap-2">
             <Button type="button" severity="secondary" outlined label="Back" onClick={() => setRejecting(false)} />
-            <Button severity="danger" label="Reject" disabled={busy || !reason.trim()} onClick={() => decide(false)} />
+            <Button severity="danger" label="Reject" disabled={!reason.trim()} onClick={() => decide(false)} />
           </div>
         </Modal>
       )}

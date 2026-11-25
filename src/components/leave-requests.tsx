@@ -1,4 +1,4 @@
-import { CancelTimeOffButton } from "@/components/time-off";
+import { RequestStatus } from "@/components/time-off";
 import { fmtDays, fmtLongDay } from "@/lib/days";
 import { KIND_LABEL, type TimeOffKind, type TimeOffStatus } from "@/lib/leave-days";
 
@@ -9,13 +9,6 @@ const KIND_DOT: Record<TimeOffKind, string> = {
   personal: "bg-violet-500",
   unpaid: "bg-zinc-400",
   religious: "bg-amber-500",
-};
-
-const PILL: Record<TimeOffStatus, [string, string]> = {
-  pending: ["Pending", "bg-amber-400 text-amber-950"],
-  approved: ["Approved", "bg-emerald-500 text-white"],
-  rejected: ["Rejected", "bg-red-500 text-white"],
-  cancelled: ["Cancelled", "bg-foreground/10 text-muted"],
 };
 
 export type LeaveRequest = {
@@ -48,11 +41,10 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
   return (
     <ul className="space-y-3">
       {items.map((t) => {
-        const [pill, tone] = PILL[t.status];
         return (
           <li
             key={t.id}
-            className={`card grid grid-cols-2 items-center gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_8.5rem] ${
+            className={`card grid grid-cols-2 items-center gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_8.5rem] transition-opacity has-data-pending:opacity-60 ${
               t.status === "cancelled" ? "opacity-60" : ""
             }`}
           >
@@ -66,8 +58,7 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
             <Cell label="Start day">{fmtLongDay(t.startDate)}</Cell>
             <Cell label="End day">{fmtLongDay(t.endDate)}</Cell>
             <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:flex-col sm:items-end sm:gap-1">
-              <span className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${tone}`}>{pill}</span>
-              {t.cancellable && <CancelTimeOffButton id={t.id} />}
+              <RequestStatus id={t.id} status={t.status} cancellable={t.cancellable} />
             </div>
             {t.status === "rejected" && t.decisionNote && (
               <p className="col-span-full -mt-1 text-xs text-muted">

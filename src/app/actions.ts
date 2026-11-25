@@ -61,8 +61,8 @@ export async function switchUser(formData: FormData) {
   const id = z.coerce.number().int().positive().parse(formData.get("userId"));
   const user = await db.query.users.findFirst({ where: eq(schema.users.id, id) });
   if (!user) return;
+  // createSession sets the cookie, and setting a cookie in a Server Action re-renders the page already.
   await createSession(user.id);
-  refresh();
 }
 
 export async function signOut() {
