@@ -17,6 +17,7 @@ const SECTIONS: Record<string, string> = {
   templates: "Templates",
   config: "Config",
   profile: "Profile",
+  notifications: "Notifications",
 };
 const DETAIL: Record<string, string> = {
   tasks: "Task",

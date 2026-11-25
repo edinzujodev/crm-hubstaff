@@ -14,6 +14,7 @@ const ICONS: Record<string, string> = {
   Finished: "pi-check-circle",
   Deleted: "pi-trash",
   All: "pi-list",
+  Unread: "pi-envelope",
   Companies: "pi-building",
   Groups: "pi-sitemap",
   Won: "pi-trophy",

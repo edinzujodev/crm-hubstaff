@@ -166,13 +166,18 @@ export async function unreadCount(userId: number) {
   return row?.n ?? 0;
 }
 
-/** The latest notifications, newest first. */
-export async function latestNotifications(userId: number, limit = 20): Promise<NotificationItem[]> {
+export async function totalCount(userId: number) {
+  const [row] = await db.select({ n: count() }).from(schema.notifications).where(eq(schema.notifications.userId, userId));
+  return row?.n ?? 0;
+}
+
+/** The latest notifications (or only the unread ones), newest first. */
+export async function latestNotifications(userId: number, { limit = 20, unreadOnly = false } = {}): Promise<NotificationItem[]> {
   const rows = await db
     .select({ n: schema.notifications, actor: schema.users.name })
     .from(schema.notifications)
     .leftJoin(schema.users, eq(schema.users.id, schema.notifications.actorId))
-    .where(eq(schema.notifications.userId, userId))
+    .where(and(eq(schema.notifications.userId, userId), unreadOnly ? isNull(schema.notifications.readAt) : undefined))
     .orderBy(desc(schema.notifications.createdAt), desc(schema.notifications.id))
     .limit(limit);
   return rows.map(({ n, actor }) => ({
