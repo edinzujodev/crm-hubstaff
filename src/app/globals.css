@@ -141,7 +141,7 @@ body {
 .p-datatable {
   font-size: 0.875rem;
 }
-/* One weight for every button: PrimeReact makes a `label` bold (700) but leaves text passed as children normal. */
+/* One weight for every button. PrimeReact makes a `label` bold (700) but leaves text passed as children normal. */
 .p-button,
 .p-button .p-button-label {
   font-weight: 600;
