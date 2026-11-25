@@ -58,7 +58,7 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
             <Cell label="Start day">{fmtLongDay(t.startDate)}</Cell>
             <Cell label="End day">{fmtLongDay(t.endDate)}</Cell>
             <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:flex-col sm:items-end sm:gap-1">
-              <RequestStatus id={t.id} status={t.status} cancellable={t.cancellable} />
+              <RequestStatus id={t.id} kind={t.kind} status={t.status} cancellable={t.cancellable} />
             </div>
             {t.status === "rejected" && t.decisionNote && (
               <p className="col-span-full -mt-1 text-xs text-muted">

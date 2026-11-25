@@ -14,7 +14,7 @@ import {
   KIND_LABEL,
   KIND_TONE,
   needsApproval,
-  STATUS_LABEL,
+  statusLabel,
   TIME_OFF_KINDS,
   type TimeOffKind,
   type TimeOffStatus,
@@ -38,11 +38,12 @@ const STATUS_ICON: Record<TimeOffStatus, string> = {
   cancelled: "pi-ban",
 };
 
-export function StatusBadge({ status }: { status: TimeOffStatus }) {
+export function StatusBadge({ status, kind }: { status: TimeOffStatus; kind?: TimeOffKind }) {
+  const recorded = kind === "sick" && status === "approved";
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${STATUS_TONE[status]}`}>
-      <i className={`pi ${STATUS_ICON[status]} text-xs`} aria-hidden />
-      {STATUS_LABEL[status]}
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${recorded ? "text-foreground/70" : STATUS_TONE[status]}`}>
+      <i className={`pi ${recorded ? "pi-file-edit" : STATUS_ICON[status]} text-xs`} aria-hidden />
+      {kind ? statusLabel(kind, status) : statusLabel("vacation", status)}
     </span>
   );
 }
@@ -250,11 +251,24 @@ const PILL: Record<TimeOffStatus, [string, string]> = {
   rejected: ["Rejected", "bg-red-500 text-white"],
   cancelled: ["Cancelled", "bg-foreground/10 text-muted"],
 };
+/** Sick leave is recorded, not approved. */
+const RECORDED: [string, string] = ["Recorded", "bg-zinc-600 text-white dark:bg-zinc-400 dark:text-zinc-950"];
 
 /** A request's status pill, with Cancel under it when allowed; the pill shows "Cancelled" as soon as it's clicked. */
-export function RequestStatus({ id, status, cancellable }: { id: number; status: TimeOffStatus; cancellable: boolean }) {
+export function RequestStatus({
+  id,
+  kind,
+  status,
+  cancellable,
+}: {
+  id: number;
+  kind: TimeOffKind;
+  status: TimeOffStatus;
+  cancellable: boolean;
+}) {
   const [cancelled, cancel] = useCancelTimeOff(id);
-  const [pill, tone] = PILL[cancelled ? "cancelled" : status];
+  const shown = cancelled ? "cancelled" : status;
+  const [pill, tone] = kind === "sick" && shown === "approved" ? RECORDED : PILL[shown];
   return (
     <>
       <span data-pending={cancelled ? "" : undefined} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${tone}`}>

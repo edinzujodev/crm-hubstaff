@@ -14,7 +14,7 @@ import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween, holidaysBetween } from "@/lib/holidays";
 import { waitingRequests } from "@/lib/hr";
 import { awayBetween, companyCalendar, type AwayEntry } from "@/lib/hr-calendar";
-import { balanceFor, countDays, KIND_LABEL, KIND_TONE, TIME_OFF_KINDS, type TimeOffKind } from "@/lib/time-off";
+import { balanceFor, countDays, KIND_LABEL, KIND_TONE, statusLabel, TIME_OFF_KINDS, type TimeOffKind } from "@/lib/time-off";
 
 // ---------------------------------------------------------------------------------------------
 // Shared pieces. "Short" is a week, "long" a month: in a calendar the current week or month, in a list the
@@ -389,7 +389,7 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
         title: `${KIND_LABEL[t.kind]}${t.halfDay ? " (½)" : ""}`,
         tone: KIND_TONE[t.kind],
         tentative: t.status === "pending",
-        details: [t.status === "pending" ? "Waiting for approval" : "Approved"],
+        details: [t.status === "pending" ? "Waiting for approval" : statusLabel(t.kind as TimeOffKind, t.status)],
       })),
     ];
     body = <CalendarView first={span.first} last={span.last} now={now} items={items} month={cfg.length === "long" ? now.slice(0, 7) : undefined} />;
@@ -403,7 +403,7 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
               <span className="block truncate font-medium">{fmtRange(t.startDate, t.endDate)}</span>
               <span className="block text-xs text-muted">
                 {fmtDays(countDays(t, daysOff))}
-                {t.status === "pending" ? " · waiting for approval" : " · approved"}
+                {t.status === "pending" ? " · waiting for approval" : ` · ${statusLabel(t.kind as TimeOffKind, t.status).toLowerCase()}`}
               </span>
             </span>
             <KindBadge kind={t.kind as TimeOffKind} />

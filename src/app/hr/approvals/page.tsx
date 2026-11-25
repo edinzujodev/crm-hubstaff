@@ -168,7 +168,7 @@ async function ApprovalsContent() {
         />
       </Section>
 
-      <Section title="Time off" sub="Approved, rejected and cancelled, from the last 60 days on.">
+      <Section title="Time off" sub="Approved, recorded (sick leave), rejected and cancelled, from the last 60 days on.">
         <DataGrid
           flush
           empty="No time off yet."
@@ -188,7 +188,7 @@ async function ApprovalsContent() {
               <span key="n" className="font-mono tabular-nums">
                 {fmtNum(countDays(t, daysOff))}
               </span>,
-              <StatusBadge key="s" status={t.status} />,
+              <StatusBadge key="s" status={t.status} kind={t.kind} />,
             ],
             actions:
               t.status === "approved" && t.userId !== auth.user.id ? <CancelTimeOffButton id={t.id} /> : undefined,

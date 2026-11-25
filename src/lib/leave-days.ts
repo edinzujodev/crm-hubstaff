@@ -29,6 +29,14 @@ export const STATUS_LABEL: Record<TimeOffStatus, string> = {
   cancelled: "Cancelled",
 };
 
+/**
+ * What a status is called for a kind of time off. Sick leave is never approved: it is recorded and counts straight
+ * away (stored as "approved" so it is counted like approved time off), so it reads "Recorded".
+ */
+export function statusLabel(kind: TimeOffKind | "out", status: TimeOffStatus): string {
+  return kind === "sick" && status === "approved" ? "Recorded" : STATUS_LABEL[status];
+}
+
 /** Sick leave counts as soon as it is entered; everything else is asked for and approved. */
 export const needsApproval = (kind: TimeOffKind) => kind !== "sick";
 

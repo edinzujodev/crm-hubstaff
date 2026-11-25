@@ -1,6 +1,6 @@
 import { Avatar } from "@/components/avatar";
 import { eachDay, fmtShortDay, isWeekend } from "@/lib/days";
-import { KIND_LABEL, STATUS_LABEL, type TimeOffKind, type TimeOffStatus } from "@/lib/leave-days";
+import { KIND_LABEL, statusLabel, type TimeOffKind, type TimeOffStatus } from "@/lib/leave-days";
 
 /**
  * Solid for approved, a light box with a coloured border for pending. "out" is what colleagues see: it uses the
@@ -111,7 +111,7 @@ export function VacationGrid({
                     <div key={d} className={`flex items-center justify-center p-[3px] ${off(d) ? "bg-foreground/[0.035]" : ""} ${weekStart(d, i) ? "border-l border-border" : ""}`}>
                       {e ? (
                         <span
-                          title={`${r.name} · ${e.kind === "out" ? "Out" : KIND_LABEL[e.kind]}${e.halfDay ? " (half day)" : ""} · ${fmtShortDay(d)} · ${STATUS_LABEL[e.status]}${e.note ? ` · ${e.note}` : ""}`}
+                          title={`${r.name} · ${e.kind === "out" ? "Out" : KIND_LABEL[e.kind]}${e.halfDay ? " (half day)" : ""} · ${fmtShortDay(d)} · ${statusLabel(e.kind, e.status)}${e.note ? ` · ${e.note}` : ""}`}
                           className={`block w-full rounded-md ${e.halfDay ? "h-1/2" : "h-full"} ${e.status === "pending" ? PENDING[e.kind] : SOLID[e.kind]}`}
                         />
                       ) : (
@@ -134,11 +134,14 @@ export function VacationGrid({
             <p className="font-medium text-muted">{k === "vacation" && kinds.includes("out") ? "Time off" : KIND_LABEL[k]}</p>
             <p className="flex items-center gap-3">
               <span className="flex items-center gap-1.5">
-                <span className={`h-2.5 w-2.5 rounded-full ${SOLID[k]}`} aria-hidden /> Approved
+                <span className={`h-2.5 w-2.5 rounded-full ${SOLID[k]}`} aria-hidden /> {statusLabel(k, "approved")}
               </span>
-              <span className="flex items-center gap-1.5">
-                <span className={`h-2.5 w-2.5 rounded-full ${PENDING[k]} border`} aria-hidden /> Pending
-              </span>
+              {/* Sick leave is recorded straight away: it is never pending. */}
+              {k !== "sick" && (
+                <span className="flex items-center gap-1.5">
+                  <span className={`h-2.5 w-2.5 rounded-full ${PENDING[k]} border`} aria-hidden /> Pending
+                </span>
+              )}
             </p>
           </div>
         ))}
