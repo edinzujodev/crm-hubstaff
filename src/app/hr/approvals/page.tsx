@@ -6,12 +6,12 @@ import { Avatar } from "@/components/avatar";
 import { fmtNum } from "@/components/balance-tiles";
 import { DataGrid } from "@/components/data-grid";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
-import { CancelTimeOffButton, DecideButtons, KindBadge, StatusBadge, TimeOffButton } from "@/components/time-off";
+import { CancelTimeOffButton, DecideButtons, KindBadge, StatusBadge } from "@/components/time-off";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { addDays, fmtLongDay, fmtRange, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
-import { blockedBetween, daysOffBetween } from "@/lib/holidays";
+import { daysOffBetween } from "@/lib/holidays";
 import { managedPeople, waitingRequests } from "@/lib/hr";
 import { balancesFor, countDays } from "@/lib/time-off";
 
@@ -45,7 +45,7 @@ async function ApprovalsContent() {
         .from(schema.users)
     : people.map((p) => ({ ...p, annual: null }));
   const ids = everyone.map((p) => p.id);
-  const [balances, rows, allowanceRows, daysOff, blocked] = await Promise.all([
+  const [balances, rows, allowanceRows, daysOff] = await Promise.all([
     balancesFor(ids, year, today),
     ids.length
       ? db
@@ -62,7 +62,6 @@ async function ApprovalsContent() {
       : [],
     admin ? db.select().from(schema.leaveAllowances).where(eq(schema.leaveAllowances.year, year)) : [],
     daysOffBetween(ymd(year - 1, 1, 1), ymd(year + 1, 12, 31)),
-    blockedBetween(today, ymd(year + 1, 12, 31)),
   ]);
   const name = new Map(everyone.map((p) => [p.id, p.name]));
   const sorted = [...everyone].sort((a, b) => a.name.localeCompare(b.name));
@@ -71,18 +70,6 @@ async function ApprovalsContent() {
     <HrTabs
       auth={auth}
       active="approvals"
-      actions={
-        <TimeOffButton
-          label="Add time off for someone"
-          icon="pi-plus"
-          me={{ id: auth.user.id, name: auth.user.name }}
-          people={people.map((p) => ({ id: p.id, name: p.name }))}
-          daysOff={[...daysOff]}
-          vacationLeft={Math.max(0, (balances.get(auth.user.id)?.left ?? 0) - (balances.get(auth.user.id)?.pending ?? 0))}
-          selfApproves={admin}
-          blocked={blocked.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason }))}
-        />
-      }
     >
       <Section title="Waiting for you" sub={waiting.length ? "Oldest first." : undefined}>
         <DataGrid
@@ -216,7 +203,7 @@ export default function ApprovalsPage() {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Approvals</h1>
-      <HrSuspense actions={["Add time off for someone"]}>
+      <HrSuspense>
         <ApprovalsContent />
       </HrSuspense>
     </div>

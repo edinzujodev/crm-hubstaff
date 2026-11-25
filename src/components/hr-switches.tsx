@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { fmtMonth, shiftMonth } from "@/lib/days";
+import { MonthPicker } from "@/components/month-picker";
+import { shiftMonth } from "@/lib/days";
 
 const href = (base: string, month: string, team: boolean) => `${base}?m=${month}${team ? "&who=team" : ""}`;
 
-/** ‹ November 2026 › with a "Today" link when another month is shown. */
+/** ‹ November 2026 › with a "Today" link when another month is shown. Clicking the month opens a picker to jump to any. */
 export function MonthSwitch({ base, month, current, team }: { base: string; month: string; current: string; team: boolean }) {
   const link = "flex h-8 w-8 items-center justify-center rounded-md hover:bg-foreground/5";
   return (
@@ -11,7 +12,7 @@ export function MonthSwitch({ base, month, current, team }: { base: string; mont
       <Link href={href(base, shiftMonth(month, -1), team)} className={link} aria-label="Previous month">
         <i className="pi pi-chevron-left text-xs" aria-hidden />
       </Link>
-      <span className="min-w-32 text-center font-semibold">{fmtMonth(month)}</span>
+      <MonthPicker base={base} month={month} current={current} team={team} />
       <Link href={href(base, shiftMonth(month, 1), team)} className={link} aria-label="Next month">
         <i className="pi pi-chevron-right text-xs" aria-hidden />
       </Link>

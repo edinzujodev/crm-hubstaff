@@ -82,12 +82,8 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
     <HrTabs
       auth={auth}
       active="vacations"
-      actions={
-        <>
-          <TimeOffButton {...form} label="Add sick leave" icon="pi-heart" kind="sick" outlined />
-          <TimeOffButton {...form} label="Request time off" icon="pi-plus" />
-        </>
-      }
+      // One button for every kind: the form picks vacation, sick leave and the rest, and (for approvers) the person.
+      actions={<TimeOffButton {...form} label="Add time off" icon="pi-plus" />}
       toolbar={
         <>
           <WhoSwitch base="/hr/vacations" month={month} team={teamOnly} hasTeam={myTeams.length > 0} />
@@ -115,7 +111,7 @@ export default function VacationsPage({ searchParams }: PageProps<"/hr/vacations
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Vacations</h1>
-      <HrSuspense actions={["Add sick leave", "Request time off"]}>
+      <HrSuspense actions={["Add time off"]}>
         <VacationsContent params={params} />
       </HrSuspense>
     </div>
