@@ -5,9 +5,9 @@ import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { BalanceTiles, fmtNum } from "@/components/balance-tiles";
 import { DataGrid } from "@/components/data-grid";
-import { CancelTimeOffButton, KindBadge, StatusBadge } from "@/components/time-off";
-import { fmtRange } from "@/lib/days";
-import { daysOffBetween } from "@/lib/holidays";
+import { CancelTimeOffButton, KindBadge, StatusBadge, TimeOffButton } from "@/components/time-off";
+import { fmtRange, ymd } from "@/lib/days";
+import { blockedBetween, daysOffBetween } from "@/lib/holidays";
 import { countDays } from "@/lib/leave-days";
 import { ProfileForm } from "@/components/profile-form";
 import { pageGuard } from "@/lib/auth";
@@ -41,10 +41,14 @@ async function ProfileContent() {
   const me = auth.user;
   const today = localDay(new Date(), config.timeZone);
 
-  const [team, balance, history] = await Promise.all([
+  const year = Number(today.slice(0, 4));
+  const [team, balance, history, formDaysOff, blocked] = await Promise.all([
     me.teamId ? db.query.teams.findFirst({ where: eq(schema.teams.id, me.teamId) }) : undefined,
-    balanceFor(me.id, Number(today.slice(0, 4)), today),
+    balanceFor(me.id, year, today),
     db.select().from(schema.timeOff).where(eq(schema.timeOff.userId, me.id)).orderBy(desc(schema.timeOff.startDate)),
+    // For the request form: it counts working days and shows holidays and blocked days in the picker.
+    daysOffBetween(ymd(year, 1, 1), ymd(year + 1, 12, 31)),
+    blockedBetween(today, ymd(year + 1, 12, 31)),
   ]);
   // Public holidays inside the history don't count as days taken.
   const daysOff = history.length
@@ -110,9 +114,21 @@ async function ProfileContent() {
       </section>
 
       <section className="card space-y-4 p-5">
-        <div>
-          <h2 className="font-semibold">Vacation</h2>
-          <p className="text-xs text-muted">Your days off this year.</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Vacation</h2>
+            <p className="text-xs text-muted">Your days off this year.</p>
+          </div>
+          <TimeOffButton
+            label="Request time off"
+            icon="pi-plus"
+            me={{ id: me.id, name: me.name }}
+            people={[]}
+            daysOff={[...formDaysOff]}
+            vacationLeft={Math.max(0, balance.left - balance.pending)}
+            selfApproves={auth.role === "super_admin"}
+            blocked={blocked.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason }))}
+          />
         </div>
         <BalanceTiles b={balance} today={today} />
       </section>

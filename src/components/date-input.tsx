@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar } from "primereact/calendar";
+import { Calendar, type CalendarDateTemplateEvent } from "primereact/calendar";
 import { useState } from "react";
 
 const toDate = (iso: string | undefined | null) => {
@@ -8,6 +8,15 @@ const toDate = (iso: string | undefined | null) => {
   const [y, m, d] = iso.split("-").map(Number);
   return y && m && d ? new Date(y, m - 1, d) : null;
 };
+/** A day picked out in the picker: blocked (red, struck through) or a public holiday (green). */
+export type DayMark = { tone: "blocked" | "holiday"; title: string };
+
+const MARK_CLASS: Record<DayMark["tone"], string> = {
+  blocked: "bg-red-500/15 text-red-700 line-through decoration-red-500/70 dark:text-red-300",
+  holiday: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
+};
+const LEGEND: Record<DayMark["tone"], string> = { blocked: "Blocked for time off", holiday: "Public holiday" };
+
 const toIso = (d: Date | null) =>
   d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
 
@@ -24,6 +33,7 @@ export function DateInput({
   className,
   max,
   disabledDays,
+  marks,
   onChange,
 }: {
   name?: string;
@@ -36,10 +46,13 @@ export function DateInput({
   max?: string;
   /** Days that can't be picked (yyyy-mm-dd). */
   disabledDays?: string[];
+  /** Days to colour in the picker (yyyy-mm-dd), with what they are on hover and a legend under the month. */
+  marks?: Record<string, DayMark>;
   onChange?: (e: { target: { value: string } }) => void;
 }) {
   const [inner, setInner] = useState(defaultValue ?? "");
   const current = value !== undefined ? value : inner;
+  const tones = marks ? [...new Set(Object.values(marks).map((m) => m.tone))].sort() : [];
   return (
     <>
       <Calendar
@@ -51,6 +64,33 @@ export function DateInput({
         required={required}
         maxDate={toDate(max) ?? undefined}
         disabledDates={disabledDays?.map((d) => toDate(d)!).filter(Boolean)}
+        dateTemplate={
+          marks
+            ? (d: CalendarDateTemplateEvent) => {
+                const mark = marks[`${d.year}-${String(d.month + 1).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`];
+                if (!mark) return d.day;
+                return (
+                  <span title={mark.title} className={`flex h-full w-full items-center justify-center rounded-full ${MARK_CLASS[mark.tone]}`}>
+                    {d.day}
+                  </span>
+                );
+              }
+            : undefined
+        }
+        footerTemplate={
+          tones.length
+            ? () => (
+                <div className="flex flex-wrap gap-3 px-1 pt-2 text-xs text-muted">
+                  {tones.map((t) => (
+                    <span key={t} className="flex items-center gap-1.5">
+                      <span className={`h-2.5 w-2.5 rounded-full ${MARK_CLASS[t]}`} aria-hidden />
+                      {LEGEND[t]}
+                    </span>
+                  ))}
+                </div>
+              )
+            : undefined
+        }
         className={className}
         appendTo={typeof document === "undefined" ? undefined : document.body}
         onChange={(e) => {

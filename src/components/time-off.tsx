@@ -2,7 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Checkbox, InputTextarea, Select } from "@/components/ui";
-import { DateInput } from "@/components/date-input";
+import { DateInput, type DayMark } from "@/components/date-input";
 import { Modal } from "@/components/modal";
 import { cancelTimeOff, decideTimeOff, requestTimeOff } from "@/app/hr/actions";
 import { eachDay, fmtDays, fmtRange } from "@/lib/days";
@@ -65,7 +65,9 @@ type FormProps = {
   onDone: () => void;
 };
 
-function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "vacation", selfApproves, blocked = [], onDone }: FormProps) {
+const NO_BLOCKS: BlockedSpan[] = [];
+
+function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "vacation", selfApproves, blocked = NO_BLOCKS, onDone }: FormProps) {
   const [state, action, pending] = useActionState(requestTimeOff, null);
   const [userId, setUserId] = useState(String(me.id));
   const [kind, setKind] = useState<TimeOffKind>(initialKind);
@@ -93,6 +95,13 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
   const clash = startDate && end >= startDate ? blockedClash({ startDate, endDate: end }, blocks) : undefined;
   const refused = !!clash && !selfApproves;
   const blockedDays = selfApproves ? [] : blocks.flatMap((b) => eachDay(b.startDate, b.endDate));
+  // Shown in the picker: blocked days with the reason, and public holidays (they don't count as days off).
+  const marks = useMemo(() => {
+    const out: Record<string, DayMark> = {};
+    for (const d of daysOff) out[d] = { tone: "holiday", title: "Public holiday" };
+    for (const b of blocked) for (const d of eachDay(b.startDate, b.endDate)) out[d] = { tone: "blocked", title: `Blocked: ${b.reason}` };
+    return out;
+  }, [daysOff, blocked]);
 
   return (
     <form action={action} className="space-y-4">
@@ -131,11 +140,11 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           First day
-          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required disabledDays={blockedDays} className="w-full" />
+          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required disabledDays={blockedDays} marks={marks} className="w-full" />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           Last day
-          <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} disabledDays={blockedDays} className="w-full" />
+          <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} disabledDays={blockedDays} marks={marks} className="w-full" />
         </label>
       </div>
       {single && (
