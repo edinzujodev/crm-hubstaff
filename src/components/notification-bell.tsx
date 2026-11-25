@@ -171,8 +171,8 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
             {items === null ? (
               <p className="px-4 py-8 text-center text-sm text-muted">Loading…</p>
             ) : items.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-muted">
-                <i className="pi pi-check-circle mb-2 block text-lg" aria-hidden />
+              <p className="flex flex-col items-center gap-2 px-4 py-8 text-sm text-muted">
+                <i className="pi pi-check-circle text-lg" aria-hidden />
                 You&apos;re all caught up.
               </p>
             ) : (
