@@ -28,12 +28,6 @@ function Note({ children }: { children: React.ReactNode }) {
   return <p className="py-6 text-center text-sm text-muted">{children}</p>;
 }
 
-function Narrowed() {
-  return (
-    <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">Narrowed to the data you are allowed to see.</p>
-  );
-}
-
 function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "bad" | "warn" }) {
   const color =
     tone === "bad" ? "text-red-600 dark:text-red-400" : tone === "warn" ? "text-amber-700 dark:text-amber-400" : "";
@@ -123,7 +117,6 @@ async function TasksWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const link = auth.role === "worker" || r.scope.userId === auth.user.id ? "/tasks" : "/tasks?scope=team";
   return (
     <>
-      {r.clamped && <Narrowed />}
       {rows.length === 0 ? (
         <Note>{cfg.due === "overdue" ? "Nothing is running late." : "No tasks here."}</Note>
       ) : (
@@ -160,7 +153,6 @@ async function TaskCountsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const soon = open.filter((t) => t.hours !== null && t.hours >= 0 && t.urgency !== "on_track").length;
   return (
     <>
-      {r.clamped && <Narrowed />}
       <div className="grid grid-cols-2 gap-2 @md:grid-cols-3">
         <Stat label="Open" value={open.length} />
         <Stat label="Running late" value={late} tone={late ? "bad" : undefined} />
@@ -177,7 +169,6 @@ async function StatsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const report = await timeReport(r.scope, cfg.range, cfg.clientId);
   return (
     <>
-      {r.clamped && <Narrowed />}
       <div className="grid grid-cols-2 gap-2 @md:grid-cols-4">
         <Stat label="Tracked" value={fmtDuration(report.total.tracked)} />
         <Stat label="Billable" value={fmtDuration(report.total.billable)} />
@@ -197,7 +188,6 @@ async function TimeChartWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const days = dailySeries(report, from, to);
   return (
     <>
-      {r.clamped && <Narrowed />}
       <ChartTip>
         {cfg.metric === "activity" ? (
           <LineChart
@@ -234,7 +224,6 @@ async function TimeBreakdownWidget({ auth, raw }: { auth: Auth; raw: unknown }) 
   const rows = { client: report.byClient, person: report.byUser, team: report.byTeam, task: report.byTask }[cfg.by];
   return (
     <>
-      {r.clamped && <Narrowed />}
       <ChartTip>
         <BarList data={toBars(rows, report.total.tracked)} />
       </ChartTip>
@@ -330,7 +319,7 @@ async function openSessions() {
 
 async function TeamWorkloadWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const cfg = parseConfig("team-workload", raw);
-  const { teamId, clamped } = resolveTeam(auth, cfg.teamId);
+  const { teamId } = resolveTeam(auth, cfg.teamId);
   const scope: Scope = { userId: null, teamId };
   const [dir, open, report, sessions] = await Promise.all([
     getDirectory(),
@@ -357,7 +346,6 @@ async function TeamWorkloadWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const unassigned = open.filter((t) => !t.task.assigneeId);
   return (
     <>
-      {clamped && <Narrowed />}
       {rows.length === 0 ? (
         <Note>No people here yet.</Note>
       ) : (
@@ -427,7 +415,7 @@ async function TeamWorkloadWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
 
 async function WorkingNowWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
   const cfg = parseConfig("working-now", raw);
-  const { teamId, clamped } = resolveTeam(auth, cfg.teamId);
+  const { teamId } = resolveTeam(auth, cfg.teamId);
   const [dir, sessions] = await Promise.all([getDirectory(), openSessions()]);
   const rows = sessions
     .map((s) => ({ ...s, user: dir.userById.get(s.userId) }))
@@ -435,7 +423,6 @@ async function WorkingNowWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
   return (
     <>
-      {clamped && <Narrowed />}
       {rows.length === 0 ? (
         <Note>Nobody has a task running.</Note>
       ) : (
