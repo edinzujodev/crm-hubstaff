@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ProfileForm } from "@/components/profile-form";
+import { SectionHead } from "@/components/section-head";
 import { pageGuard } from "@/lib/auth";
 import { authMode } from "@/lib/session";
 import { config } from "@/lib/config";
@@ -45,10 +46,7 @@ async function ProfileContent() {
   return (
     <div className="space-y-5">
       <section className="card space-y-4 p-5">
-        <div>
-          <h1 className="font-semibold">Personal details</h1>
-          <p className="text-xs text-muted">Only you can change these. Your colleagues see your name and job title.</p>
-        </div>
+        <SectionHead as="h1" title="Personal details" sub="Only you can change these. Your colleagues see your name and job title." />
         <ProfileForm
           today={today}
           initial={{
@@ -62,10 +60,7 @@ async function ProfileContent() {
       </section>
 
       <section className="card space-y-4 p-5">
-        <div>
-          <h2 className="font-semibold">Work</h2>
-          <p className="text-xs text-muted">Set by a super admin or your team leader in HR.</p>
-        </div>
+        <SectionHead title="Work" sub="Set by a super admin or your team leader in HR." />
         <dl className="grid gap-4 sm:grid-cols-3">
           <Fact label="Role">{ROLE_LABEL[auth.role]}</Fact>
           <Fact label="Team">{team?.name ?? "No team"}</Fact>
@@ -78,12 +73,7 @@ async function ProfileContent() {
       </section>
 
       <section className="card space-y-4 p-5">
-        <div>
-          <h2 className="font-semibold">Sign-in & security</h2>
-          <p className="text-xs text-muted">
-            You sign in with your Google account, so the CRM keeps no password for you.
-          </p>
-        </div>
+        <SectionHead title="Sign-in & security" sub="You sign in with your Google account, so the CRM keeps no password for you." />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <dl>
             <Fact label="Google account">{me.email}</Fact>

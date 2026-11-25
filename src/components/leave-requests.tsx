@@ -33,18 +33,18 @@ function Cell({ label, children, className = "" }: { label: string; children: Re
   );
 }
 
-/** Your time off, newest first, one card per request. */
+/** Your time off, newest first, one row per request (inside a card). */
 export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
   if (!items.length) {
-    return <p className="card p-5 text-sm text-muted">You haven&apos;t asked for any time off yet.</p>;
+    return <p className="px-5 py-6 text-sm text-muted">You haven&apos;t asked for any time off yet.</p>;
   }
   return (
-    <ul className="space-y-3">
+    <ul className="divide-y divide-border">
       {items.map((t) => {
         return (
           <li
             key={t.id}
-            className={`card grid grid-cols-2 items-center gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_8.5rem] transition-opacity has-data-pending:opacity-60 ${
+            className={`grid grid-cols-2 items-center gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_8.5rem] transition-opacity has-data-pending:opacity-60 ${
               t.status === "cancelled" ? "opacity-60" : ""
             }`}
           >

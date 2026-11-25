@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { LeaveTiles } from "@/components/balance-tiles";
 import { LeaveRequests, type LeaveRequest } from "@/components/leave-requests";
 import { FormSkeleton } from "@/components/page-skeleton";
+import { SectionHead } from "@/components/section-head";
 import { TimeOffButton } from "@/components/time-off";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
@@ -54,11 +55,8 @@ async function TimeOffContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold">My time off</h1>
-          <p className="text-xs text-muted">Your days off in {year} and everything you have asked for.</p>
-        </div>
+      <h1 className="sr-only">My time off</h1>
+      <div className="flex justify-end">
         <TimeOffButton
           label="Add request"
           icon="pi-plus"
@@ -71,8 +69,12 @@ async function TimeOffContent() {
         />
       </div>
       <LeaveTiles b={balance} taken={taken} today={today} />
-      <h2 className="pt-2 font-semibold">My requests</h2>
-      <LeaveRequests items={requests} />
+      <section className="card overflow-hidden p-5 pb-0">
+        <SectionHead title="My requests" />
+        <div className="-mx-5">
+          <LeaveRequests items={requests} />
+        </div>
+      </section>
     </div>
   );
 }
