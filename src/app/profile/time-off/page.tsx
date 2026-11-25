@@ -4,7 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { LeaveTiles } from "@/components/balance-tiles";
 import { LeaveRequests, type LeaveRequest } from "@/components/leave-requests";
-import { FormSkeleton } from "@/components/page-skeleton";
+import { TimeOffSkeleton } from "@/components/page-skeleton";
 import { SectionHead } from "@/components/section-head";
 import { TimeOffButton } from "@/components/time-off";
 import { pageGuard } from "@/lib/auth";
@@ -56,7 +56,7 @@ async function TimeOffContent() {
   return (
     <div className="space-y-4">
       <h1 className="sr-only">My time off</h1>
-      <div className="flex justify-end">
+      <div className="flex justify-start">
         <TimeOffButton
           label="Add request"
           icon="pi-plus"
@@ -81,7 +81,7 @@ async function TimeOffContent() {
 
 export default function ProfileTimeOffPage() {
   return (
-    <Suspense fallback={<FormSkeleton />}>
+    <Suspense fallback={<TimeOffSkeleton />}>
       <TimeOffContent />
     </Suspense>
   );
