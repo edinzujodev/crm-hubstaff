@@ -412,7 +412,7 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
       {summary}
       {body}
       <Footer>
-        <MoreLink href="/profile">See all on your profile</MoreLink>
+        <MoreLink href="/profile/time-off">See all on your profile</MoreLink>
         {request}
       </Footer>
     </div>

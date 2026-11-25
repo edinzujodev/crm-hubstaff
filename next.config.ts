@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
       { source: "/team", destination: "/hr/people", permanent: false },
       { source: "/team/:id", destination: "/hr/teams/:id", permanent: false },
       // Your own time off (balance and history) is on your profile; requests are made on HR → Vacations.
-      { source: "/hr/time-off", destination: "/profile", permanent: false },
+      { source: "/hr/time-off", destination: "/profile/time-off", permanent: false },
     ];
   },
   turbopack: {

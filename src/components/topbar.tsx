@@ -16,6 +16,7 @@ const SECTIONS: Record<string, string> = {
   hr: "HR",
   templates: "Templates",
   config: "Config",
+  profile: "Profile",
 };
 const DETAIL: Record<string, string> = {
   tasks: "Task",
@@ -30,6 +31,10 @@ const HR_PAGES: Record<string, string> = {
   people: "People",
   teams: "Teams",
   holidays: "Holidays",
+};
+/** Named pages one level under a section (not detail pages with an id). */
+const SUBPAGES: Record<string, string> = {
+  "profile/time-off": "Time off",
 };
 
 /** Where you are: Home › Tasks › Task name. Detail pages name themselves with <Crumb>; until then (or without it) kind and id. */
@@ -47,7 +52,7 @@ function Breadcrumb() {
     // There is no /recurring list page: recurring tasks are a tab on Tasks.
     const listHref = parts[0] === "recurring" ? "/tasks?show=recurring" : `/${parts[0]}`;
     crumbs.push({ label: section, href: parts[1] ? listHref : undefined });
-    if (parts[1]) crumbs.push({ label: named ?? `${DETAIL[parts[0]] ?? "Item"} #${parts[1]}` });
+    if (parts[1]) crumbs.push({ label: named ?? SUBPAGES[`${parts[0]}/${parts[1]}`] ?? `${DETAIL[parts[0]] ?? "Item"} #${parts[1]}` });
   }
   // On the dashboard itself "Home › Dashboard" says the same thing twice.
   const shown = parts[0] === "dashboard" ? crumbs.slice(1) : crumbs;

@@ -6,15 +6,18 @@ import { usePathname } from "next/navigation";
 export type HrNavItem = { href: string; label: string; icon: string; count?: number };
 export type HrNavGroup = { title: string; items: HrNavItem[] };
 
-/** The HR section's own menu: a column on the left on larger screens, a scrolling row on phones. */
-export function HrNavLinks({ groups }: { groups: HrNavGroup[] }) {
+/**
+ * A section's own menu (HR, Profile): a column on the left on larger screens, a scrolling row on phones.
+ * `root` is the section's front page, which is only current on its own (not for the pages under it).
+ */
+export function HrNavLinks({ groups, label = "HR", root = "/hr" }: { groups: HrNavGroup[]; label?: string; root?: string }) {
   const path = usePathname();
-  const active = (href: string) => (href === "/hr" ? path === "/hr" : path === href || path.startsWith(`${href}/`));
+  const active = (href: string) => (href === root ? path === root : path === href || path.startsWith(`${href}/`));
   return (
-    <nav aria-label="HR" className="flex gap-1 overflow-x-auto [scrollbar-width:none] md:flex-col md:gap-5 md:overflow-visible">
+    <nav aria-label={label} className="flex gap-1 overflow-x-auto [scrollbar-width:none] md:flex-col md:gap-5 md:overflow-visible">
       {groups.map((g) => (
         <div key={g.title} className="flex shrink-0 gap-1 md:flex-col">
-          <p className="hidden px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted md:block">{g.title}</p>
+          {g.title && <p className="hidden px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted md:block">{g.title}</p>}
           {g.items.map((i) => {
             const on = active(i.href);
             return (

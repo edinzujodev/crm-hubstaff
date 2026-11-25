@@ -1,0 +1,72 @@
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { HrNavLinks } from "@/components/hr-nav";
+import { getAuth } from "@/lib/auth";
+
+const ROLE_LABEL = { super_admin: "Super admin", leader: "Team leader", worker: "Member" } as const;
+
+/** Who you are, then the profile's pages: your details, and your time off. */
+async function ProfileNav() {
+  await connection();
+  const auth = await getAuth();
+  if (!auth) return null;
+  const me = auth.user;
+  const initials = me.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 md:flex-col md:items-start md:px-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-base font-semibold text-(--primary-fg) md:h-14 md:w-14 md:text-lg">
+          {initials}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-semibold">{me.name}</p>
+          <p className="truncate text-xs text-muted">{me.jobTitle || ROLE_LABEL[auth.role]}</p>
+        </div>
+      </div>
+      <HrNavLinks
+        label="Profile"
+        root="/profile"
+        groups={[
+          {
+            title: "",
+            items: [
+              { href: "/profile", label: "Personal details", icon: "pi-user" },
+              { href: "/profile/time-off", label: "Time off", icon: "pi-calendar" },
+            ],
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+function NavSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden>
+      <span className="block h-12 w-12 animate-pulse rounded-full bg-foreground/5 md:mx-3 md:h-14 md:w-14" />
+      <div className="flex gap-2 md:flex-col">
+        {[0, 1].map((i) => (
+          <span key={i} className="h-9 w-32 animate-pulse rounded-md bg-foreground/5 md:w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function ProfileLayout({ children }: LayoutProps<"/profile">) {
+  return (
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 md:flex-row md:items-start">
+      <aside className="md:sticky md:top-16 md:w-48 md:shrink-0">
+        <Suspense fallback={<NavSkeleton />}>
+          <ProfileNav />
+        </Suspense>
+      </aside>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
