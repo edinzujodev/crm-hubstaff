@@ -6,6 +6,8 @@ import { getAuth, taskScope } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { openTasks } from "@/lib/dashboard/data";
 import { fmtTime, truncate } from "@/lib/format";
+import { NotificationBell } from "@/components/notification-bell";
+import { unreadCount } from "@/lib/notifications";
 import { lastSyncAt } from "@/lib/sync";
 
 const pill =
@@ -13,13 +15,13 @@ const pill =
 
 /**
  * What is worth seeing on every page: the task you have running, how many tasks are critical,
- * when Hubstaff last synced, and today's date.
+ * when Hubstaff last synced, today's date, and the notifications bell.
  */
 export async function TopbarStatus() {
   await connection();
   const auth = await getAuth();
   if (!auth) return null;
-  const [running, open, synced, onReview, toReview] = await Promise.all([
+  const [running, open, synced, onReview, toReview, unread] = await Promise.all([
     db
       .select({ taskId: schema.tasks.id, title: schema.tasks.title, startedAt: schema.workSessions.startedAt })
       .from(schema.workSessions)
@@ -44,6 +46,7 @@ export async function TopbarStatus() {
           eq(schema.tasks.reviewerId, auth.user.id),
         ),
       ),
+    unreadCount(auth.user.id),
   ]);
   const reviewTotal = onReview[0]?.n ?? 0;
   const reviewMine = toReview[0]?.n ?? 0;
@@ -88,6 +91,7 @@ export async function TopbarStatus() {
         {synced ? `Synced ${fmtTime(synced, config.timeZone)}` : "Not synced yet"}
       </span>
       <span className="hidden px-1 text-xs font-medium sm:inline">{date}</span>
+      <NotificationBell initialUnread={unread} />
     </>
   );
 }
