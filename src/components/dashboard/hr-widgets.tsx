@@ -23,7 +23,8 @@ import { balanceFor, countDays, KIND_LABEL, KIND_TONE, TIME_OFF_KINDS, type Time
 
 type Length = "short" | "long";
 const today = () => localDay(new Date(), config.timeZone);
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Working days only: the calendars leave out Saturdays and Sundays. */
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 function calendarSpan(length: Length, day: string) {
   if (length === "long") return monthBounds(day.slice(0, 7));
@@ -83,25 +84,25 @@ function Chip({ item }: { item: CalendarItem }) {
 }
 
 /**
- * A calendar of `first`..`last`, Monday to Sunday. A week shows every item in its day; a month shows a dot per
+ * A calendar of `first`..`last`, Monday to Friday (weekends left out). A week shows every item in its day; a month shows a dot per
  * item in narrow widgets and short chips in wide ones (container queries, so it follows the widget's width).
  */
 function CalendarView({ first, last, now, items, month }: { first: string; last: string; now: string; items: CalendarItem[]; month?: string }) {
   const gridStart = addDays(first, -((weekday(first) + 6) % 7));
   const gridEnd = addDays(last, (7 - weekday(last)) % 7);
-  const days = eachDay(gridStart, gridEnd);
+  const days = eachDay(gridStart, gridEnd).filter((d) => !isWeekend(d));
   const on = (d: string) => items.filter((i) => i.start <= d && i.end >= d).sort(sortItems);
   const week = !month;
   return (
     <div className="@container">
-      <div className="grid grid-cols-7 text-center text-[11px] font-medium text-muted">
+      <div className="grid grid-cols-5 text-center text-[11px] font-medium text-muted">
         {WEEKDAYS.map((w) => (
           <div key={w} className="pb-1">
             {w}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-border bg-border">
+      <div className="grid grid-cols-5 gap-px overflow-hidden rounded-md border border-border bg-border">
         {days.map((d) => {
           const list = on(d);
           const outside = month ? d.slice(0, 7) !== month : false;
@@ -111,7 +112,7 @@ function CalendarView({ first, last, now, items, month }: { first: string; last:
               key={d}
               title={list.length ? `${fmtShortDay(d)}\n${list.map((i) => `• ${i.title}`).join("\n")}` : fmtShortDay(d)}
               className={`min-w-0 p-1 ${week ? "min-h-24" : "min-h-12 @xl:min-h-16"} ${
-                isWeekend(d) || outside ? "bg-[color-mix(in_srgb,var(--surface),var(--foreground)_4%)]" : "bg-surface"
+                outside ? "bg-[color-mix(in_srgb,var(--surface),var(--foreground)_4%)]" : "bg-surface"
               } ${outside ? "text-muted" : ""}`}
             >
               <span

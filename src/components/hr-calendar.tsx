@@ -28,7 +28,8 @@ export type CalendarItem = {
   holiday?: HolidayEdit;
 };
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Working days only: the calendars leave out Saturdays and Sundays. */
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const MAX_IN_CELL = 3;
 
 function Chip({ item, onOpen }: { item: CalendarItem; onOpen: (i: CalendarItem) => void }) {
@@ -86,11 +87,11 @@ export function HrCalendar({
   }, []);
   const canAdd = eventTeams.length > 0;
 
-  // The grid runs Monday to Sunday, from the week of the 1st to the week of the last day.
+  // The grid runs Monday to Friday (weekends left out), from the week of the 1st to the week of the last day.
   const gridStart = addDays(first, -((weekday(first) + 6) % 7));
   const gridEnd = addDays(last, (7 - weekday(last)) % 7);
   const days: string[] = [];
-  for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) days.push(d);
+  for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) if (!isWeekend(d)) days.push(d);
   const on = (day: string) =>
     items
       .filter((i) => i.start <= day && i.end >= day)
@@ -101,23 +102,21 @@ export function HrCalendar({
     <>
       {/* Month grid (tablets and up) */}
       <div className="hidden md:block">
-        <div className="grid grid-cols-7 border-b border-border text-xs font-medium text-muted">
+        <div className="grid grid-cols-5 border-b border-border text-xs font-medium text-muted">
           {WEEKDAYS.map((w) => (
             <div key={w} className="px-2 py-2">
               {w}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-5">
           {days.map((d) => {
             const list = on(d);
             const isToday = d === today;
             return (
               <div
                 key={d}
-                className={`group min-h-28 border-b border-r border-border p-1.5 [&:nth-child(7n)]:border-r-0 ${
-                  isWeekend(d) ? "bg-foreground/[0.025]" : ""
-                } ${inMonth(d) ? "" : "opacity-45"}`}
+                className={`group min-h-28 border-b border-r border-border p-1.5 [&:nth-child(5n)]:border-r-0 ${inMonth(d) ? "" : "opacity-45"}`}
               >
                 <div className="mb-1 flex items-center justify-between">
                   <span
