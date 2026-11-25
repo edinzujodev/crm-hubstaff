@@ -518,3 +518,29 @@ export type LeaveAllowance = typeof leaveAllowances.$inferSelect;
 export type Holiday = typeof holidays.$inferSelect;
 export type BlockedPeriod = typeof blockedPeriods.$inferSelect;
 export type HrEvent = typeof events.$inferSelect;
+
+// Things a person should know about, shown under the bell in the top bar. `readAt` is set when they open it, or
+// when it no longer needs them (another approver already decided the request).
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
+    // What happened, e.g. "time_off_requested" (see lib/notifications.ts).
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+    // Where clicking it goes.
+    href: text("href"),
+    // Who did it, for the avatar.
+    actorId: integer("actor_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    timeOffId: integer("time_off_id").references((): AnyPgColumn => timeOff.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt), index("notifications_time_off_idx").on(t.timeOffId)],
+);
+
+export type Notification = typeof notifications.$inferSelect;

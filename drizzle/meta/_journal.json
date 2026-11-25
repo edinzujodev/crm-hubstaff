@@ -211,6 +211,13 @@
       "when": 1795530353504,
       "tag": "0029_blocked_periods",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795617134161,
+      "tag": "0030_notifications",
+      "breakpoints": true
     }
   ]
 }

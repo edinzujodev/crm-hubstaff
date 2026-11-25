@@ -8,11 +8,21 @@ import { config } from "@/lib/config";
 import { fmtDays, fmtRange, isDay, weekday } from "@/lib/days";
 import { REPEATS } from "@/lib/recurrence";
 import { localDay } from "@/lib/format";
+import { notifyTimeOffAdded, notifyTimeOffCancelled, notifyTimeOffDecided } from "@/lib/notifications";
 import { blockedBetween, builtInHolidays, daysOffBetween } from "@/lib/holidays";
 import { run, type Result } from "@/lib/result";
 import { balanceFor, blockable, blockedClash, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval } from "@/lib/time-off";
 
 const today = () => localDay(new Date(), config.timeZone);
+
+/** Notifications are a courtesy: if sending one fails, the change itself still stands. */
+async function quietly(send: () => Promise<void>) {
+  try {
+    await send();
+  } catch (e) {
+    console.error("Couldn't send the notification:", e);
+  }
+}
 
 const day = (what: string) => z.string().refine(isDay, `Pick ${what}`);
 const optionalText = (max: number) =>
@@ -99,7 +109,7 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
     }
 
     const approvedNow = !needsApproval(input.kind) || (forSomeoneElse && canDecide(auth, person)) || auth.role === "super_admin";
-    await db.insert(schema.timeOff).values({
+    const [row] = await db.insert(schema.timeOff).values({
       userId: person.id,
       kind: input.kind,
       startDate: input.startDate,
@@ -109,7 +119,8 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
       status: approvedNow ? "approved" : "pending",
       createdById: auth.user.id,
       ...(approvedNow && needsApproval(input.kind) ? { decidedById: auth.user.id, decidedAt: new Date() } : {}),
-    });
+    }).returning({ id: schema.timeOff.id });
+    await quietly(() => notifyTimeOffAdded(auth.user, person, { ...input, id: row!.id }, approvedNow));
     return { status: approvedNow ? "approved" : "pending" };
   });
 }
@@ -127,10 +138,14 @@ export async function decideTimeOff(id: number, approve: boolean, note?: string)
     if (!approve && !decisionNote) throw new Error("Say why it's rejected, so they know.");
     // Blocked after it was asked for: a team leader can only reject it now.
     if (approve) await checkNotBlocked(auth, row);
-    await db
+    const changed = await db
       .update(schema.timeOff)
       .set({ status: approve ? "approved" : "rejected", decidedById: auth.user.id, decidedAt: new Date(), decisionNote })
-      .where(and(eq(schema.timeOff.id, id), eq(schema.timeOff.status, "pending")));
+      .where(and(eq(schema.timeOff.id, id), eq(schema.timeOff.status, "pending")))
+      .returning({ id: schema.timeOff.id });
+    // Someone else decided it a moment earlier: they have told the person already.
+    if (!changed.length) throw new Error("That request has already been decided.");
+    await quietly(() => notifyTimeOffDecided(auth.user, person, row, approve, decisionNote));
     return undefined;
   });
 }
@@ -152,6 +167,7 @@ export async function cancelTimeOff(id: number): Promise<Result> {
       canDecide(auth, person) || (own && (row.status === "pending" || row.kind === "sick" || row.startDate > today()));
     if (!allowed) throw new Error("Time off that has already started can only be cancelled by your team leader.");
     await db.update(schema.timeOff).set({ status: "cancelled" }).where(eq(schema.timeOff.id, id));
+    await quietly(() => notifyTimeOffCancelled(auth.user, person, row));
     return undefined;
   });
 }
