@@ -13,7 +13,7 @@ import { ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween } from "@/lib/holidays";
 import { countDays, TIME_OFF_KINDS, type TimeOffKind } from "@/lib/leave-days";
-import { balanceFor } from "@/lib/time-off";
+import { balanceFor, teamOffFor } from "@/lib/time-off";
 
 async function TimeOffContent() {
   await connection();
@@ -24,12 +24,14 @@ async function TimeOffContent() {
   const yearStart = ymd(year, 1, 1);
   const yearEnd = ymd(year, 12, 31);
 
-  const [balance, history, formDaysOff, blocked] = await Promise.all([
+  const [balance, history, formDaysOff, blocked, team] = await Promise.all([
     balanceFor(me.id, year, today),
     db.select().from(schema.timeOff).where(eq(schema.timeOff.userId, me.id)).orderBy(desc(schema.timeOff.startDate)),
     // For the request form: it counts working days and shows holidays and blocked days in the picker.
     daysOffBetween(yearStart, ymd(year + 1, 12, 31)),
     blockedBetween(today, ymd(year + 1, 12, 31)),
+    // A worker sees their team's calendar in the form, and can't pick days the team is full on.
+    teamOffFor(auth, today, ymd(year + 1, 12, 31)),
   ]);
   // Public holidays inside the history (and this year, for the tiles) don't count as days taken.
   const daysOff = await daysOffBetween(
@@ -66,6 +68,8 @@ async function TimeOffContent() {
           vacationLeft={Math.max(0, balance.left - balance.pending)}
           selfApproves={auth.role === "super_admin"}
           blocked={blocked.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason }))}
+          team={team}
+          today={today}
         />
       </div>
       <LeaveTiles b={balance} taken={taken} today={today} />

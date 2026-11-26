@@ -43,6 +43,32 @@ export const needsApproval = (kind: TimeOffKind) => kind !== "sick";
 /** Days nobody can take off, set by a super admin. */
 export type BlockedSpan = { startDate: string; endDate: string; reason: string };
 
+/**
+ * A worker's team as the request form shows it: who else is off when (approved or still waiting), and how many may
+ * be off at once (null: no limit).
+ */
+export type TeamOff = {
+  name: string;
+  max: number | null;
+  /** Everyone in the team, the worker included. */
+  size: number;
+  off: { name: string; startDate: string; endDate: string; pending: boolean }[];
+};
+
+/** Who of the team is off on each day, by date. Weekends and days off are left out. */
+export function teamOffByDay(team: TeamOff, daysOff: Set<string>): Map<string, string[]> {
+  const byDay = new Map<string, string[]>();
+  for (const o of team.off) {
+    for (const d of eachDay(o.startDate, o.endDate)) {
+      if (isWeekend(d) || daysOff.has(d)) continue;
+      const names = byDay.get(d) ?? [];
+      if (!names.includes(o.name)) names.push(o.name);
+      byDay.set(d, names);
+    }
+  }
+  return byDay;
+}
+
 /** Blocked days stop time off that is planned; sick leave is recorded whatever the date. */
 export const blockable = (kind: TimeOffKind) => kind !== "sick";
 

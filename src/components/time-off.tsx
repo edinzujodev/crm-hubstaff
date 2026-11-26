@@ -5,8 +5,9 @@ import { Button, Checkbox, InputTextarea, Select } from "@/components/ui";
 import { DateInput, type DayMark } from "@/components/date-input";
 import { Modal } from "@/components/modal";
 import { useConfirm } from "@/components/confirm-modal";
+import { TeamOffCalendar } from "@/components/team-off-calendar";
 import { cancelTimeOff, decideTimeOff, requestTimeOff, updateTimeOff } from "@/app/hr/actions";
-import { eachDay, fmtDays, fmtRange } from "@/lib/days";
+import { eachDay, fmtDays, fmtRange, fmtShortDay, isWeekend } from "@/lib/days";
 import {
   blockable,
   blockedClash,
@@ -16,6 +17,8 @@ import {
   KIND_TONE,
   needsApproval,
   statusLabel,
+  type TeamOff,
+  teamOffByDay,
   TIME_OFF_KINDS,
   type TimeOffKind,
   type TimeOffStatus,
@@ -78,6 +81,10 @@ type FormProps = {
   blocked?: BlockedSpan[];
   /** Change this time off instead of adding new time off. */
   editing?: TimeOffEdit;
+  /** A worker's team: shown as a calendar, and days it is full on can't be picked. */
+  team?: TeamOff;
+  /** Today in the company's time zone (for the team calendar). */
+  today?: string;
   onDone: () => void;
 };
 
@@ -95,6 +102,8 @@ export function TimeOffForm({
   selfApproves,
   blocked = NO_BLOCKS,
   editing,
+  team,
+  today = "",
   onDone,
 }: FormProps) {
   const save = useMemo(() => (editing ? updateTimeOff.bind(null, editing.id) : requestTimeOff), [editing]);
@@ -126,8 +135,25 @@ export function TimeOffForm({
   const instant = !needsApproval(kind) || !forMe || selfApproves;
   const blocks = blockable(kind) ? blocked : [];
   const clash = startDate && end >= startDate ? blockedClash({ startDate, endDate: end }, blocks) : undefined;
-  const refused = !!clash && !selfApproves;
-  const blockedDays = selfApproves ? [] : blocks.flatMap((b) => eachDay(b.startDate, b.endDate));
+  // The team's limit (workers only: leaders and super admins are warned by the server and may go past it).
+  const offByDay = useMemo(() => (team ? teamOffByDay(team, offSet) : new Map<string, string[]>()), [team, offSet]);
+  const limited = !!team && team.max !== null && blockable(kind);
+  const fullDays = limited ? [...offByDay].filter(([, names]) => names.length >= team!.max!).map(([d]) => d) : [];
+  const teamClash =
+    limited && startDate && end >= startDate
+      ? eachDay(startDate, end)
+          .filter((d) => !isWeekend(d) && !offSet.has(d))
+          .map((d) => ({ day: d, names: offByDay.get(d) ?? [] }))
+          .find((x) => x.names.length >= team!.max!)
+      : undefined;
+  const refused = (!!clash && !selfApproves) || !!teamClash;
+  const blockedDays = [...(selfApproves ? [] : blocks.flatMap((b) => eachDay(b.startDate, b.endDate))), ...fullDays];
+  const pick = (d: string) => {
+    if (!startDate || endDate || d < startDate) {
+      setStart(d);
+      setEnd("");
+    } else setEnd(d);
+  };
   // Shown in the picker: blocked days with the reason, and public holidays (they don't count as days off).
   const marks = useMemo(() => {
     const out: Record<string, DayMark> = {};
@@ -184,6 +210,16 @@ export function TimeOffForm({
           <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} disabledDays={blockedDays} marks={marks} className="w-full" />
         </label>
       </div>
+      {team && (
+        <TeamOffCalendar team={team} offByDay={offByDay} daysOff={offSet} today={today} start={startDate} end={endDate} onPick={pick} />
+      )}
+      {teamClash && (
+        <p role="alert" className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+          <i className="pi pi-users mr-1.5 text-xs" aria-hidden />
+          {team!.name} allows {team!.max} of {team!.size} people off at the same time, and {fmtShortDay(teamClash.day)} already has{" "}
+          {teamClash.names.length} ({teamClash.names.join(", ")}) off or waiting for approval. Pick other days.
+        </p>
+      )}
       {single && (
         <label className="flex items-center gap-2 text-sm">
           <Checkbox name="halfDay" checked={halfDay} onChange={(e) => setHalfDay(e.target.checked)} />
@@ -258,7 +294,7 @@ export function TimeOffButton({
     <>
       <Button icon={icon ? `pi ${icon}` : undefined} severity={outlined ? "secondary" : undefined} outlined={outlined} onClick={() => setOpen(true)} label={label} />
       {open && (
-        <Modal title={label} onClose={close}>
+        <Modal title={label} onClose={close} wide={!!form.team}>
           <TimeOffForm {...form} onDone={close} />
         </Modal>
       )}

@@ -3,7 +3,7 @@ import { db, schema } from "@/db";
 import type { Auth } from "@/lib/auth";
 import { ymd } from "@/lib/days";
 import { daysOffBetween } from "@/lib/holidays";
-import { countDays, workingDays } from "@/lib/leave-days";
+import { countDays, workingDays, type TeamOff } from "@/lib/leave-days";
 
 export * from "@/lib/leave-days";
 
@@ -20,6 +20,35 @@ export function canDecide(a: Auth, person: { id: number; teamId: number | null }
 /** Whose time off a person may enter or see in full: their own, and everyone they approve for. */
 export const canManagePerson = (a: Auth, person: { id: number; teamId: number | null }) =>
   person.id === a.user.id || canDecide(a, person);
+
+/**
+ * For a worker's request form: their team's time off from `from` to `to` (everyone else's, approved or waiting),
+ * shown only as "off", never the kind. Undefined for leaders and super admins (they may go past the limit) and for
+ * people without a team.
+ */
+export async function teamOffFor(auth: Auth, from: string, to: string): Promise<TeamOff | undefined> {
+  const teamId = auth.user.teamId;
+  if (auth.role !== "worker" || teamId === null) return undefined;
+  const [team, [{ size }], off] = await Promise.all([
+    db.query.teams.findFirst({ where: eq(schema.teams.id, teamId), columns: { name: true, maxOff: true } }),
+    db.select({ size: count() }).from(schema.users).where(eq(schema.users.teamId, teamId)),
+    db
+      .select({ name: schema.users.name, startDate: schema.timeOff.startDate, endDate: schema.timeOff.endDate, status: schema.timeOff.status })
+      .from(schema.timeOff)
+      .innerJoin(schema.users, eq(schema.users.id, schema.timeOff.userId))
+      .where(
+        and(
+          eq(schema.users.teamId, teamId),
+          ne(schema.timeOff.userId, auth.user.id),
+          inArray(schema.timeOff.status, ["approved", "pending"]),
+          lte(schema.timeOff.startDate, to),
+          gte(schema.timeOff.endDate, from),
+        ),
+      ),
+  ]);
+  if (!team) return undefined;
+  return { name: team.name, max: team.maxOff, size, off: off.map((o) => ({ name: o.name, startDate: o.startDate, endDate: o.endDate, pending: o.status === "pending" })) };
+}
 
 export type TeamLimitClash = { day: string; off: string[]; max: number; size: number; team: string };
 

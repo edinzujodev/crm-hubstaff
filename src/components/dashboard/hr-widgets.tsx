@@ -14,7 +14,7 @@ import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween, holidaysBetween } from "@/lib/holidays";
 import { waitingRequests } from "@/lib/hr";
 import { awayBetween, companyCalendar, type AwayEntry } from "@/lib/hr-calendar";
-import { balanceFor, countDays, KIND_LABEL, KIND_TONE, statusLabel, TIME_OFF_KINDS, type TimeOffKind } from "@/lib/time-off";
+import { balanceFor, countDays, teamOffFor, KIND_LABEL, KIND_TONE, statusLabel, TIME_OFF_KINDS, type TimeOffKind } from "@/lib/time-off";
 
 // ---------------------------------------------------------------------------------------------
 // Shared pieces. "Short" is a week, "long" a month: in a calendar the current week or month, in a list the
@@ -324,7 +324,7 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
   const span = cfg.view === "calendar" ? calendarSpan(cfg.length, now) : listSpan(cfg.length, now);
   const [from, to] = cfg.view === "calendar" ? [addDays(span.first, -6), addDays(span.last, 6)] : [now, ymd(year + 1, 12, 31)];
 
-  const [b, mine, daysOff, blockedAhead, holidays, blockedHere] = await Promise.all([
+  const [b, mine, daysOff, blockedAhead, holidays, blockedHere, team] = await Promise.all([
     balanceFor(me.id, year, now),
     db
       .select()
@@ -335,6 +335,8 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
     blockedBetween(now, ymd(year + 1, 12, 31)),
     cfg.view === "calendar" ? holidaysBetween(from, to) : Promise.resolve([]),
     cfg.view === "calendar" ? blockedBetween(from, to) : Promise.resolve([]),
+    // For the request form: a worker sees their team's calendar.
+    teamOffFor(auth, now, ymd(year + 1, 12, 31)),
   ]);
   const total = b.allowance + b.carriedOver - b.expired;
 
@@ -349,6 +351,8 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
       vacationLeft={Math.max(0, b.left - b.pending)}
       selfApproves={auth.role === "super_admin"}
       blocked={blockedAhead.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason }))}
+      team={team}
+      today={now}
     />
   );
 
