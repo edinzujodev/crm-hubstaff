@@ -225,6 +225,13 @@
       "when": 1795639111193,
       "tag": "0031_team_max_off",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795696541843,
+      "tag": "0032_hr_tab_links",
+      "breakpoints": true
     }
   ]
 }
