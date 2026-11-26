@@ -104,7 +104,7 @@ function RepeatFields({
           )}
           <label className="flex flex-col gap-1 text-xs font-medium text-muted">
             Repeat until <span className="font-normal">(optional, empty: no end)</span>
-            <DateInput name="repeatUntil" value={until} onChange={(e) => setUntil(e.target.value)} className="w-full" />
+            <DateInput name="repeatUntil" value={until} min={startDate || undefined} onChange={(e) => setUntil(e.target.value)} className="w-full" />
           </label>
           {summary && (
             <p className="flex items-center gap-2 text-sm">
@@ -155,11 +155,22 @@ export function EventForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={field}>
           Date
-          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required className="w-full" />
+          <DateInput
+            name="startDate"
+            value={startDate}
+            onChange={(e) => {
+              const d = e.target.value;
+              setStart(d);
+              // A later start moves the end along with it.
+              if (endDate && d && endDate < d) setEnd(d);
+            }}
+            required
+            className="w-full"
+          />
         </label>
         <label className={field}>
           Ends on <span className="sr-only">(optional)</span>
-          <DateInput name="endDate" value={endDate} onChange={(e) => setEnd(e.target.value)} className="w-full" />
+          <DateInput name="endDate" value={endDate} min={startDate || undefined} onChange={(e) => setEnd(e.target.value)} className="w-full" />
         </label>
       </div>
       <label className="flex items-center gap-2 text-sm">

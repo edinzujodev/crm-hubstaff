@@ -227,7 +227,7 @@ export function TimeOffForm({
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           Last day
-          <DateInput name="endDate" value={end} onChange={(e) => changeEnd(e.target.value)} disabledDays={blockedDays} marks={marks} className="w-full" />
+          <DateInput name="endDate" value={end} min={startDate || undefined} onChange={(e) => changeEnd(e.target.value)} disabledDays={blockedDays} marks={marks} className="w-full" />
         </label>
       </div>
       {team && (

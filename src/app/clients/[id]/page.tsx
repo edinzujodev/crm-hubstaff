@@ -132,7 +132,7 @@ async function ClientDetail({
         </label>
         <label className="flex flex-col gap-1 text-xs text-muted">
           To
-          <DateInput key={to} name="to" defaultValue={to} />
+          <DateInput key={to} name="to" defaultValue={to} min={from} />
         </label>
         <Button severity="secondary" outlined className="ml-auto">
           Show

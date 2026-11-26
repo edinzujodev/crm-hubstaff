@@ -189,11 +189,22 @@ function BlockDaysForm({ onDone }: { onDone: () => void }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           First day
-          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required className="w-full" />
+          <DateInput
+            name="startDate"
+            value={startDate}
+            onChange={(e) => {
+              const d = e.target.value;
+              setStart(d);
+              // A later first day moves the last day along with it.
+              if (endDate && d && endDate < d) setEnd(d);
+            }}
+            required
+            className="w-full"
+          />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           Last day
-          <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} className="w-full" />
+          <DateInput name="endDate" value={end} min={startDate || undefined} onChange={(e) => setEnd(e.target.value)} className="w-full" />
         </label>
       </div>
       <label className="flex flex-col gap-1 text-xs font-medium text-muted">

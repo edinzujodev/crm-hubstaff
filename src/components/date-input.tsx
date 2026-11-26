@@ -31,6 +31,7 @@ export function DateInput({
   required,
   disabled,
   className,
+  min,
   max,
   disabledDays,
   marks,
@@ -42,6 +43,8 @@ export function DateInput({
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  /** Earliest date that can be picked (yyyy-mm-dd), e.g. the first day for a last day. Days before it are greyed out. */
+  min?: string;
   /** Latest date that can be picked (yyyy-mm-dd), e.g. today for a birth date. */
   max?: string;
   /** Days that can't be picked (yyyy-mm-dd). */
@@ -62,6 +65,7 @@ export function DateInput({
         showButtonBar
         disabled={disabled}
         required={required}
+        minDate={toDate(min) ?? undefined}
         maxDate={toDate(max) ?? undefined}
         disabledDates={disabledDays?.map((d) => toDate(d)!).filter(Boolean)}
         dateTemplate={
@@ -94,7 +98,9 @@ export function DateInput({
         className={className}
         appendTo={typeof document === "undefined" ? undefined : document.body}
         onChange={(e) => {
-          const next = toIso((e.value as Date | null) ?? null);
+          let next = toIso((e.value as Date | null) ?? null);
+          // A typed date before the earliest allowed one becomes that one.
+          if (min && next && next < min) next = min;
           if (value === undefined) setInner(next);
           onChange?.({ target: { value: next } });
         }}
