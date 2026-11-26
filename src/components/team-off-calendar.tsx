@@ -2,19 +2,21 @@
 
 import { useState } from "react";
 import { addDays, eachDay, fmtMonth, fmtShortDay, isWeekend, monthBounds, shiftMonth, weekday } from "@/lib/days";
-import type { TeamOff } from "@/lib/leave-days";
+import type { BlockedSpan, TeamOff } from "@/lib/leave-days";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 /**
  * The worker's team in the request form: a small month of working days, each with how many others are off (or have
- * asked to be); hover a day for their names. Days the team is already full on are red and can't be picked. Clicking a
- * day picks the first day; clicking a later one picks the last.
+ * asked to be); hover a day for their names. Days the team is already full on are red, and days blocked for time off
+ * are grey with a ⊘; neither can be picked. Clicking a day picks the first day; clicking a later one picks the last.
  */
 export function TeamOffCalendar({
   team,
   offByDay,
   daysOff,
+  blocked,
+  canPickBlocked = false,
   today,
   start,
   end,
@@ -23,6 +25,10 @@ export function TeamOffCalendar({
   team: TeamOff;
   offByDay: Map<string, string[]>;
   daysOff: Set<string>;
+  /** Days nobody can take off (for this kind of time off), with why. */
+  blocked: BlockedSpan[];
+  /** A super admin can still pick blocked days. */
+  canPickBlocked?: boolean;
   today: string;
   start: string;
   end: string;
@@ -72,9 +78,12 @@ export function TeamOffCalendar({
           const holiday = daysOff.has(d);
           const past = d < today;
           const isFull = full(d);
-          const disabled = past || holiday || isFull || other;
+          const block = blocked.find((b) => b.startDate <= d && b.endDate >= d);
+          const disabled = past || holiday || isFull || other || (!!block && !canPickBlocked);
           const title = holiday
             ? `${fmtShortDay(d)} · public holiday`
+            : block
+              ? `${fmtShortDay(d)} · blocked: ${block.reason}`
             : names.length
               ? `${fmtShortDay(d)} · off: ${names.join(", ")}${isFull ? " · team is full" : ""}`
               : `${fmtShortDay(d)} · nobody off`;
@@ -86,7 +95,9 @@ export function TeamOffCalendar({
               disabled={disabled}
               onClick={() => onPick(d)}
               className={`relative flex h-7 items-center justify-center rounded border transition-colors ${other ? "invisible" : ""} ${
-                isFull
+                block
+                  ? `bg-zinc-500/15 text-muted ${picked(d) ? "border-primary" : "border-zinc-300 dark:border-zinc-700"}`
+                  : isFull
                   ? `bg-red-500/10 ${picked(d) ? "border-red-500" : "border-red-300 dark:border-red-800"}`
                   : picked(d)
                     ? "border-primary bg-primary/10"
@@ -99,6 +110,7 @@ export function TeamOffCalendar({
                 {Number(d.slice(8))}
                 {holiday && <span className="text-muted">★</span>}
               </span>
+              {block && <i className="pi pi-ban absolute left-0.5 top-0.5 text-[8px] text-muted" aria-hidden />}
               {/* How many others are off: a small count in the corner. */}
               {names.length > 0 && (
                 <span
@@ -118,6 +130,11 @@ export function TeamOffCalendar({
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm border border-red-300 bg-red-500/10" aria-hidden /> Team full
         </span>
+        {blocked.length > 0 && (
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm border border-zinc-300 bg-zinc-500/15" aria-hidden /> Blocked
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm border border-primary bg-primary/10" aria-hidden /> Your dates
         </span>

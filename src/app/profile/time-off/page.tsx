@@ -51,8 +51,11 @@ async function TimeOffContent() {
     halfDay: t.halfDay,
     days: countDays(t, daysOff),
     decisionNote: t.decisionNote,
-    // Requests still waiting, and time off that hasn't started yet, can be called off.
-    cancellable: t.status === "pending" || (t.status === "approved" && (t.startDate > today || t.kind === "sick")),
+    // Requests still waiting, and time off that hasn't started yet (sick leave: that isn't over), can be withdrawn.
+    // Nothing that is already over.
+    cancellable:
+      t.endDate >= today &&
+      (t.status === "pending" || (t.status === "approved" && (t.startDate > today || t.kind === "sick"))),
   }));
 
   return (

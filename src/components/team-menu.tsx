@@ -51,7 +51,7 @@ export function TeamMenu({
         <ConfirmDelete
           title="Delete team?"
           what={name}
-          note="Its members stay, without a team."
+          note="Its members and tasks stay, without a team. Its events are deleted."
           action={() => deleteTeam(teamId)}
           onClose={() => setConfirm(false)}
         />

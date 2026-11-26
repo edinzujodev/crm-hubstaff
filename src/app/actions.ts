@@ -1315,12 +1315,17 @@ export async function setUserTeam(userId: number, teamId: number | null) {
   });
 }
 
-/** Deletes the team itself; its members stay and become "no team". */
+/**
+ * Deletes the team itself. Everything that pointed at it stays and lets go of it: members become "no team", its tasks
+ * keep going without an owning team, and teams that reported to it no longer report anywhere. Its events go with it.
+ */
 export async function deleteTeam(teamId: number) {
   return run(async () => {
     await requireRole("super_admin");
     await db.transaction(async (tx) => {
       await tx.update(schema.users).set({ teamId: null }).where(eq(schema.users.teamId, teamId));
+      await tx.update(schema.tasks).set({ teamId: null }).where(eq(schema.tasks.teamId, teamId));
+      await tx.update(schema.teams).set({ parentTeamId: null }).where(eq(schema.teams.parentTeamId, teamId));
       await tx.update(schema.teams).set({ leaderId: null }).where(eq(schema.teams.id, teamId));
       await tx.delete(schema.teams).where(eq(schema.teams.id, teamId));
     });

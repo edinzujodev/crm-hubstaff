@@ -36,13 +36,16 @@ export function TimeOffFormProvider({
   return <FormContext.Provider value={value}>{children}</FormContext.Provider>;
 }
 
-/** Time off that the viewer may change or cancel. */
+/** Time off that the viewer may change or take back. */
 export type ManagedTimeOff = TimeOffEdit & {
   status: TimeOffStatus;
   days?: number;
 };
 
-/** The window for one person's time off: what it is, then Change or Cancel. Either one sends them a notification. */
+/**
+ * The window for one person's time off: what it is, then Change, and Revoke (someone else's) or Withdraw (your own)
+ * while it isn't over yet. Changing or revoking sends them a notification.
+ */
 function ManageTimeOff({
   t,
   startEditing,
@@ -56,13 +59,16 @@ function ManageTimeOff({
   const [editing, setEditing] = useState(startEditing);
   const [busy, startTransition] = useTransition();
   const own = form?.me.id === t.userId;
+  // Time off that is already over can't be taken back.
+  const over = !!form?.today && t.endDate < form.today;
+  const verb = own ? "Withdraw" : "Revoke";
   const [ask, confirmModal] = useConfirm();
 
   const cancel = async () => {
     const sure = await ask({
-      title: own ? "Cancel your time off?" : `Cancel ${t.name}'s ${KIND_LABEL[t.kind].toLowerCase()}?`,
+      title: own ? "Withdraw your time off?" : `Revoke ${t.name}'s ${KIND_LABEL[t.kind].toLowerCase()}?`,
       message: `${fmtRange(t.startDate, t.endDate)} comes off the calendar${own ? "." : `, and ${t.name} gets a notification.`}`,
-      confirmLabel: "Cancel time off",
+      confirmLabel: verb,
       cancelLabel: "Keep it",
     });
     if (!sure) return;
@@ -71,10 +77,10 @@ function ManageTimeOff({
       notify(
         r.ok
           ? {
-              message: "Time off cancelled",
+              message: own ? "Time off withdrawn" : "Time off revoked",
               detail: own ? undefined : `${t.name} gets a notification.`,
             }
-          : { message: "Couldn't cancel it", detail: r.error, tone: "error" },
+          : { message: own ? "Couldn't withdraw it" : "Couldn't revoke it", detail: r.error, tone: "error" },
       );
       if (r.ok) onClose();
     });
@@ -115,14 +121,16 @@ function ManageTimeOff({
           {own ? "" : `${t.name} is notified of any change.`}
         </span>
         <span className="flex gap-2">
-          <Button
-            type="button"
-            severity="danger"
-            outlined
-            disabled={busy}
-            label={busy ? "Cancelling…" : "Cancel time off"}
-            onClick={() => void cancel()}
-          />
+          {!over && (
+            <Button
+              type="button"
+              severity="danger"
+              outlined
+              disabled={busy}
+              label={busy ? (own ? "Withdrawing…" : "Revoking…") : verb}
+              onClick={() => void cancel()}
+            />
+          )}
           {form && (
             <Button
               type="button"

@@ -8,6 +8,37 @@ import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { TeamMenu } from "@/components/team-menu";
 import { NewTeamButton } from "@/components/team-popups";
 import { pageGuard } from "@/lib/auth";
+import { fmtLongDay } from "@/lib/days";
+import type { User } from "@/db/schema";
+
+/** A team opened in the list: everyone in it, the leader first, with their email and start date. */
+function TeamMembers({ members, leaderId }: { members: User[]; leaderId: number | null }) {
+  const sorted = [...members].sort((a, b) => Number(b.id === leaderId) - Number(a.id === leaderId) || a.name.localeCompare(b.name));
+  return (
+    <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+      {sorted.map((m) => (
+        <li key={m.id} className="grid grid-cols-1 items-center gap-x-4 gap-y-1 px-3 py-2 text-sm sm:grid-cols-[16rem_18rem_1fr]">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <Avatar name={m.name} size="sm" />
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="truncate">{m.name}</span>
+                {m.id === leaderId && (
+                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">Leader</span>
+                )}
+              </span>
+              <span className="block truncate text-xs text-muted">{m.jobTitle ?? "No job title"}</span>
+            </span>
+          </span>
+          <a href={`mailto:${m.email}`} className="truncate text-muted hover:text-foreground hover:underline">
+            {m.email}
+          </a>
+          <span className="whitespace-nowrap text-xs text-muted sm:text-right">{m.startedOn ? `Started ${fmtLongDay(m.startedOn)}` : ""}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /** Setting teams up: who is in which team, and who leads it. Each team's tasks are on its own page. */
 async function TeamsContent() {
@@ -80,6 +111,8 @@ async function TeamsContent() {
                 </span>
               ),
             ],
+            // Open a team to see its members in detail.
+            details: members.length ? <TeamMembers members={members} leaderId={t.leaderId} /> : undefined,
             actions: (
               <TeamMenu
                 teamId={t.id}

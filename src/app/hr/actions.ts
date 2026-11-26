@@ -229,8 +229,8 @@ export async function decideTimeOff(id: number, approve: boolean, note?: string,
 }
 
 /**
- * Cancel time off. People cancel their own requests and approved time off that hasn't started yet; approvers can
- * cancel anything of the people they approve for.
+ * Take time off back. People withdraw their own requests, and approved time off that hasn't started yet; approvers
+ * revoke anything of the people they approve for. Time off that is already over stays as it is, for everyone.
  */
 export async function cancelTimeOff(id: number): Promise<Result> {
   return run(async () => {
@@ -238,12 +238,13 @@ export async function cancelTimeOff(id: number): Promise<Result> {
     const row = await db.query.timeOff.findFirst({ where: eq(schema.timeOff.id, id) });
     if (!row) throw new Error("That time off no longer exists.");
     if (row.status === "rejected" || row.status === "cancelled") throw new Error("It's already off the calendar.");
+    if (row.endDate < today()) throw new Error("This time off is already over, so it can't be taken back.");
     const person = await db.query.users.findFirst({ where: eq(schema.users.id, row.userId) });
     if (!person) throw new Error("That person no longer exists.");
     const own = row.userId === auth.user.id;
     const allowed =
       canDecide(auth, person) || (own && (row.status === "pending" || row.kind === "sick" || row.startDate > today()));
-    if (!allowed) throw new Error("Time off that has already started can only be cancelled by your team leader.");
+    if (!allowed) throw new Error("Time off that has already started can only be revoked by your team leader.");
     await db.update(schema.timeOff).set({ status: "cancelled" }).where(eq(schema.timeOff.id, id));
     await quietly(() => notifyTimeOffCancelled(auth.user, person, row));
     return undefined;

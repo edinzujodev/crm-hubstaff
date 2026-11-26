@@ -61,19 +61,20 @@ export function Toaster() {
       {toasts.map((t) => (
         <div
           key={t.key}
-          className={`card flex items-start justify-between gap-3 p-3 text-sm shadow-lg ${t.tone === "error" ? "border-red-500/60" : "border-emerald-500/60"}`}
+          className={`card flex items-center justify-between gap-3 px-3 py-2.5 text-sm shadow-lg ${t.tone === "error" ? "border-red-500/60" : "border-emerald-500/60"}`}
         >
-          <div>
+          <div className="min-w-0">
+            {/* The icon and the message share one centred line. */}
             <p
-              className={`font-medium ${t.tone === "error" ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}
+              className={`flex items-center gap-2 font-medium ${t.tone === "error" ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}
             >
-              {t.tone === "error" ? "✕ " : "✓ "}
+              <i className={`pi ${t.tone === "error" ? "pi-times-circle" : "pi-check-circle"} text-sm`} aria-hidden />
               {t.message}
             </p>
-            {t.detail && <p className="text-xs text-muted">{t.detail}</p>}
+            {t.detail && <p className="pl-6 text-xs text-muted">{t.detail}</p>}
             {t.link && (
               <Link
-                className="text-xs font-medium underline"
+                className="pl-6 text-xs font-medium underline"
                 href={t.link.href}
               >
                 {t.link.label}

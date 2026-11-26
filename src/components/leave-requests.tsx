@@ -27,24 +27,36 @@ export type LeaveRequest = {
 function Cell({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={`min-w-0 ${className}`}>
-      <p className="text-xs text-muted">{label}</p>
+      {/* On wider screens the labels are in the header row instead. */}
+      <p className="text-xs text-muted sm:sr-only">{label}</p>
       <p className="truncate text-sm font-medium">{children}</p>
     </div>
   );
 }
 
-/** Your time off, newest first, one row per request (inside a card). */
+/** The same columns for the header and every row. */
+const COLS = "grid grid-cols-2 gap-x-4 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_15rem]";
+
+/** Your time off, newest first, one row per request (inside a card), under one header row. */
 export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
   if (!items.length) {
     return <p className="px-5 py-6 text-sm text-muted">You haven&apos;t asked for any time off yet.</p>;
   }
   return (
+    <div>
+    <div className={`${COLS} hidden border-b border-border bg-foreground/[0.03] px-5 py-2 text-xs font-medium text-muted sm:grid`} aria-hidden>
+      <span>Request type</span>
+      <span>Duration</span>
+      <span>Start day</span>
+      <span>End day</span>
+      <span>Status</span>
+    </div>
     <ul className="divide-y divide-border">
       {items.map((t) => {
         return (
           <li
             key={t.id}
-            className={`grid grid-cols-2 items-center gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_8.5rem] transition-opacity has-data-pending:opacity-60 ${
+            className={`${COLS} items-center gap-y-3 px-5 py-3.5 transition-opacity has-data-pending:opacity-60 ${
               t.status === "cancelled" ? "opacity-60" : ""
             }`}
           >
@@ -57,7 +69,8 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
             <Cell label="Duration">{t.halfDay && t.days <= 0.5 ? "Half day" : fmtDays(t.days)}</Cell>
             <Cell label="Start day">{fmtLongDay(t.startDate)}</Cell>
             <Cell label="End day">{fmtLongDay(t.endDate)}</Cell>
-            <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:flex-col sm:items-end sm:gap-1">
+            {/* The status on the left, Withdraw on the right, on one line. */}
+            <div className="col-span-2 flex min-h-8 items-center justify-between gap-3 sm:col-span-1">
               <RequestStatus id={t.id} kind={t.kind} status={t.status} cancellable={t.cancellable} />
             </div>
             {t.status === "rejected" && t.decisionNote && (
@@ -69,5 +82,6 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
         );
       })}
     </ul>
+    </div>
   );
 }

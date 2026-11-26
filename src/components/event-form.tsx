@@ -53,11 +53,12 @@ function RepeatFields({
 
   return (
     <div className="space-y-3 rounded-lg bg-foreground/[0.04] p-3">
+      {/* First, so it doesn't give the switch row a bottom margin (space-y spaces every child but the last). */}
+      <input type="hidden" name="repeat" value={on ? repeat : "none"} />
       <label className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
         Repeat event
         <InputSwitch checked={on} onChange={(e) => setOn(!!e.value)} />
       </label>
-      <input type="hidden" name="repeat" value={on ? repeat : "none"} />
       {on && (
         <>
           <div className="flex gap-1.5" role="radiogroup" aria-label="How often">

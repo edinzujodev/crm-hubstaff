@@ -231,7 +231,17 @@ export function TimeOffForm({
         </label>
       </div>
       {team && (
-        <TeamOffCalendar team={team} offByDay={offByDay} daysOff={offSet} today={today} start={startDate} end={endDate} onPick={pick} />
+        <TeamOffCalendar
+          team={team}
+          offByDay={offByDay}
+          daysOff={offSet}
+          blocked={blocks}
+          canPickBlocked={selfApproves}
+          today={today}
+          start={startDate}
+          end={endDate}
+          onPick={pick}
+        />
       )}
       {teamClash && (
         <p role="alert" className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
@@ -268,8 +278,19 @@ export function TimeOffForm({
             "Only weekends or public holidays: nothing to take off."
           ) : (
             <>
-              <strong>{fmtDays(days)}</strong> {kind === "vacation" && forMe && <>of your {fmtDays(vacationLeft)} left</>}
-              {overLimit && " — that's more than you have left."}
+              Takes <strong>{fmtDays(days)}</strong>
+              {/* Your own vacation: what is left once this is taken, or that it doesn't fit. */}
+              {kind === "vacation" && forMe && !editing && (
+                <>
+                  {overLimit ? (
+                    <>, but you only have {fmtDays(vacationLeft)} left.</>
+                  ) : (
+                    <>
+                      . You have {fmtDays(vacationLeft)} left, <strong>{fmtDays(vacationLeft - days)}</strong> after this.
+                    </>
+                  )}
+                </>
+              )}
             </>
           )}
       </p>
@@ -324,59 +345,74 @@ export function TimeOffButton({
 }
 
 /**
- * Cancelling time off, optimistically: `cancelled` turns true on the click and stays so until the server's answer
- * (with the refreshed page) arrives. If the server refuses, it goes back to false by itself and a notice says why.
- * The "Are you sure?" modal comes back too, for the caller to render.
+ * Taking time off back, optimistically: `gone` turns true on the click and stays so until the server's answer (with
+ * the refreshed page) arrives. If the server refuses, it goes back to false by itself and a notice says why.
+ * "withdraw" is the person taking back their own request or time off; "revoke" is an approver taking back someone
+ * else's (they get a notification). The "Are you sure?" modal comes back too, for the caller to render.
  */
-function useCancelTimeOff(id: number) {
-  const [cancelled, setCancelled] = useOptimistic(false);
+function useWithdrawTimeOff(id: number, mode: "withdraw" | "revoke", pending = false) {
+  const [gone, setGone] = useOptimistic(false);
   const [, startTransition] = useTransition();
   const [ask, confirmModal] = useConfirm();
-  const cancel = async () => {
-    const sure = await ask({
-      title: "Cancel this time off?",
-      message: "It comes off the calendar, and any days it took are given back.",
-      confirmLabel: "Cancel time off",
-      cancelLabel: "Keep it",
-    });
+  const run = async () => {
+    const sure = await ask(
+      mode === "withdraw"
+        ? {
+            title: pending ? "Withdraw this request?" : "Withdraw this time off?",
+            message: pending ? "It won't go to your approver any more." : "It comes off the calendar, and any days it took are given back.",
+            confirmLabel: "Withdraw",
+            cancelLabel: "Keep it",
+          }
+        : {
+            title: "Revoke this time off?",
+            message: "It comes off the calendar, any days it took are given back, and they get a notification.",
+            confirmLabel: "Revoke",
+            cancelLabel: "Keep it",
+          },
+    );
     if (!sure) return;
     startTransition(async () => {
-      setCancelled(true);
+      setGone(true);
       const r = await cancelTimeOff(id);
-      notify(r.ok ? { message: "Time off cancelled" } : { message: "Couldn't cancel it", detail: r.error, tone: "error" });
+      notify(
+        r.ok
+          ? { message: mode === "withdraw" ? (pending ? "Request withdrawn" : "Time off withdrawn") : "Time off revoked" }
+          : { message: mode === "withdraw" ? "Couldn't withdraw it" : "Couldn't revoke it", detail: r.error, tone: "error" },
+      );
     });
   };
-  return [cancelled, cancel, confirmModal] as const;
+  return [gone, run, confirmModal] as const;
 }
 
-/** `data-pending` lets the row or card around it fade (has-data-pending:) until the server confirms. */
-export function CancelTimeOffButton({ id, label = "Cancel" }: { id: number; label?: string }) {
-  const [cancelled, cancel, confirmModal] = useCancelTimeOff(id);
-  if (cancelled) {
+/** An approver taking back someone's time off. `data-pending` lets the row fade (has-data-pending:) until the server confirms. */
+export function RevokeTimeOffButton({ id }: { id: number }) {
+  const [gone, revoke, confirmModal] = useWithdrawTimeOff(id, "revoke");
+  if (gone) {
     return (
       <span data-pending="" className="text-xs font-medium text-muted">
-        Cancelled
+        Revoked
       </span>
     );
   }
   return (
     <>
-      <Button size="small" text severity="danger" label={label} onClick={() => void cancel()} />
+      <Button size="small" text severity="danger" label="Revoke" onClick={() => void revoke()} />
       {confirmModal}
     </>
   );
 }
 
-const PILL: Record<TimeOffStatus, [string, string]> = {
-  pending: ["Pending", "bg-amber-400 text-amber-950"],
-  approved: ["Approved", "bg-emerald-500 text-white"],
-  rejected: ["Rejected", "bg-red-500 text-white"],
-  cancelled: ["Cancelled", "bg-foreground/10 text-muted"],
+const STATUS_DOT: Record<TimeOffStatus, [string, string]> = {
+  pending: ["bg-amber-500", "text-amber-700 dark:text-amber-400"],
+  approved: ["bg-emerald-500", "text-emerald-700 dark:text-emerald-400"],
+  rejected: ["bg-red-500", "text-red-600 dark:text-red-400"],
+  cancelled: ["bg-foreground/30", "text-muted"],
 };
-/** Sick leave is recorded, not approved. */
-const RECORDED: [string, string] = ["Recorded", "bg-zinc-600 text-white dark:bg-zinc-400 dark:text-zinc-950"];
 
-/** A request's status pill, with Cancel under it when allowed; the pill shows "Cancelled" as soon as it's clicked. */
+/**
+ * A request's status as plain text with a coloured dot (not a button), and Withdraw next to it when it can still be
+ * taken back. The status reads "Cancelled" as soon as Withdraw is confirmed.
+ */
 export function RequestStatus({
   id,
   kind,
@@ -388,15 +424,16 @@ export function RequestStatus({
   status: TimeOffStatus;
   cancellable: boolean;
 }) {
-  const [cancelled, cancel, confirmModal] = useCancelTimeOff(id);
-  const shown = cancelled ? "cancelled" : status;
-  const [pill, tone] = kind === "sick" && shown === "approved" ? RECORDED : PILL[shown];
+  const [gone, withdraw, confirmModal] = useWithdrawTimeOff(id, "withdraw", status === "pending");
+  const shown = gone ? "cancelled" : status;
+  const [dot, tone] = kind === "sick" && shown === "approved" ? ["bg-zinc-500", "text-foreground/70"] : STATUS_DOT[shown];
   return (
     <>
-      <span data-pending={cancelled ? "" : undefined} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${tone}`}>
-        {pill}
+      <span data-pending={gone ? "" : undefined} className={`inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium ${tone}`}>
+        <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
+        {statusLabel(kind, shown)}
       </span>
-      {cancellable && !cancelled && <Button size="small" text severity="danger" label="Cancel" onClick={() => void cancel()} />}
+      {cancellable && !gone && <Button size="small" text severity="danger" label="Withdraw" onClick={() => void withdraw()} />}
       {confirmModal}
     </>
   );
@@ -448,8 +485,8 @@ export function DecideButtons({ id, name }: { id: number; name: string }) {
   }
   return (
     <span className="flex items-center gap-1.5">
-      <Button size="small" icon="pi pi-check" label="Approve" onClick={() => decide(true)} />
       <Button size="small" severity="secondary" outlined label="Reject" onClick={() => setRejecting(true)} />
+      <Button size="small" icon="pi pi-check" label="Approve" onClick={() => decide(true)} />
       {rejecting && (
         <Modal title={`Reject ${name}'s request`} onClose={() => setRejecting(false)}>
           <label className="flex flex-col gap-1 text-xs font-medium text-muted">

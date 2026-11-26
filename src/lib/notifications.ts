@@ -116,7 +116,7 @@ export async function notifyTimeOffCancelled(actor: { id: number; name: string }
   if (actor.id === person.id) {
     await send(await approversFor(person), {
       kind: "time_off_cancelled",
-      title: `${person.name} cancelled their ${KIND_LABEL[r.kind].toLowerCase()}`,
+      title: `${person.name} withdrew their ${KIND_LABEL[r.kind].toLowerCase()}`,
       body: fmtRange(r.startDate, r.endDate),
       href: VACATIONS,
       actorId: actor.id,
@@ -125,7 +125,7 @@ export async function notifyTimeOffCancelled(actor: { id: number; name: string }
   } else {
     await send([person.id], {
       kind: "time_off_cancelled",
-      title: `${firstName(actor.name)} cancelled your ${what(r)}`,
+      title: `${firstName(actor.name)} revoked your ${what(r)}`,
       href: MY_TIME_OFF,
       actorId: actor.id,
       timeOffId: r.id,
