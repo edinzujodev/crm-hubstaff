@@ -49,11 +49,13 @@ async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined>
     <HrTabs
       auth={auth}
       active="holidays"
-      toolbar={<YearSwitch year={year} />}
       actions={admin ? <AddHolidayButton /> : undefined}
     >
       <DataGrid
         flush
+        alwaysSearch
+        // The year sits on the search row, so there is one line of filters.
+        toolbar={<YearSwitch year={year} />}
         empty={`No holidays in ${year}.`}
         headers={["Date", "Holiday", "Type", "Source"]}
         rows={list.map((h) => ({
@@ -126,7 +128,7 @@ export default function HolidaysPage({ searchParams }: PageProps<"/hr/holidays">
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Holidays</h1>
-      <HrSuspense toolbar actions={(a) => (a.role === "super_admin" ? ["Add holiday"] : undefined)}>
+      <HrSuspense actions={(a) => (a.role === "super_admin" ? ["Add holiday"] : undefined)}>
         <HolidaysContent wanted={wanted} />
       </HrSuspense>
     </div>

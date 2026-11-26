@@ -62,6 +62,7 @@ export function DataGrid({
   noHeader,
   alwaysSearch,
   toolbar,
+  pageSize = PAGE,
 }: {
   headers: GridHeader[];
   rows: GridRow[];
@@ -76,6 +77,8 @@ export function DataGrid({
   alwaysSearch?: boolean;
   /** Shown on the right of the search bar, in place of the row count. */
   toolbar?: ReactNode;
+  /** Rows per page; longer lists get a pager under them. */
+  pageSize?: number;
 }) {
   const [expanded, setExpanded] = useState<DataTableExpandedRows>({});
   const [query, setQuery] = useState("");
@@ -165,8 +168,8 @@ export function DataGrid({
         emptyMessage={query ? "Nothing matches your search." : empty}
         expandedRows={expanded}
         removableSort
-        paginator={!plain && shown.length > PAGE}
-        rows={PAGE}
+        paginator={!plain && shown.length > pageSize}
+        rows={pageSize}
         paginatorTemplate="PrevPageLink PageLinks NextPageLink"
         onRowToggle={(e: DataTableRowToggleEvent) => setExpanded(e.data as DataTableExpandedRows)}
         rowExpansionTemplate={(row: GridRow) => <div className="px-2 py-1">{row.details}</div>}

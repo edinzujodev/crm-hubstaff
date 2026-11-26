@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { AllowanceButton } from "@/components/allowance-button";
@@ -8,13 +8,16 @@ import { DataGrid } from "@/components/data-grid";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
+import { ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
+import { daysOffBetween } from "@/lib/holidays";
 import { managedPeople } from "@/lib/hr";
-import { balancesFor } from "@/lib/time-off";
+import { balancesFor, countDays } from "@/lib/time-off";
 
 /**
- * Vacation days per person this year: allowance, carried over, taken, waiting and left. A super admin sees everyone
- * and sets their days; a team leader sees the people they look after.
+ * Vacation days per person this year: allowance, carried over, taken, waiting and left, and next to them the sick
+ * leave recorded this year. A super admin sees everyone and sets their days; a team leader sees the people they look
+ * after.
  */
 async function BalancesContent() {
   await connection();
@@ -29,17 +32,33 @@ async function BalancesContent() {
         .from(schema.users)
     : (await managedPeople(auth)).map((p) => ({ ...p, annual: null }));
   const ids = everyone.map((p) => p.id);
-  const [balances, allowanceRows] = await Promise.all([
+  const [yearStart, yearEnd] = [ymd(year, 1, 1), ymd(year, 12, 31)];
+  const [balances, allowanceRows, sickRows, daysOff] = await Promise.all([
     balancesFor(ids, year, today),
     admin ? db.select().from(schema.leaveAllowances).where(eq(schema.leaveAllowances.year, year)) : [],
+    ids.length
+      ? db
+          .select({ userId: schema.timeOff.userId, startDate: schema.timeOff.startDate, endDate: schema.timeOff.endDate, halfDay: schema.timeOff.halfDay })
+          .from(schema.timeOff)
+          .where(
+            and(
+              inArray(schema.timeOff.userId, ids),
+              eq(schema.timeOff.kind, "sick"),
+              eq(schema.timeOff.status, "approved"),
+              lte(schema.timeOff.startDate, yearEnd),
+              gte(schema.timeOff.endDate, yearStart),
+            ),
+          )
+      : [],
+    daysOffBetween(yearStart, yearEnd),
   ]);
+  // Sick days recorded this year (working days only; it never comes off the vacation days).
+  const sick = new Map<number, number>();
+  for (const t of sickRows) sick.set(t.userId, (sick.get(t.userId) ?? 0) + countDays(t, daysOff, yearStart, yearEnd));
   const sorted = [...everyone].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <HrTabs auth={auth} active="balances">
-      <p className="border-b border-border px-4 py-2.5 text-xs text-muted">
-        Vacation days in {year}. {admin ? "Change someone's days with the pencil." : "Set by a super admin."}
-      </p>
       <DataGrid
         flush
         empty="Nobody in your teams yet."
@@ -50,6 +69,7 @@ async function BalancesContent() {
           { label: "Taken", align: "right" },
           { label: "Waiting", align: "right" },
           { label: "Left", align: "right" },
+          { label: "Sick leave", align: "right" },
         ]}
         rows={sorted.map((p) => {
           const b = balances.get(p.id)!;
@@ -78,6 +98,9 @@ async function BalancesContent() {
               </span>,
               <span key="l" className={`font-mono font-semibold tabular-nums ${b.left < 0 ? "text-red-600" : ""}`}>
                 {fmtNum(b.left)}
+              </span>,
+              <span key="s" className={`font-mono tabular-nums ${sick.get(p.id) ? "text-rose-600 dark:text-rose-400" : "text-muted"}`}>
+                {sick.get(p.id) ? fmtNum(sick.get(p.id)!) : "—"}
               </span>,
             ],
             actions: admin ? (

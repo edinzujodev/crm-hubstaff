@@ -1,4 +1,4 @@
-import { and, desc, gte, inArray, ne } from "drizzle-orm";
+import { and, desc, inArray, ne } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { Avatar } from "@/components/avatar";
@@ -9,23 +9,11 @@ import { CancelTimeOffButton, DecideButtons, KindBadge, StatusBadge } from "@/co
 import { ChangeTimeOffButton, TimeOffFormProvider } from "@/components/time-off-entry";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { addDays, fmtLongDay, fmtRange, ymd } from "@/lib/days";
+import { fmtLongDay, fmtRange, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween } from "@/lib/holidays";
 import { managedPeople, waitingRequests } from "@/lib/hr";
 import { balancesFor, canDecide, countDays } from "@/lib/time-off";
-
-function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
-  return (
-    <section className="border-t border-border first:border-t-0">
-      <div className="px-4 pb-2 pt-4">
-        <h2 className="font-semibold">{title}</h2>
-        {sub && <p className="text-xs text-muted">{sub}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /**
  * For team leaders and super admins: requests waiting for a decision, and the recent time off of the people they look
@@ -45,7 +33,7 @@ async function RequestsContent() {
         .from(schema.users)
     : people.map((p) => ({ ...p, annual: null }));
   const ids = everyone.map((p) => p.id);
-  const [balances, rows, daysOff, blocked] = await Promise.all([
+  const [balances, rows, blocked] = await Promise.all([
     balancesFor(ids, year, today),
     ids.length
       ? db
@@ -55,14 +43,17 @@ async function RequestsContent() {
             and(
               inArray(schema.timeOff.userId, ids),
               ne(schema.timeOff.status, "pending"),
-              gte(schema.timeOff.endDate, addDays(today, -60)),
             ),
           )
           .orderBy(desc(schema.timeOff.startDate))
       : [],
-    daysOffBetween(ymd(year - 1, 1, 1), ymd(year + 1, 12, 31)),
     blockedBetween(today, ymd(year + 1, 12, 31)),
   ]);
+  // Public holidays from the oldest time off on, so every row counts its days right.
+  const daysOff = await daysOffBetween(
+    rows.reduce((m, t) => (t.startDate < m ? t.startDate : m), ymd(year - 1, 1, 1)),
+    ymd(year + 1, 12, 31),
+  );
   const name = new Map(everyone.map((p) => [p.id, p.name]));
   const byId = new Map(everyone.map((p) => [p.id, p]));
   // For changing someone's time off from the list at the bottom.
@@ -76,13 +67,14 @@ async function RequestsContent() {
   };
 
   return (
+    <>
     <HrTabs
       auth={auth}
       active="requests"
     >
-      <Section title="Waiting for you" sub={waiting.length ? "Oldest first." : undefined}>
         <DataGrid
           flush
+          pageSize={10}
           empty="Nothing to approve right now."
           headers={["Person", "Dates", "Kind", { label: "Days", align: "right" }, "Note", "Asked"]}
           rows={waiting.map(({ request: t, person }) => ({
@@ -115,12 +107,17 @@ async function RequestsContent() {
             actions: <DecideButtons id={t.id} name={person.name} />,
           }))}
         />
-      </Section>
+    </HrTabs>
 
-      <TimeOffFormProvider value={form}>
-      <Section title="Time off" sub="Approved, recorded (sick leave), rejected and cancelled, from the last 60 days on.">
+    {/* The history is a box of its own under the requests. */}
+    <TimeOffFormProvider value={form}>
+      <div className="card overflow-hidden">
+        <div className="flex min-h-16 items-center border-b border-border px-4 py-3">
+          <h2 className="text-base font-semibold">Time off</h2>
+        </div>
         <DataGrid
           flush
+          pageSize={10}
           empty="No time off yet."
           headers={["Person", "Dates", "Kind", { label: "Days", align: "right" }, "Status"]}
           rows={rows.map((t) => ({
@@ -149,15 +146,15 @@ async function RequestsContent() {
               ) : undefined,
           }))}
         />
-      </Section>
-      </TimeOffFormProvider>
-    </HrTabs>
+      </div>
+    </TimeOffFormProvider>
+    </>
   );
 }
 
 export default function RequestsPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="sr-only">Requests</h1>
       <HrSuspense>
         <RequestsContent />
