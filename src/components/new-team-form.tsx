@@ -49,7 +49,7 @@ export function NewTeamForm({
         <Button type="button" severity="secondary" outlined onClick={onCancel}>
           Cancel
         </Button>
-        <Button disabled={pending}>{pending ? "Adding…" : "Add team"}</Button>
+        <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
       </div>
     </form>
   );

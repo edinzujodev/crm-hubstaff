@@ -87,7 +87,7 @@ export function HolidayForm({ holiday, onDone }: { holiday?: HolidayEdit; onDone
             onClick={remove}
           />
         ) : null}
-        <Button disabled={pending || !date} label={pending ? "Saving…" : holiday ? "Save" : "Add holiday"} />
+        <Button disabled={pending || !date} label={pending ? "Saving…" : "Save"} />
       </div>
       {confirmModal}
     </form>

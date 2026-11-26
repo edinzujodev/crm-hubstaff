@@ -127,7 +127,7 @@ function AddCompany({ clientId, onDone }: { clientId: number; onDone: () => void
   useEffect(() => {
     if (state?.ok) onDone();
   }, [state, onDone]);
-  return <CompanyForm action={action} pending={pending} state={state} submitLabel="Add company" onDone={onDone} />;
+  return <CompanyForm action={action} pending={pending} state={state} submitLabel="Save" onDone={onDone} />;
 }
 
 function EditCompany({ company, onDone }: { company: Company; onDone: () => void }) {

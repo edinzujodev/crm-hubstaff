@@ -139,7 +139,7 @@ function CreateProject({ clientId, onDone }: { clientId: number; onDone: () => v
       state={state}
       name=""
       kind="one_off"
-      submitLabel="Add project"
+      submitLabel="Save"
       onDone={onDone}
     />
   );

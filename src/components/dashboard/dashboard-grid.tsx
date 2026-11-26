@@ -595,7 +595,7 @@ function AddWidget({
           initial={picked.preset.config}
           initialTitle={null}
           lookups={lookups}
-          submitLabel="Add to dashboard"
+          submitLabel="Save"
           pending={pending}
           onCancel={() => setPicked(null)}
           onSubmit={(config, title) => onAdd(picked.type, config, title)}

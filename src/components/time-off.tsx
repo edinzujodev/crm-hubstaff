@@ -108,6 +108,10 @@ export function TimeOffForm({
 }: FormProps) {
   const save = useMemo(() => (editing ? updateTimeOff.bind(null, editing.id) : requestTimeOff), [editing]);
   const [state, action, pending] = useActionState(save, null);
+  // The server's answer stops showing once something is changed, until the form is sent again.
+  const [stale, setStale] = useState<typeof state>(null);
+  const error = state && !state.ok && state !== stale ? state : null;
+  const touched = () => setStale(state);
   const [userId, setUserId] = useState(String(editing?.userId ?? me.id));
   const [kind, setKind] = useState<TimeOffKind>(editing?.kind ?? initialKind);
   const [startDate, setStart] = useState(editing?.startDate ?? "");
@@ -148,11 +152,21 @@ export function TimeOffForm({
       : undefined;
   const refused = (!!clash && !selfApproves) || !!teamClash;
   const blockedDays = [...(selfApproves ? [] : blocks.flatMap((b) => eachDay(b.startDate, b.endDate))), ...fullDays];
+  // A first day after the last day moves the last day along with it.
+  const changeStart = (d: string) => {
+    touched();
+    setStart(d);
+    if (endDate && d && endDate < d) setEnd(d);
+  };
+  const changeEnd = (d: string) => {
+    touched();
+    setEnd(d);
+  };
   const pick = (d: string) => {
     if (!startDate || endDate || d < startDate) {
-      setStart(d);
+      changeStart(d);
       setEnd("");
-    } else setEnd(d);
+    } else changeEnd(d);
   };
   // Shown in the picker: blocked days with the reason, and public holidays (they don't count as days off).
   const marks = useMemo(() => {
@@ -171,7 +185,10 @@ export function TimeOffForm({
       ) : people.length > 0 && (
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           For
-          <Select name="userId" value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full">
+          <Select name="userId" value={userId} onChange={(e) => {
+            touched();
+            setUserId(e.target.value);
+          }} className="w-full">
             <option value={String(me.id)}>Me ({me.name})</option>
             {people.map((p) => (
               <option key={p.id} value={String(p.id)}>
@@ -183,7 +200,10 @@ export function TimeOffForm({
       )}
       <label className="flex flex-col gap-1 text-xs font-medium text-muted">
         Kind
-        <Select name="kind" value={kind} onChange={(e) => setKind(e.target.value as TimeOffKind)} className="w-full">
+        <Select name="kind" value={kind} onChange={(e) => {
+          touched();
+          setKind(e.target.value as TimeOffKind);
+        }} className="w-full">
           {TIME_OFF_KINDS.map((k) => (
             <option key={k} value={k}>
               {KIND_LABEL[k]}
@@ -203,11 +223,11 @@ export function TimeOffForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           First day
-          <DateInput name="startDate" value={startDate} onChange={(e) => setStart(e.target.value)} required disabledDays={blockedDays} marks={marks} className="w-full" />
+          <DateInput name="startDate" value={startDate} onChange={(e) => changeStart(e.target.value)} required disabledDays={blockedDays} marks={marks} className="w-full" />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           Last day
-          <DateInput name="endDate" value={end} onChange={(e) => setEnd(e.target.value)} disabledDays={blockedDays} marks={marks} className="w-full" />
+          <DateInput name="endDate" value={end} onChange={(e) => changeEnd(e.target.value)} disabledDays={blockedDays} marks={marks} className="w-full" />
         </label>
       </div>
       {team && (
@@ -222,7 +242,10 @@ export function TimeOffForm({
       )}
       {/* Always there (only usable for a single day), so the form doesn't change height when dates are picked. */}
       <label className={`flex items-center gap-2 text-sm ${single ? "" : "text-muted"}`}>
-        <Checkbox name="halfDay" checked={halfDay && single} disabled={!single} onChange={(e) => setHalfDay(e.target.checked)} />
+        <Checkbox name="halfDay" checked={halfDay && single} disabled={!single} onChange={(e) => {
+          touched();
+          setHalfDay(e.target.checked);
+        }} />
         Half a day
         {!single && <span className="text-xs">(single day only)</span>}
       </label>
@@ -250,20 +273,20 @@ export function TimeOffForm({
             </>
           )}
       </p>
-      {state && !state.ok && !state.canOverride && (
+      {error && !error.canOverride && (
         <p role="alert" className="text-sm text-red-600">
-          {state.error}
+          {error.error}
         </p>
       )}
-      {state && !state.ok && state.canOverride && (
+      {error && error.canOverride && (
         <div role="alert" className="space-y-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">
           <p className="flex gap-2">
             <i className="pi pi-exclamation-triangle mt-0.5 text-sm" aria-hidden />
-            <span>{state.error}</span>
+            <span>{error.error}</span>
           </p>
           <div className="flex justify-end gap-2">
             <Button type="button" size="small" severity="secondary" outlined disabled={pending} label="Cancel" onClick={onDone} />
-            <Button name="overrideLimit" value="on" size="small" severity="warning" disabled={pending} label={editing ? "Save anyway" : "Add anyway"} />
+            <Button name="overrideLimit" value="on" size="small" severity="warning" disabled={pending} label="Save anyway" />
           </div>
         </div>
       )}
@@ -272,7 +295,7 @@ export function TimeOffForm({
           {editing ? (editing.userId === me.id ? "" : `${editing.name} gets a notification.`) : instant ? "Counts straight away." : "Needs approval."}
         </span>
         <Button className="shrink-0 whitespace-nowrap" disabled={pending || !startDate || days === 0 || refused}>
-          {pending ? "Saving…" : editing ? "Save changes" : instant ? "Add" : "Send request"}
+          {pending ? "Saving…" : editing ? "Save changes" : instant ? "Save" : "Send request"}
         </Button>
       </div>
     </form>

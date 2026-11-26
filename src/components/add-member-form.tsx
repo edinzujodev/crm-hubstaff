@@ -34,7 +34,7 @@ export function AddMemberForm({ onDone, onCancel }: { onDone?: () => void; onCan
             Cancel
           </Button>
         )}
-        <Button disabled={pending}>{pending ? "Adding…" : "Add member"}</Button>
+        <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
       </div>
     </form>
   );

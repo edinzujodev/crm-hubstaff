@@ -231,7 +231,7 @@ export function TaskChecklist({
                 outlined
                 disabled={pending || !text.trim()}
               >
-                Add
+                Save
               </Button>
             </form>
           )}

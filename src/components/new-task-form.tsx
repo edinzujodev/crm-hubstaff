@@ -247,7 +247,7 @@ function TaskForm({
         <Button type="button" severity="secondary" outlined onClick={onDone}>
           {hubstaffWarning ? "Close" : "Cancel"}
         </Button>
-        {!hubstaffWarning && <Button disabled={pending}>{pending ? "Adding…" : "Add task"}</Button>}
+        {!hubstaffWarning && <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>}
       </div>
     </form>
   );

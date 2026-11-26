@@ -145,7 +145,7 @@ function NewTemplate({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     if (state?.ok) onDone();
   }, [state, onDone]);
-  return <TemplateForm action={action} pending={pending} state={state} submitLabel="Create template" onDone={onDone} />;
+  return <TemplateForm action={action} pending={pending} state={state} submitLabel="Save" onDone={onDone} />;
 }
 
 function EditTemplate({ template, onDone }: { template: TemplateOption; onDone: () => void }) {

@@ -74,7 +74,7 @@ function ClientForm({ onDone }: { onDone: () => void }) {
         <Button type="button" severity="secondary" outlined onClick={onDone}>
           Cancel
         </Button>
-        <Button disabled={pending}>{pending ? "Adding…" : "Add client"}</Button>
+        <Button disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
       </div>
     </form>
   );

@@ -226,7 +226,7 @@ export function EventForm({
             }}
           />
         ) : null}
-        <Button disabled={pending || !startDate} label={pending ? "Saving…" : event ? "Save" : "Add event"} />
+        <Button disabled={pending || !startDate} label={pending ? "Saving…" : "Save"} />
       </div>
       {confirmModal}
     </form>
