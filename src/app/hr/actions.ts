@@ -3,7 +3,7 @@
 import { and, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { requireAuth, requireRole, type Auth } from "@/lib/auth";
+import { canUseHr, requireAuth, requireRole, type Auth } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { fmtDays, fmtRange, fmtShortDay, isDay, weekday } from "@/lib/days";
 import { REPEATS } from "@/lib/recurrence";
@@ -42,7 +42,7 @@ async function checkNotBlocked(auth: Auth, t: { kind: (typeof schema.timeOffKind
 
 /**
  * Refuses planned time off on a day when the team already has as many people off as it allows. Sick leave is never
- * refused. A super admin is warned too, but may go past the limit by confirming (`override`).
+ * refused. Super admins and team leaders are only warned: they may go past the limit by confirming (`override`).
  */
 async function checkTeamLimit(
   auth: Auth,
@@ -50,13 +50,13 @@ async function checkTeamLimit(
   t: { kind: (typeof schema.timeOffKind.enumValues)[number]; startDate: string; endDate: string; halfDay: boolean },
   opts: { withPending: boolean; ignoreId?: number; override?: boolean },
 ) {
-  const admin = auth.role === "super_admin";
-  if (!blockable(t.kind) || (admin && opts.override)) return;
+  const mayOverride = canUseHr(auth);
+  if (!blockable(t.kind) || (mayOverride && opts.override)) return;
   const clash = await teamLimitClash(person, t, opts);
   if (!clash) return;
   const names = clash.off.join(", ");
   const message = `${clash.team} allows ${clash.max} of ${clash.size} people off at the same time, and ${fmtShortDay(clash.day)} already has ${clash.off.length} (${names})${opts.withPending ? " off or waiting for approval" : " off"}.`;
-  throw admin ? new OverridableError(message) : new Error(message);
+  throw mayOverride ? new OverridableError(message) : new Error(message);
 }
 
 async function personFor(auth: Auth, userId: number) {

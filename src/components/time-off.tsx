@@ -227,8 +227,9 @@ export function TimeOffForm({
             <i className="pi pi-exclamation-triangle mt-0.5 text-sm" aria-hidden />
             <span>{state.error}</span>
           </p>
-          <div className="flex justify-end">
-            <Button name="overrideLimit" value="on" size="small" severity="warning" disabled={pending} label="Add anyway" />
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="small" severity="secondary" outlined disabled={pending} label="Cancel" onClick={onDone} />
+            <Button name="overrideLimit" value="on" size="small" severity="warning" disabled={pending} label={editing ? "Save anyway" : "Add anyway"} />
           </div>
         </div>
       )}
