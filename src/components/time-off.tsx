@@ -294,7 +294,7 @@ export function TimeOffButton({
     <>
       <Button icon={icon ? `pi ${icon}` : undefined} severity={outlined ? "secondary" : undefined} outlined={outlined} onClick={() => setOpen(true)} label={label} />
       {open && (
-        <Modal title={label} onClose={close} wide={!!form.team}>
+        <Modal title={label} onClose={close}>
           <TimeOffForm {...form} onDone={close} />
         </Modal>
       )}
