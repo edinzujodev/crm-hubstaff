@@ -180,10 +180,21 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
           )}
         </p>
       )}
-      {state && !state.ok && (
+      {state && !state.ok && !state.canOverride && (
         <p role="alert" className="text-sm text-red-600">
           {state.error}
         </p>
+      )}
+      {state && !state.ok && state.canOverride && (
+        <div role="alert" className="space-y-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">
+          <p className="flex gap-2">
+            <i className="pi pi-exclamation-triangle mt-0.5 text-sm" aria-hidden />
+            <span>{state.error}</span>
+          </p>
+          <div className="flex justify-end">
+            <Button name="overrideLimit" value="on" size="small" severity="warning" disabled={pending} label="Add anyway" />
+          </div>
+        </div>
       )}
       <div className="flex items-center justify-between gap-2 pt-1">
         <span className="text-xs text-muted">{instant ? "Counts straight away." : "Needs approval."}</span>
@@ -292,7 +303,11 @@ export function DecideButtons({ id, name }: { id: number; name: string }) {
     setRejecting(false);
     startTransition(async () => {
       setDecided(approve ? "approved" : "rejected");
-      const r = await decideTimeOff(id, approve, approve ? undefined : reason);
+      let r = await decideTimeOff(id, approve, approve ? undefined : reason);
+      // Over the team's limit: a super admin may approve it anyway.
+      if (!r.ok && r.canOverride && confirm(`${r.error}
+
+Approve it anyway?`)) r = await decideTimeOff(id, approve, undefined, true);
       notify(
         r.ok
           ? { message: approve ? `Approved for ${name}` : `Rejected for ${name}` }

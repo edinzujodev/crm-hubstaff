@@ -1193,6 +1193,13 @@ export async function addMember(_prev: unknown, formData: FormData): Promise<Res
 const newTeam = z.object({
   name: z.string().trim().min(1, "Team name is required"),
   leaderId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+  // How many of the team may be off on the same day; empty for no limit.
+  maxOff: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? Number(v) : null))
+    .refine((v) => v === null || (Number.isInteger(v) && v >= 1 && v <= 500), "The limit must be a whole number, at least 1"),
 });
 
 /** The leader is also made a member of the team (moving them out of any other team). */
@@ -1244,7 +1251,7 @@ export async function createTeam(_prev: unknown, formData: FormData): Promise<Re
     const memberIds = [...new Set([...memberIdsOf(formData), ...(leaderId ? [leaderId] : [])])];
     try {
       await db.transaction(async (tx) => {
-        const [team] = await tx.insert(schema.teams).values({ name: input.name }).returning({ id: schema.teams.id });
+        const [team] = await tx.insert(schema.teams).values({ name: input.name, maxOff: input.maxOff }).returning({ id: schema.teams.id });
         await setMembers(tx, team.id, memberIds, leaderId);
       });
     } catch (e) {
@@ -1263,7 +1270,7 @@ export async function updateTeam(teamId: number, _prev: unknown, formData: FormD
     const memberIds = [...new Set([...memberIdsOf(formData), ...(leaderId ? [leaderId] : [])])];
     try {
       await db.transaction(async (tx) => {
-        await tx.update(schema.teams).set({ name: input.name }).where(eq(schema.teams.id, teamId));
+        await tx.update(schema.teams).set({ name: input.name, maxOff: input.maxOff }).where(eq(schema.teams.id, teamId));
         await setMembers(tx, teamId, memberIds, leaderId);
       });
     } catch (e) {

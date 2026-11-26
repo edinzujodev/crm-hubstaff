@@ -64,7 +64,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
         <div className="flex gap-2">
           {admin && (
             <EditTeamButton
-              team={{ id: team.id, name: team.name, leaderId: team.leaderId, memberIds: members.map((m) => m.id) }}
+              team={{ id: team.id, name: team.name, leaderId: team.leaderId, memberIds: members.map((m) => m.id), maxOff: team.maxOff }}
               users={pickerUsers}
             />
           )}

@@ -14,8 +14,8 @@ const TITLES: Record<HrTab, string> = {
 };
 
 /**
- * The box around an HR page: its title on the left; the page's filters (`toolbar`) and buttons (`actions`) on the
- * right of the same row. Every HR page's box starts at the same height, so switching pages in the HR menu on the
+ * The box around an HR page: its title on the left and its buttons (`actions`) on the right; the page's filters
+ * (`toolbar`) get their own row under the line, so the title row never gets crowded. Every HR page's box starts at the same height, so switching pages in the HR menu on the
  * left (app/hr/layout.tsx) doesn't make the page jump.
  */
 export async function HrTabs({
@@ -36,10 +36,8 @@ export async function HrTabs({
   const title = active === "teams" && auth.role !== "super_admin" ? "Your team" : TITLES[active];
   return (
     <div className="card overflow-hidden">
-      <HrBoxHeader title={title}>
-        {toolbar}
-        {actions}
-      </HrBoxHeader>
+      <HrBoxHeader title={title}>{actions}</HrBoxHeader>
+      {toolbar && <HrFilterRow>{toolbar}</HrFilterRow>}
       <div className={padded ? "p-4" : undefined}>{children}</div>
     </div>
   );
@@ -54,10 +52,29 @@ function HrBoxHeader({ title, children }: { title: React.ReactNode; children?: R
   );
 }
 
+/** The filters of an HR page, in a row of their own under the title. With two groups, the first sits left and the last right. */
+function HrFilterRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-13 flex-wrap items-center justify-between gap-2 border-b border-border bg-foreground/[0.02] px-4 py-2">
+      {children}
+    </div>
+  );
+}
+
 type Actions = string[] | ((auth: Auth) => string[] | undefined);
 
 /** The loading state of an HR page: the same box, so nothing moves when the page arrives. */
-export function HrSuspense({ rows = 6, children }: { actions?: Actions; rows?: number; children: React.ReactNode }) {
+export function HrSuspense({
+  rows = 6,
+  toolbar,
+  children,
+}: {
+  actions?: Actions;
+  /** The page has a filter row, so the loading box keeps room for it. */
+  toolbar?: boolean;
+  rows?: number;
+  children: React.ReactNode;
+}) {
   return (
     <Suspense
       fallback={
@@ -65,6 +82,11 @@ export function HrSuspense({ rows = 6, children }: { actions?: Actions; rows?: n
           <HrBoxHeader title={<span className="block h-5 w-28 animate-pulse rounded bg-foreground/10" />}>
             <span className="block h-9 w-36 animate-pulse rounded-md bg-foreground/10" />
           </HrBoxHeader>
+          {toolbar && (
+            <HrFilterRow>
+              <span className="block h-8 w-48 animate-pulse rounded-md bg-foreground/10" />
+            </HrFilterRow>
+          )}
           <TableSkeleton rows={rows} />
         </div>
       }

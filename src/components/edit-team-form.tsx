@@ -5,7 +5,7 @@ import { useActionState, useEffect } from "react";
 import { updateTeam } from "@/app/actions";
 import { MemberPicker, type PickerUser } from "@/components/member-picker";
 
-export type TeamEditData = { id: number; name: string; leaderId: number | null; memberIds: number[] };
+export type TeamEditData = { id: number; name: string; leaderId: number | null; memberIds: number[]; maxOff: number | null };
 
 /** Rename a team, change its leader and add or remove its members. */
 export function EditTeamForm({ team, users, onDone }: { team: TeamEditData; users: PickerUser[]; onDone: () => void }) {
@@ -31,6 +31,11 @@ export function EditTeamForm({ team, users, onDone }: { team: TeamEditData; user
           ))}
         </Select>
         <span>The leader is always a member of the team.</span>
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-muted">
+        Most people off at the same time
+        <InputText name="maxOff" type="number" min={1} step={1} inputMode="numeric" defaultValue={team.maxOff ?? ""} placeholder="No limit" className="w-full text-foreground" />
+        <span>Time-off requests that would put more of the team off on one day are refused. Sick leave is never refused, but it counts toward the limit. Leave empty for no limit.</span>
       </label>
       <MemberPicker users={users} selected={team.memberIds} />
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}

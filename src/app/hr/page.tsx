@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { HrCalendar, NewEventButton } from "@/components/hr-calendar";
+import { BlockDaysButton } from "@/components/holiday-actions";
 import type { EventTeamOption } from "@/components/event-form";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { MonthSwitch, WhoSwitch } from "@/components/hr-switches";
@@ -42,7 +43,14 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
     <HrTabs
       auth={auth}
       active="calendar"
-      actions={eventTeams.length ? <NewEventButton teams={eventTeams} /> : undefined}
+      actions={
+        admin || eventTeams.length ? (
+          <>
+            {admin && <BlockDaysButton />}
+            {eventTeams.length > 0 && <NewEventButton teams={eventTeams} />}
+          </>
+        ) : undefined
+      }
       toolbar={
         <>
           <WhoSwitch base="/hr" month={month} team={teamOnly} hasTeam={myTeams.length > 0} />
@@ -87,7 +95,7 @@ export default function HrPage({ searchParams }: PageProps<"/hr">) {
   return (
     <div className="space-y-6">
       <h1 className="sr-only">HR calendar</h1>
-      <HrSuspense actions={(a) => (a.role === "super_admin" || a.ledTeamIds.length ? ["New event"] : undefined)}>
+      <HrSuspense toolbar actions={(a) => (a.role === "super_admin" ? ["Block days", "New event"] : a.ledTeamIds.length ? ["New event"] : undefined)}>
         <CalendarContent params={params} />
       </HrSuspense>
     </div>

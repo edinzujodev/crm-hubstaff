@@ -85,7 +85,7 @@ async function TeamsContent() {
                 teamId={t.id}
                 name={t.name}
                 canManage={admin}
-                team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id) }}
+                team={{ id: t.id, name: t.name, leaderId: t.leaderId, memberIds: members.map((m) => m.id), maxOff: t.maxOff }}
                 users={options}
               />
             ),

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Modal } from "@/components/modal";
 import { EventForm, type EventData, type EventTeamOption } from "@/components/event-form";
-import { HolidayForm, type HolidayEdit } from "@/components/holiday-actions";
+import { HolidayForm, UnblockButton, type HolidayEdit } from "@/components/holiday-actions";
 import { addDays, fmtRange, fmtShortDay, isWeekend, weekday } from "@/lib/days";
 import { ORDER, TYPE_ICON, TYPE_TONE } from "@/lib/calendar-tones";
 
@@ -26,6 +26,8 @@ export type CalendarItem = {
   event?: EventData;
   /** Set when the signed-in person may edit this holiday (super admins). */
   holiday?: HolidayEdit;
+  /** Set on blocked days when the signed-in person may unblock them (super admins). */
+  blockId?: number;
 };
 
 /** Working days only: the calendars leave out Saturdays and Sundays. */
@@ -205,6 +207,11 @@ export function HrCalendar({
               </Link>
               .
             </p>
+          )}
+          {open.blockId !== undefined && (
+            <div className="flex justify-end border-t border-border pt-3">
+              <UnblockButton id={open.blockId} what={fmtRange(open.start, open.end)} onDone={close} />
+            </div>
           )}
         </Modal>
       )}

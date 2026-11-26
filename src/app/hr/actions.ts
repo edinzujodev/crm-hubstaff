@@ -10,7 +10,7 @@ import { REPEATS } from "@/lib/recurrence";
 import { localDay } from "@/lib/format";
 import { notifyTimeOffAdded, notifyTimeOffCancelled, notifyTimeOffDecided } from "@/lib/notifications";
 import { blockedBetween, builtInHolidays, daysOffBetween } from "@/lib/holidays";
-import { run, type Result } from "@/lib/result";
+import { OverridableError, run, type Result } from "@/lib/result";
 import { balanceFor, blockable, blockedClash, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval, teamLimitClash } from "@/lib/time-off";
 
 const today = () => localDay(new Date(), config.timeZone);
@@ -42,21 +42,21 @@ async function checkNotBlocked(auth: Auth, t: { kind: (typeof schema.timeOffKind
 
 /**
  * Refuses planned time off on a day when the team already has as many people off as it allows. Sick leave is never
- * refused, and a super admin can still enter it.
+ * refused. A super admin is warned too, but may go past the limit by confirming (`override`).
  */
 async function checkTeamLimit(
   auth: Auth,
   person: { id: number; name: string; teamId: number | null },
   t: { kind: (typeof schema.timeOffKind.enumValues)[number]; startDate: string; endDate: string; halfDay: boolean },
-  opts: { withPending: boolean; ignoreId?: number },
+  opts: { withPending: boolean; ignoreId?: number; override?: boolean },
 ) {
-  if (!blockable(t.kind) || auth.role === "super_admin") return;
+  const admin = auth.role === "super_admin";
+  if (!blockable(t.kind) || (admin && opts.override)) return;
   const clash = await teamLimitClash(person, t, opts);
   if (!clash) return;
   const names = clash.off.join(", ");
-  throw new Error(
-    `${clash.team} allows ${clash.max} of ${clash.size} people off at the same time, and ${fmtShortDay(clash.day)} already has ${clash.off.length} (${names})${opts.withPending ? " off or waiting for approval" : " off"}.`,
-  );
+  const message = `${clash.team} allows ${clash.max} of ${clash.size} people off at the same time, and ${fmtShortDay(clash.day)} already has ${clash.off.length} (${names})${opts.withPending ? " off or waiting for approval" : " off"}.`;
+  throw admin ? new OverridableError(message) : new Error(message);
 }
 
 async function personFor(auth: Auth, userId: number) {
@@ -95,7 +95,7 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
     const forSomeoneElse = person.id !== auth.user.id;
 
     await checkNotBlocked(auth, input);
-    await checkTeamLimit(auth, person, input, { withPending: true });
+    await checkTeamLimit(auth, person, input, { withPending: true, override: formData.get("overrideLimit") === "on" });
 
     const daysOff = await daysOffBetween(input.startDate, input.endDate);
     const days = countDays(input, daysOff);
@@ -146,7 +146,7 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
 }
 
 /** Approve or reject a request that is waiting. */
-export async function decideTimeOff(id: number, approve: boolean, note?: string): Promise<Result> {
+export async function decideTimeOff(id: number, approve: boolean, note?: string, overrideLimit = false): Promise<Result> {
   return run(async () => {
     const auth = await requireAuth();
     const row = await db.query.timeOff.findFirst({ where: eq(schema.timeOff.id, id) });
@@ -159,7 +159,7 @@ export async function decideTimeOff(id: number, approve: boolean, note?: string)
     // Blocked after it was asked for: a team leader can only reject it now.
     if (approve) {
       await checkNotBlocked(auth, row);
-      await checkTeamLimit(auth, person, row, { withPending: false, ignoreId: row.id });
+      await checkTeamLimit(auth, person, row, { withPending: false, ignoreId: row.id, override: overrideLimit });
     }
     const changed = await db
       .update(schema.timeOff)

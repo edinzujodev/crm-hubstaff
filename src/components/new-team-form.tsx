@@ -38,6 +38,11 @@ export function NewTeamForm({
         </Select>
         <span>The leader is added to the team and sees its tasks and reports.</span>
       </label>
+      <label className="flex flex-col gap-1 text-xs text-muted">
+        Most people off at the same time
+        <InputText name="maxOff" type="number" min={1} step={1} inputMode="numeric" placeholder="No limit" className="w-full text-foreground" />
+        <span>Time-off requests that would put more of the team off on one day are refused. Sick leave is never refused, but it counts toward the limit. Leave empty for no limit.</span>
+      </label>
       <MemberPicker users={users} />
       {state && !state.ok && <p className="text-sm text-red-600">{state.error}</p>}
       <div className="flex justify-end gap-2 pt-1">

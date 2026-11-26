@@ -73,6 +73,7 @@ export async function companyCalendar(auth: Auth, from: string, to: string, team
       end: b.endDate,
       title: `Blocked: ${b.reason}`,
       details: [`Nobody can take time off ${fmtRange(b.startDate, b.endDate)}.`, "Sick leave can still be recorded."],
+      blockId: admin ? b.id : undefined,
     });
   }
 

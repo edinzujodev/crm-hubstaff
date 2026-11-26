@@ -111,7 +111,7 @@ export default function VacationsPage({ searchParams }: PageProps<"/hr/vacations
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Vacations</h1>
-      <HrSuspense actions={["Add time off"]}>
+      <HrSuspense toolbar actions={["Add time off"]}>
         <VacationsContent params={params} />
       </HrSuspense>
     </div>

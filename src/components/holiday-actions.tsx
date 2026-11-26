@@ -209,7 +209,7 @@ export function BlockDaysButton() {
   );
 }
 
-export function UnblockButton({ id, what }: { id: number; what: string }) {
+export function UnblockButton({ id, what, onDone }: { id: number; what: string; onDone?: () => void }) {
   const [busy, setBusy] = useState(false);
   return (
     <Button
@@ -224,6 +224,7 @@ export function UnblockButton({ id, what }: { id: number; what: string }) {
         const r = await deleteBlockedPeriod(id);
         setBusy(false);
         notify(r.ok ? { message: "Days unblocked" } : { message: "Couldn't unblock them", detail: r.error, tone: "error" });
+        if (r.ok) onDone?.();
       }}
     />
   );

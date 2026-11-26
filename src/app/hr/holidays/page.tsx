@@ -3,13 +3,13 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { DataGrid } from "@/components/data-grid";
-import { AddHolidayButton, BlockDaysButton, EditHolidayButton, HolidayButton, UnblockButton } from "@/components/holiday-actions";
+import { AddHolidayButton, EditHolidayButton, HolidayButton } from "@/components/holiday-actions";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { HR_ROLES, pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { fmtLongDay, fmtRange, fmtShortDay, isWeekend, ymd } from "@/lib/days";
+import { fmtLongDay, fmtShortDay, isWeekend, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
-import { blockedBetween, holidaysBetween } from "@/lib/holidays";
+import { holidaysBetween } from "@/lib/holidays";
 
 function YearSwitch({ year }: { year: number }) {
   const link = "flex h-8 w-8 items-center justify-center rounded-md hover:bg-foreground/5";
@@ -35,7 +35,7 @@ async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined>
   const asked = Number(await wanted);
   const year = Number.isInteger(asked) && asked >= 2000 && asked <= 2100 ? asked : current;
   const [from, to] = [ymd(year, 1, 1), ymd(year, 12, 31)];
-  const [list, hidden, blocked] = await Promise.all([
+  const [list, hidden] = await Promise.all([
     holidaysBetween(from, to),
     admin
       ? db
@@ -43,7 +43,6 @@ async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined>
           .from(schema.holidays)
           .where(and(eq(schema.holidays.source, "hidden"), gte(schema.holidays.date, from), lte(schema.holidays.date, to)))
       : [],
-    blockedBetween(from, to),
   ]);
 
   return (
@@ -51,14 +50,7 @@ async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined>
       auth={auth}
       active="holidays"
       toolbar={<YearSwitch year={year} />}
-      actions={
-        admin ? (
-          <>
-            <BlockDaysButton />
-            <AddHolidayButton />
-          </>
-        ) : undefined
-      }
+      actions={admin ? <AddHolidayButton /> : undefined}
     >
       <DataGrid
         flush
@@ -106,28 +98,6 @@ async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined>
           ) : undefined,
         }))}
       />
-      {(blocked.length > 0 || admin) && (
-        <div className="space-y-2 border-t border-border p-4">
-          <p className="text-xs font-medium text-muted">
-            <i className="pi pi-ban mr-1.5 text-xs" aria-hidden />
-            Blocked for time off in {year}
-          </p>
-          {blocked.length ? (
-            <ul className="space-y-1 text-sm">
-              {blocked.map((b) => (
-                <li key={b.id} className="flex items-center justify-between gap-3">
-                  <span>
-                    <span className="font-medium">{fmtRange(b.startDate, b.endDate)}</span> <span className="text-muted">· {b.reason}</span>
-                  </span>
-                  {admin && <UnblockButton id={b.id} what={fmtRange(b.startDate, b.endDate)} />}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">No blocked days. Use “Block days” to stop time off around a launch or a busy week.</p>
-          )}
-        </div>
-      )}
       {hidden.length > 0 && (
         <div className="space-y-2 border-t border-border p-4">
           <p className="text-xs font-medium text-muted">Built-in holidays removed for {year}</p>
@@ -156,7 +126,7 @@ export default function HolidaysPage({ searchParams }: PageProps<"/hr/holidays">
   return (
     <div className="space-y-6">
       <h1 className="sr-only">Holidays</h1>
-      <HrSuspense actions={(a) => (a.role === "super_admin" ? ["Block days", "Add holiday"] : undefined)}>
+      <HrSuspense toolbar actions={(a) => (a.role === "super_admin" ? ["Add holiday"] : undefined)}>
         <HolidaysContent wanted={wanted} />
       </HrSuspense>
     </div>
