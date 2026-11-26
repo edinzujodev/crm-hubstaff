@@ -58,7 +58,7 @@ async function TimeOffContent() {
   return (
     <div className="space-y-4">
       <h1 className="sr-only">My time off</h1>
-      <div className="flex justify-start">
+      <div className="flex justify-end">
         <TimeOffButton
           label="Add request"
           icon="pi-plus"

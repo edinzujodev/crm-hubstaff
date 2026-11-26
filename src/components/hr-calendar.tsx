@@ -32,7 +32,7 @@ export type CalendarItem = {
 
 /** Working days only: the calendars leave out Saturdays and Sundays. */
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-const MAX_IN_CELL = 3;
+const MAX_IN_CELL = 2;
 
 function Chip({ item, onOpen }: { item: CalendarItem; onOpen: (i: CalendarItem) => void }) {
   return (
@@ -106,7 +106,7 @@ export function HrCalendar({
       <div className="hidden md:block">
         <div className="grid grid-cols-5 border-b border-border text-xs font-medium text-muted">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="px-2 py-2">
+            <div key={w} className="px-2 py-1.5">
               {w}
             </div>
           ))}
@@ -118,11 +118,11 @@ export function HrCalendar({
             return (
               <div
                 key={d}
-                className={`group min-h-28 border-b border-r border-border p-1.5 [&:nth-child(5n)]:border-r-0 ${inMonth(d) ? "" : "opacity-45"}`}
+                className={`group min-h-[4.75rem] border-b border-r border-border p-1 [&:nth-child(5n)]:border-r-0 ${inMonth(d) ? "" : "opacity-45"}`}
               >
-                <div className="mb-1 flex items-center justify-between">
+                <div className="mb-0.5 flex items-center justify-between">
                   <span
-                    className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs tabular-nums ${
+                    className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs tabular-nums ${
                       isToday ? "bg-primary font-semibold text-(--primary-fg)" : "text-muted"
                     }`}
                   >
@@ -132,10 +132,10 @@ export function HrCalendar({
                     <button
                       type="button"
                       onClick={() => setAdding(d)}
-                      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-muted opacity-0 hover:bg-foreground/10 focus-visible:opacity-100 group-hover:opacity-100"
+                      className="-my-0.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-surface text-muted opacity-0 shadow-sm hover:border-primary hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                       aria-label={`Add an event on ${fmtShortDay(d)}`}
                     >
-                      <i className="pi pi-plus text-[10px]" aria-hidden />
+                      <i className="pi pi-plus text-sm" aria-hidden />
                     </button>
                   )}
                 </div>
@@ -149,7 +149,7 @@ export function HrCalendar({
                       onClick={() =>
                         setMore({ day: d, items: list })
                       }
-                      className="cursor-pointer px-1.5 text-[11px] font-medium text-muted hover:text-foreground"
+                      className="cursor-pointer px-1.5 text-[11px] leading-4 font-medium text-muted hover:text-foreground"
                     >
                       +{list.length - MAX_IN_CELL} more
                     </button>

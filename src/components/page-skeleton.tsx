@@ -149,7 +149,7 @@ export function FormSkeleton() {
 export function TimeOffSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="space-y-4" role="status" aria-label="Loading">
-      <ActionsSkeleton labels={["Add request"]} align="start" />
+      <ActionsSkeleton labels={["Add request"]} />
       <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         {[0, 1, 2].map((i) => (
           <div key={i} className="card flex items-center gap-4 p-4 sm:flex-col sm:items-start sm:p-5">

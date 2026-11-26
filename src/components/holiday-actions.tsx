@@ -76,7 +76,7 @@ export function HolidayForm({ holiday, onDone }: { holiday?: HolidayEdit; onDone
           {state.error}
         </p>
       )}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-end gap-2">
         {holiday ? (
           <Button
             type="button"
@@ -86,9 +86,7 @@ export function HolidayForm({ holiday, onDone }: { holiday?: HolidayEdit; onDone
             label={removing ? "Removing…" : holiday.source === "built-in" ? "Remove this year" : "Delete"}
             onClick={remove}
           />
-        ) : (
-          <span />
-        )}
+        ) : null}
         <Button disabled={pending || !date} label={pending ? "Saving…" : holiday ? "Save" : "Add holiday"} />
       </div>
       {confirmModal}

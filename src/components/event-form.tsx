@@ -203,7 +203,7 @@ export function EventForm({
           {state.error}
         </p>
       )}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-end gap-2">
         {event ? (
           <Button
             type="button"
@@ -225,9 +225,7 @@ export function EventForm({
               if (r.ok) onDone();
             }}
           />
-        ) : (
-          <span />
-        )}
+        ) : null}
         <Button disabled={pending || !startDate} label={pending ? "Saving…" : event ? "Save" : "Add event"} />
       </div>
       {confirmModal}
