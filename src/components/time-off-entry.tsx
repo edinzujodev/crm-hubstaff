@@ -139,7 +139,7 @@ function ManageTimeOff({
   );
 }
 
-/** A day of someone's time off in the Vacations grid, as a button that opens it. */
+/** A day of someone's time off in the Time off grid, as a button that opens it. */
 export function GridEntryButton({
   t,
   title,

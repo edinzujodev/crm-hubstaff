@@ -75,8 +75,8 @@ async function CalendarContent({ params }: { params: Promise<{ m?: string; who?:
             <Legend tone="bg-red-500/40" label="Blocked for time off" />
             <span className="ml-auto">
               Who is away:{" "}
-              <Link href="/hr/vacations" className="underline hover:text-foreground">
-                Vacations
+              <Link href="/hr/time-off" className="underline hover:text-foreground">
+                Time off
               </Link>
             </span>
           </>

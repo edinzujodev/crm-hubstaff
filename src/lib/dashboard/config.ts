@@ -552,13 +552,13 @@ export const WIDGETS: Record<WidgetType, WidgetDef> = {
       },
       {
         id: "week",
-        label: "Vacation planner: this week",
+        label: "Time off: this week",
         description: "People and days of the current week.",
         config: { view: "calendar", length: "short" },
       },
       {
         id: "month",
-        label: "Vacation planner: this month",
+        label: "Time off: this month",
         description: "People and days of the whole month.",
         config: { view: "calendar", length: "long" },
       },

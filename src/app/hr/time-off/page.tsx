@@ -19,7 +19,7 @@ import { balanceFor, canDecide, canManagePerson } from "@/lib/time-off";
  * Who is away when, as a month planner. Everyone sees who is out; the kind of time off and requests still waiting
  * only show for themselves and the people they approve for (so sick leave stays private).
  */
-async function VacationsContent({ params }: { params: Promise<{ m?: string; who?: string }> }) {
+async function TimeOffContent({ params }: { params: Promise<{ m?: string; who?: string }> }) {
   await connection();
   const auth = await pageGuard(...HR_ROLES);
   const today = localDay(new Date(), config.timeZone);
@@ -86,13 +86,13 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
   return (
     <HrTabs
       auth={auth}
-      active="vacations"
+      active="time-off"
       // One button for every kind: the form picks vacation, sick leave and the rest, and (for approvers) the person.
       actions={<TimeOffButton {...form} label="Add time off" icon="pi-plus" />}
       toolbar={
         <>
-          <WhoSwitch base="/hr/vacations" month={month} team={teamOnly} hasTeam={myTeams.length > 0} />
-          <MonthSwitch base="/hr/vacations" month={month} current={today.slice(0, 7)} team={teamOnly} />
+          <WhoSwitch base="/hr/time-off" month={month} team={teamOnly} hasTeam={myTeams.length > 0} />
+          <MonthSwitch base="/hr/time-off" month={month} current={today.slice(0, 7)} team={teamOnly} />
         </>
       }
     >
@@ -110,16 +110,16 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
   );
 }
 
-export default function VacationsPage({ searchParams }: PageProps<"/hr/vacations">) {
+export default function TimeOffPage({ searchParams }: PageProps<"/hr/time-off">) {
   const params = searchParams.then((p) => ({
     m: typeof p.m === "string" ? p.m : undefined,
     who: typeof p.who === "string" ? p.who : undefined,
   }));
   return (
     <div className="space-y-6">
-      <h1 className="sr-only">Vacations</h1>
+      <h1 className="sr-only">Time off</h1>
       <HrSuspense toolbar actions={["Add time off"]}>
-        <VacationsContent params={params} />
+        <TimeOffContent params={params} />
       </HrSuspense>
     </div>
   );

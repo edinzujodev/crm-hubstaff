@@ -4,7 +4,10 @@ import { HrNavLinks, type HrNavGroup } from "@/components/hr-nav";
 import { canUseHr, getAuth } from "@/lib/auth";
 import { waitingRequests } from "@/lib/hr";
 
-/** HR is for super admins and team leaders: planning (calendar, vacations, holidays) and managing people. */
+/**
+ * HR is for super admins and team leaders. Planning: the calendar and who is away. Manage: requests and vacation
+ * balances. Organisation: people and teams. Settings: holidays.
+ */
 async function HrNav() {
   await connection();
   const auth = await getAuth();
@@ -16,17 +19,26 @@ async function HrNav() {
       title: "Planning",
       items: [
         { href: "/hr", label: "Calendar", icon: "pi-calendar" },
-        { href: "/hr/vacations", label: "Vacations", icon: "pi-table" },
-        { href: "/hr/holidays", label: "Holidays", icon: "pi-star" },
+        { href: "/hr/time-off", label: "Time off", icon: "pi-table" },
       ],
     },
     {
       title: "Manage",
       items: [
-        { href: "/hr/approvals", label: "Approvals", icon: "pi-check-circle", count: waiting },
+        { href: "/hr/requests", label: "Requests", icon: "pi-inbox", count: waiting },
+        { href: "/hr/balances", label: "Balances", icon: "pi-chart-bar" },
+      ],
+    },
+    {
+      title: "Organisation",
+      items: [
         { href: "/hr/people", label: "People", icon: "pi-users" },
         { href: "/hr/teams", label: auth.role === "super_admin" ? "Teams" : "Your team", icon: "pi-sitemap" },
       ],
+    },
+    {
+      title: "Settings",
+      items: [{ href: "/hr/holidays", label: "Holidays", icon: "pi-star" }],
     },
   ];
   return <HrNavLinks groups={groups} />;

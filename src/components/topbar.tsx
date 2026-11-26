@@ -27,15 +27,16 @@ const DETAIL: Record<string, string> = {
 };
 /** The pages inside HR (/hr/<page>), and what one item under them is called. */
 const HR_PAGES: Record<string, string> = {
-  vacations: "Vacations",
-  approvals: "Approvals",
+  "time-off": "Time off",
+  requests: "Requests",
+  balances: "Balances",
   people: "People",
   teams: "Teams",
   holidays: "Holidays",
 };
 /** Named pages one level under a section (not detail pages with an id). */
 const SUBPAGES: Record<string, string> = {
-  "profile/time-off": "Time off",
+  "profile/time-off": "My time off",
 };
 
 /** Where you are: Home › Tasks › Task name. Detail pages name themselves with <Crumb>; until then (or without it) kind and id. */

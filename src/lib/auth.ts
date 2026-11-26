@@ -42,7 +42,7 @@ export const getAuth = cache(async (): Promise<Auth | null> => {
   return { user, role, ledTeam, ledTeamIds: ledTeam ? await teamsUnder(ledTeam.id) : [] };
 });
 
-/** The HR section (calendar, vacations, holidays, people, teams) is for super admins and team leaders only. */
+/** The HR section (calendar, time off, requests, balances, people, teams, holidays) is for super admins and team leaders only. */
 export const HR_ROLES: Role[] = ["super_admin", "leader"];
 export const canUseHr = (a: Auth) => HR_ROLES.includes(a.role);
 

@@ -257,7 +257,7 @@ export async function HrAwayWidget({ auth, raw }: { auth: Auth; raw: unknown }) 
         )}
         {canUseHr(auth) && (
           <Footer>
-            <MoreLink href={`/hr/vacations${team ? "?who=team" : ""}`}>Open the vacation planner</MoreLink>
+            <MoreLink href={`/hr/time-off${team ? "?who=team" : ""}`}>Open Time off</MoreLink>
           </Footer>
         )}
       </>
@@ -295,7 +295,7 @@ export async function HrAwayWidget({ auth, raw }: { auth: Auth; raw: unknown }) 
       )}
       {canUseHr(auth) && (
         <Footer>
-          <MoreLink href={`/hr/vacations${team ? "?who=team" : ""}`}>Open the vacation planner</MoreLink>
+          <MoreLink href={`/hr/time-off${team ? "?who=team" : ""}`}>Open Time off</MoreLink>
         </Footer>
       )}
     </>
@@ -472,7 +472,7 @@ export async function HrApprovalsWidget({ auth, raw }: { auth: Auth; raw: unknow
         </ul>
       )}
       <Footer>
-        <MoreLink href="/hr/approvals">{waiting.length > shown.length ? `See all ${waiting.length}` : "Open approvals"}</MoreLink>
+        <MoreLink href="/hr/requests">{waiting.length > shown.length ? `See all ${waiting.length}` : "Open requests"}</MoreLink>
       </Footer>
     </>
   );

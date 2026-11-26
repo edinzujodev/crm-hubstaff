@@ -1,7 +1,6 @@
-import { and, desc, eq, gte, inArray, ne } from "drizzle-orm";
+import { and, desc, gte, inArray, ne } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
-import { AllowanceButton } from "@/components/allowance-button";
 import { Avatar } from "@/components/avatar";
 import { fmtNum } from "@/components/balance-tiles";
 import { DataGrid } from "@/components/data-grid";
@@ -29,10 +28,10 @@ function Section({ title, sub, children }: { title: string; sub?: string; childr
 }
 
 /**
- * For team leaders and super admins: requests waiting for a decision, everyone's vacation days, and the time off of
- * the people they look after.
+ * For team leaders and super admins: requests waiting for a decision, and the recent time off of the people they look
+ * after (to change or cancel). Vacation days per person are on Balances.
  */
-async function ApprovalsContent() {
+async function RequestsContent() {
   await connection();
   const auth = await pageGuard("super_admin", "leader");
   const admin = auth.role === "super_admin";
@@ -46,7 +45,7 @@ async function ApprovalsContent() {
         .from(schema.users)
     : people.map((p) => ({ ...p, annual: null }));
   const ids = everyone.map((p) => p.id);
-  const [balances, rows, allowanceRows, daysOff, blocked] = await Promise.all([
+  const [balances, rows, daysOff, blocked] = await Promise.all([
     balancesFor(ids, year, today),
     ids.length
       ? db
@@ -61,7 +60,6 @@ async function ApprovalsContent() {
           )
           .orderBy(desc(schema.timeOff.startDate))
       : [],
-    admin ? db.select().from(schema.leaveAllowances).where(eq(schema.leaveAllowances.year, year)) : [],
     daysOffBetween(ymd(year - 1, 1, 1), ymd(year + 1, 12, 31)),
     blockedBetween(today, ymd(year + 1, 12, 31)),
   ]);
@@ -76,12 +74,11 @@ async function ApprovalsContent() {
     selfApproves: admin,
     blocked: blocked.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason })),
   };
-  const sorted = [...everyone].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <HrTabs
       auth={auth}
-      active="approvals"
+      active="requests"
     >
       <Section title="Waiting for you" sub={waiting.length ? "Oldest first." : undefined}>
         <DataGrid
@@ -117,66 +114,6 @@ async function ApprovalsContent() {
             ],
             actions: <DecideButtons id={t.id} name={person.name} />,
           }))}
-        />
-      </Section>
-
-      <Section title={`Vacation days in ${year}`} sub={admin ? "Change someone's days with the pencil." : "Set by a super admin."}>
-        <DataGrid
-          flush
-          empty="Nobody in your teams yet."
-          headers={[
-            "Person",
-            { label: "Allowance", align: "right" },
-            { label: "Carried over", align: "right" },
-            { label: "Taken", align: "right" },
-            { label: "Waiting", align: "right" },
-            { label: "Left", align: "right" },
-          ]}
-          rows={sorted.map((p) => {
-            const b = balances.get(p.id)!;
-            const row = allowanceRows.find((r) => r.userId === p.id);
-            return {
-              key: p.id,
-              cells: [
-                <span key="p" className="flex items-center gap-2 font-medium">
-                  <Avatar name={p.name} size="sm" />
-                  {p.name}
-                </span>,
-                <span key="a" className="font-mono tabular-nums" title={b.custom.days ? "Set by hand for this year" : undefined}>
-                  {fmtNum(b.allowance)}
-                  {b.custom.days && "*"}
-                </span>,
-                <span key="c" className="font-mono tabular-nums" title={b.expired ? `${fmtNum(b.expired)} expired` : undefined}>
-                  {fmtNum(b.carriedOver)}
-                  {b.custom.carriedOver && "*"}
-                  {b.expired > 0 && <span className="text-muted"> (−{fmtNum(b.expired)})</span>}
-                </span>,
-                <span key="u" className="font-mono tabular-nums">
-                  {fmtNum(b.used)}
-                </span>,
-                <span key="w" className="font-mono tabular-nums">
-                  {b.pending ? fmtNum(b.pending) : "—"}
-                </span>,
-                <span key="l" className={`font-mono font-semibold tabular-nums ${b.left < 0 ? "text-red-600" : ""}`}>
-                  {fmtNum(b.left)}
-                </span>,
-              ],
-              actions: admin ? (
-                <AllowanceButton
-                  data={{
-                    userId: p.id,
-                    name: p.name,
-                    year,
-                    annual: p.annual ?? b.allowance,
-                    days: row?.days ?? null,
-                    carriedOver: row?.carriedOver ?? null,
-                    carryOverUntil: row?.carryOverUntil ?? null,
-                    computedCarry: b.carryWorkedOut,
-                  }}
-                />
-              ) : undefined,
-            };
-          })}
         />
       </Section>
 
@@ -218,12 +155,12 @@ async function ApprovalsContent() {
   );
 }
 
-export default function ApprovalsPage() {
+export default function RequestsPage() {
   return (
     <div className="space-y-6">
-      <h1 className="sr-only">Approvals</h1>
+      <h1 className="sr-only">Requests</h1>
       <HrSuspense>
-        <ApprovalsContent />
+        <RequestsContent />
       </HrSuspense>
     </div>
   );

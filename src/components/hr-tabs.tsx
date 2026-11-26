@@ -2,12 +2,13 @@ import { Suspense } from "react";
 import { TableSkeleton } from "@/components/page-skeleton";
 import type { Auth } from "@/lib/auth";
 
-export type HrTab = "calendar" | "vacations" | "approvals" | "people" | "teams" | "holidays";
+export type HrTab = "calendar" | "time-off" | "requests" | "balances" | "people" | "teams" | "holidays";
 
 const TITLES: Record<HrTab, string> = {
   calendar: "Calendar",
-  vacations: "Vacations",
-  approvals: "Approvals",
+  "time-off": "Time off",
+  requests: "Requests",
+  balances: "Balances",
   people: "People",
   teams: "Teams",
   holidays: "Holidays",

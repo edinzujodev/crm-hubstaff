@@ -36,7 +36,7 @@ async function ProfileNav() {
             title: "",
             items: [
               { href: "/profile", label: "Personal details", icon: "pi-user" },
-              { href: "/profile/time-off", label: "Time off", icon: "pi-calendar" },
+              { href: "/profile/time-off", label: "My time off", icon: "pi-calendar" },
             ],
           },
         ]}

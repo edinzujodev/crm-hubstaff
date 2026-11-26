@@ -23,8 +23,8 @@ export type NotificationKind =
 type Person = { id: number; name: string; teamId: number | null };
 type Request = { id: number; kind: TimeOffKind; startDate: string; endDate: string; halfDay: boolean };
 
-const APPROVALS = "/hr/approvals";
-const VACATIONS = "/hr/vacations";
+const APPROVALS = "/hr/requests";
+const VACATIONS = "/hr/time-off";
 const MY_TIME_OFF = "/profile/time-off";
 
 /**
