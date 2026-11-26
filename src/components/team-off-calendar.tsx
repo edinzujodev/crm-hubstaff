@@ -89,10 +89,10 @@ export function TeamOffCalendar({
               className={`flex h-12 flex-col items-start rounded-md border px-1 py-0.5 text-left transition-colors ${
                 other ? "invisible" : ""
               } ${
-                picked(d)
-                  ? "border-primary bg-primary/10"
-                  : isFull
-                    ? "border-red-300 bg-red-500/10 dark:border-red-800"
+                isFull
+                  ? `bg-red-500/10 ${picked(d) ? "border-red-500" : "border-red-300 dark:border-red-800"}`
+                  : picked(d)
+                    ? "border-primary bg-primary/10"
                     : holiday
                       ? "border-transparent bg-foreground/[0.04]"
                       : "border-border"
