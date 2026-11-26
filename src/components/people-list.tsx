@@ -7,6 +7,7 @@ import { resetTwoFactor, setHubstaffUserId } from "@/app/actions";
 import { notify } from "@/lib/toast";
 import { DataGrid } from "@/components/data-grid";
 import { Avatar } from "@/components/avatar";
+import { useConfirm } from "@/components/confirm-modal";
 import { RoleSelect } from "@/components/role-select";
 import { TeamSelect } from "@/components/team-select";
 
@@ -25,6 +26,7 @@ export type Person = {
 /** Two-step status, with a reset for a lost phone: they set up the app again at their next sign-in. */
 function TwoFactorCell({ person }: { person: Person }) {
   const [pending, setPending] = useState(false);
+  const [ask, confirmModal] = useConfirm();
   if (!person.twoFactor) return <span className="text-xs text-muted">Not set up</span>;
   return (
     <span className="flex items-center gap-2">
@@ -39,7 +41,12 @@ function TwoFactorCell({ person }: { person: Person }) {
         disabled={pending}
         title="For a lost or new phone: signs them out; they set up the app again at their next sign-in"
         onClick={async () => {
-          if (!confirm(`Reset two-step verification for ${person.name}? They are signed out and set up their authenticator app again at their next sign-in.`)) return;
+          const sure = await ask({
+            title: `Reset two-step verification for ${person.name}?`,
+            message: "They are signed out and set up their authenticator app again at their next sign-in.",
+            confirmLabel: "Reset",
+          });
+          if (!sure) return;
           setPending(true);
           const r = await resetTwoFactor(person.id);
           setPending(false);
@@ -48,6 +55,7 @@ function TwoFactorCell({ person }: { person: Person }) {
       >
         Reset
       </Button>
+      {confirmModal}
     </span>
   );
 }

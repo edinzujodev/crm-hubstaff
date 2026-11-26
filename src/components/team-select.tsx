@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/toast";
 import { Select } from "@/components/ui";
 import { useTransition } from "react";
 import { setUserTeam } from "@/app/actions";
@@ -26,7 +27,7 @@ export function TeamSelect({
       onChange={(e) =>
         startTransition(async () => {
           const res = await setUserTeam(userId, e.target.value ? Number(e.target.value) : null);
-          if (!res.ok) alert(res.error);
+          if (!res.ok) notify({ message: "Couldn't change the team", detail: res.error, tone: "error" });
         })
       }
     >

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { InputSwitch } from "primereact/inputswitch";
 import { Button, Checkbox, InputText, InputTextarea, Select } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
+import { useConfirm } from "@/components/confirm-modal";
 import { deleteEvent, saveEvent } from "@/app/hr/actions";
 import { notify } from "@/lib/toast";
 import { describeRepeat, REPEAT_LABEL, WEEKDAY_CHIPS, type Repeat } from "@/lib/recurrence";
@@ -137,6 +138,7 @@ export function EventForm({
   const [endDate, setEnd] = useState(event?.endDate ?? "");
   const [allDay, setAllDay] = useState(!event?.startTime);
   const [deleting, setDeleting] = useState(false);
+  const [ask, confirmModal] = useConfirm();
   useEffect(() => {
     if (!state?.ok) return;
     notify({ message: event ? "Event saved" : "Event added" });
@@ -210,7 +212,12 @@ export function EventForm({
             disabled={deleting}
             label={deleting ? "Deleting…" : "Delete"}
             onClick={async () => {
-              if (!confirm(event.repeat !== "none" ? `Delete “${event.title}” and every repeat of it?` : `Delete “${event.title}”?`)) return;
+              const sure = await ask({
+                title: `Delete “${event.title}”?`,
+                message: event.repeat !== "none" ? "Every repeat of it comes off the calendar too." : "It comes off the calendar.",
+                confirmLabel: "Delete",
+              });
+              if (!sure) return;
               setDeleting(true);
               const r = await deleteEvent(event.id);
               setDeleting(false);
@@ -223,6 +230,7 @@ export function EventForm({
         )}
         <Button disabled={pending || !startDate} label={pending ? "Saving…" : event ? "Save" : "Add event"} />
       </div>
+      {confirmModal}
     </form>
   );
 }

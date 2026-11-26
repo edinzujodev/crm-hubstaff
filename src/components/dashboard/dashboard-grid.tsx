@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Modal } from "@/components/modal";
+import { useConfirm } from "@/components/confirm-modal";
 import { WidgetForm, type Lookups } from "@/components/dashboard/widget-form";
 import type { Role } from "@/lib/auth";
 import {
@@ -259,6 +260,7 @@ export function DashboardGrid({
   const [pending, startTransition] = useTransition();
   const [configuring, setConfiguring] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [ask, confirmModal] = useConfirm();
 
   // Local rows make drags feel instant; the server's version wins whenever it changes.
   const serverSections = toSections(items, savedLayouts);
@@ -385,6 +387,7 @@ export function DashboardGrid({
 
   return (
     <div className="space-y-4">
+      {confirmModal}
       <div className="flex flex-wrap items-center justify-end gap-2">
         <h1 className="sr-only">Dashboard</h1>
         {editing && (
@@ -396,9 +399,13 @@ export function DashboardGrid({
               severity="secondary"
               outlined
               disabled={pending}
-              onClick={() => {
-                if (window.confirm("Replace your widgets with the default layout for your role?"))
-                  act(() => resetDashboard());
+              onClick={async () => {
+                const sure = await ask({
+                  title: "Reset your dashboard?",
+                  message: "Your widgets are replaced with the default layout for your role.",
+                  confirmLabel: "Reset",
+                });
+                if (sure) act(() => resetDashboard());
               }}
             >
               Reset to default
@@ -494,7 +501,14 @@ export function DashboardGrid({
                         editing={editing}
                         busy={pending}
                         onConfigure={setConfiguring}
-                        onRemove={(id) => act(() => removeWidget(id))}
+                        onRemove={async (id) => {
+                          const sure = await ask({
+                            title: "Remove this widget?",
+                            message: "It comes off your dashboard. You can add it again with “Add widget”.",
+                            confirmLabel: "Remove",
+                          });
+                          if (sure) act(() => removeWidget(id));
+                        }}
                       />
                     ))}
                   </div>

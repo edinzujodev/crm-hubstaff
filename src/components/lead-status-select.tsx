@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/toast";
 import { Select } from "@/components/ui";
 import { useTransition } from "react";
 import { setLeadStatus } from "@/app/actions";
@@ -17,7 +18,7 @@ export function LeadStatusSelect({ leadId, status }: { leadId: number; status: S
       onChange={(e) =>
         startTransition(async () => {
           const res = await setLeadStatus(leadId, e.target.value as Status);
-          if (!res.ok) alert(res.error);
+          if (!res.ok) notify({ message: "Couldn't change the status", detail: res.error, tone: "error" });
         })
       }
     >

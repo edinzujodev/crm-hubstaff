@@ -1,16 +1,8 @@
 "use client";
 
 import { deleteLead } from "@/app/actions";
-import { HoldToDelete } from "@/components/hold-to-delete";
+import { DeleteButton } from "@/components/delete-button";
 
-export function DeleteLeadButton({
-  leadId,
-  title,
-  redirectTo,
-}: {
-  leadId: number;
-  title: string;
-  redirectTo?: string;
-}) {
-  return <HoldToDelete title={title} redirectTo={redirectTo} action={() => deleteLead(leadId)} />;
+export function DeleteLeadButton({ leadId, title, redirectTo }: { leadId: number; title: string; redirectTo?: string }) {
+  return <DeleteButton title="Delete lead?" what={title} redirectTo={redirectTo} action={() => deleteLead(leadId)} />;
 }

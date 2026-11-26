@@ -92,7 +92,7 @@ async function HolidaysContent({ wanted }: { wanted: Promise<string | undefined>
                 action={{ kind: "hide", date: h.date, name: h.name }}
                 label="Remove"
                 done={`${h.name} removed for ${year}`}
-                confirmText={`Remove ${h.name} from ${year}? You can bring it back below.`}
+                confirmText={`Remove ${h.name} from ${year}?`}
               />
             )
           ) : undefined,

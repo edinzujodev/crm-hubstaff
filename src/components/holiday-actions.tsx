@@ -4,6 +4,7 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import { Button, Checkbox, InputText } from "@/components/ui";
 import { DateInput } from "@/components/date-input";
 import { Modal } from "@/components/modal";
+import { useConfirm } from "@/components/confirm-modal";
 import { addBlockedPeriod, addHoliday, deleteBlockedPeriod, deleteHoliday, hideBuiltInHoliday, updateHoliday } from "@/app/hr/actions";
 import { notify } from "@/lib/toast";
 
@@ -21,6 +22,7 @@ export function HolidayForm({ holiday, onDone }: { holiday?: HolidayEdit; onDone
   const [state, action, pending] = useActionState(save, null);
   const [date, setDate] = useState(holiday?.date ?? "");
   const [removing, setRemoving] = useState(false);
+  const [ask, confirmModal] = useConfirm();
   useEffect(() => {
     if (!state?.ok) return;
     notify({ message: holiday ? "Holiday saved" : "Holiday added" });
@@ -30,7 +32,16 @@ export function HolidayForm({ holiday, onDone }: { holiday?: HolidayEdit; onDone
   const remove = async () => {
     if (!holiday) return;
     const builtIn = holiday.source === "built-in";
-    if (!confirm(builtIn ? `Remove ${holiday.name} from ${holiday.date.slice(0, 4)}? You can bring it back on the Holidays page.` : `Delete ${holiday.name}?`)) return;
+    const sure = await ask(
+      builtIn
+        ? {
+            title: `Remove ${holiday.name}?`,
+            message: `It comes off the calendar for ${holiday.date.slice(0, 4)}. You can bring it back on the Holidays page.`,
+            confirmLabel: "Remove",
+          }
+        : { title: `Delete ${holiday.name}?`, message: "It comes off the calendar.", confirmLabel: "Delete" },
+    );
+    if (!sure) return;
     setRemoving(true);
     const r = builtIn ? await hideBuiltInHoliday(holiday.date, holiday.name) : await deleteHoliday(holiday.id!);
     setRemoving(false);
@@ -80,6 +91,7 @@ export function HolidayForm({ holiday, onDone }: { holiday?: HolidayEdit; onDone
         )}
         <Button disabled={pending || !date} label={pending ? "Saving…" : holiday ? "Save" : "Add holiday"} />
       </div>
+      {confirmModal}
     </form>
   );
 }
@@ -130,7 +142,9 @@ export function HolidayButton({
   confirmText?: string;
 }) {
   const [busy, setBusy] = useState(false);
+  const [ask, confirmModal] = useConfirm();
   return (
+    <>
     <Button
       size="small"
       text
@@ -138,13 +152,23 @@ export function HolidayButton({
       disabled={busy}
       label={label}
       onClick={async () => {
-        if (confirmText && !confirm(confirmText)) return;
+        if (
+          confirmText &&
+          !(await ask({
+            title: confirmText,
+            message: action.kind === "hide" ? "It comes off the calendar for this year. You can bring it back at the bottom of this page." : "It comes off the calendar.",
+            confirmLabel: label,
+          }))
+        )
+          return;
         setBusy(true);
         const r = action.kind === "delete" ? await deleteHoliday(action.id) : await hideBuiltInHoliday(action.date, action.name);
         setBusy(false);
         notify(r.ok ? { message: done } : { message: "Couldn't change it", detail: r.error, tone: "error" });
       }}
     />
+    {confirmModal}
+    </>
   );
 }
 
@@ -211,7 +235,9 @@ export function BlockDaysButton() {
 
 export function UnblockButton({ id, what, onDone }: { id: number; what: string; onDone?: () => void }) {
   const [busy, setBusy] = useState(false);
+  const [ask, confirmModal] = useConfirm();
   return (
+    <>
     <Button
       size="small"
       text
@@ -219,7 +245,8 @@ export function UnblockButton({ id, what, onDone }: { id: number; what: string; 
       disabled={busy}
       label="Unblock"
       onClick={async () => {
-        if (!confirm(`Unblock ${what}? People can ask for time off then again.`)) return;
+        const sure = await ask({ title: `Unblock ${what}?`, message: "People can ask for time off on these days again.", confirmLabel: "Unblock" });
+        if (!sure) return;
         setBusy(true);
         const r = await deleteBlockedPeriod(id);
         setBusy(false);
@@ -227,5 +254,7 @@ export function UnblockButton({ id, what, onDone }: { id: number; what: string; 
         if (r.ok) onDone?.();
       }}
     />
+    {confirmModal}
+    </>
   );
 }

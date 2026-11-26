@@ -4,6 +4,7 @@ import { useActionState, useCallback, useEffect, useMemo, useOptimistic, useStat
 import { Button, Checkbox, InputTextarea, Select } from "@/components/ui";
 import { DateInput, type DayMark } from "@/components/date-input";
 import { Modal } from "@/components/modal";
+import { useConfirm } from "@/components/confirm-modal";
 import { cancelTimeOff, decideTimeOff, requestTimeOff, updateTimeOff } from "@/app/hr/actions";
 import { eachDay, fmtDays, fmtRange } from "@/lib/days";
 import {
@@ -267,24 +268,32 @@ export function TimeOffButton({
 /**
  * Cancelling time off, optimistically: `cancelled` turns true on the click and stays so until the server's answer
  * (with the refreshed page) arrives. If the server refuses, it goes back to false by itself and a notice says why.
+ * The "Are you sure?" modal comes back too, for the caller to render.
  */
 function useCancelTimeOff(id: number) {
   const [cancelled, setCancelled] = useOptimistic(false);
   const [, startTransition] = useTransition();
-  const cancel = () => {
-    if (!confirm("Cancel this time off?")) return;
+  const [ask, confirmModal] = useConfirm();
+  const cancel = async () => {
+    const sure = await ask({
+      title: "Cancel this time off?",
+      message: "It comes off the calendar, and any days it took are given back.",
+      confirmLabel: "Cancel time off",
+      cancelLabel: "Keep it",
+    });
+    if (!sure) return;
     startTransition(async () => {
       setCancelled(true);
       const r = await cancelTimeOff(id);
       notify(r.ok ? { message: "Time off cancelled" } : { message: "Couldn't cancel it", detail: r.error, tone: "error" });
     });
   };
-  return [cancelled, cancel] as const;
+  return [cancelled, cancel, confirmModal] as const;
 }
 
 /** `data-pending` lets the row or card around it fade (has-data-pending:) until the server confirms. */
 export function CancelTimeOffButton({ id, label = "Cancel" }: { id: number; label?: string }) {
-  const [cancelled, cancel] = useCancelTimeOff(id);
+  const [cancelled, cancel, confirmModal] = useCancelTimeOff(id);
   if (cancelled) {
     return (
       <span data-pending="" className="text-xs font-medium text-muted">
@@ -292,7 +301,12 @@ export function CancelTimeOffButton({ id, label = "Cancel" }: { id: number; labe
       </span>
     );
   }
-  return <Button size="small" text severity="danger" label={label} onClick={cancel} />;
+  return (
+    <>
+      <Button size="small" text severity="danger" label={label} onClick={() => void cancel()} />
+      {confirmModal}
+    </>
+  );
 }
 
 const PILL: Record<TimeOffStatus, [string, string]> = {
@@ -316,7 +330,7 @@ export function RequestStatus({
   status: TimeOffStatus;
   cancellable: boolean;
 }) {
-  const [cancelled, cancel] = useCancelTimeOff(id);
+  const [cancelled, cancel, confirmModal] = useCancelTimeOff(id);
   const shown = cancelled ? "cancelled" : status;
   const [pill, tone] = kind === "sick" && shown === "approved" ? RECORDED : PILL[shown];
   return (
@@ -324,7 +338,8 @@ export function RequestStatus({
       <span data-pending={cancelled ? "" : undefined} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${tone}`}>
         {pill}
       </span>
-      {cancellable && !cancelled && <Button size="small" text severity="danger" label="Cancel" onClick={cancel} />}
+      {cancellable && !cancelled && <Button size="small" text severity="danger" label="Cancel" onClick={() => void cancel()} />}
+      {confirmModal}
     </>
   );
 }
@@ -338,15 +353,17 @@ export function DecideButtons({ id, name }: { id: number; name: string }) {
   const [, startTransition] = useTransition();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
-  const decide = (approve: boolean) => {
+  const [ask, confirmModal] = useConfirm();
+  const decide = (approve: boolean, overrideLimit = false) => {
     setRejecting(false);
     startTransition(async () => {
       setDecided(approve ? "approved" : "rejected");
-      let r = await decideTimeOff(id, approve, approve ? undefined : reason);
-      // Over the team's limit: a super admin may approve it anyway.
-      if (!r.ok && r.canOverride && confirm(`${r.error}
-
-Approve it anyway?`)) r = await decideTimeOff(id, approve, undefined, true);
+      const r = await decideTimeOff(id, approve, approve ? undefined : reason, overrideLimit);
+      // Over the team's limit: a super admin may approve it anyway (asked once the buttons are back).
+      if (!r.ok && r.canOverride) {
+        void approveAnyway(r.error);
+        return;
+      }
       notify(
         r.ok
           ? { message: approve ? `Approved for ${name}` : `Rejected for ${name}` }
@@ -356,6 +373,9 @@ Approve it anyway?`)) r = await decideTimeOff(id, approve, undefined, true);
       if (!r.ok && !approve) setRejecting(true);
     });
   };
+  const approveAnyway = async (why: string) => {
+    if (await ask({ title: "Over the team's limit", message: why, confirmLabel: "Approve anyway", tone: "primary" })) decide(true, true);
+  };
   if (decided) {
     return (
       <span
@@ -364,6 +384,7 @@ Approve it anyway?`)) r = await decideTimeOff(id, approve, undefined, true);
       >
         <i className={`pi ${decided === "approved" ? "pi-check-circle" : "pi-times-circle"} text-xs`} aria-hidden />
         {decided === "approved" ? "Approved" : "Rejected"}
+        {confirmModal}
       </span>
     );
   }
@@ -383,6 +404,7 @@ Approve it anyway?`)) r = await decideTimeOff(id, approve, undefined, true);
           </div>
         </Modal>
       )}
+      {confirmModal}
     </span>
   );
 }

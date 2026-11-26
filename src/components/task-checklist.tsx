@@ -8,6 +8,7 @@ import {
   setTaskInstructions,
   toggleChecklistItem,
 } from "@/app/actions";
+import { useConfirm } from "@/components/confirm-modal";
 
 export type ChecklistItem = { id: number; text: string; done: boolean };
 
@@ -37,6 +38,7 @@ export function TaskChecklist({
   const [text, setText] = useState("");
   const [notes, setNotes] = useState(description ?? "");
   const [editingNotes, setEditingNotes] = useState(false);
+  const [ask, confirmModal] = useConfirm();
   const doneCount = items.filter((i) => i.done).length;
 
   const run = (
@@ -51,6 +53,7 @@ export function TaskChecklist({
 
   return (
     <div className="space-y-4">
+      {confirmModal}
       {(description || canEdit) && (
         <section className="card space-y-2 p-4">
           <div className="flex items-center justify-between gap-3">
@@ -190,7 +193,14 @@ export function TaskChecklist({
                       severity="danger"
                       aria-label={`Remove ${item.text}`}
                       disabled={pending}
-                      onClick={() => run(() => removeChecklistItem(item.id))}
+                      onClick={async () => {
+                        const sure = await ask({
+                          title: "Remove this checklist item?",
+                          message: <>&ldquo;{item.text}&rdquo; is removed from the checklist.</>,
+                          confirmLabel: "Remove",
+                        });
+                        if (sure) run(() => removeChecklistItem(item.id));
+                      }}
                     />
                   )}
                 </li>

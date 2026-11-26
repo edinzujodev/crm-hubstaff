@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui";
 import { Modal } from "@/components/modal";
+import { useConfirm } from "@/components/confirm-modal";
 import { cancelTimeOff } from "@/app/hr/actions";
 import { fmtDays, fmtRange } from "@/lib/days";
 import { KIND_LABEL, statusLabel, type TimeOffStatus } from "@/lib/leave-days";
@@ -55,16 +56,16 @@ function ManageTimeOff({
   const [editing, setEditing] = useState(startEditing);
   const [busy, startTransition] = useTransition();
   const own = form?.me.id === t.userId;
+  const [ask, confirmModal] = useConfirm();
 
-  const cancel = () => {
-    if (
-      !confirm(
-        own
-          ? "Cancel this time off?"
-          : `Cancel ${t.name}'s ${KIND_LABEL[t.kind].toLowerCase()}? They'll get a notification.`,
-      )
-    )
-      return;
+  const cancel = async () => {
+    const sure = await ask({
+      title: own ? "Cancel your time off?" : `Cancel ${t.name}'s ${KIND_LABEL[t.kind].toLowerCase()}?`,
+      message: `${fmtRange(t.startDate, t.endDate)} comes off the calendar${own ? "." : `, and ${t.name} gets a notification.`}`,
+      confirmLabel: "Cancel time off",
+      cancelLabel: "Keep it",
+    });
+    if (!sure) return;
     startTransition(async () => {
       const r = await cancelTimeOff(t.id);
       notify(
@@ -120,7 +121,7 @@ function ManageTimeOff({
             outlined
             disabled={busy}
             label={busy ? "Cancelling…" : "Cancel time off"}
-            onClick={cancel}
+            onClick={() => void cancel()}
           />
           {form && (
             <Button
@@ -133,6 +134,7 @@ function ManageTimeOff({
           )}
         </span>
       </div>
+      {confirmModal}
     </Modal>
   );
 }

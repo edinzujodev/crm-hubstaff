@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/toast";
 import { Select } from "@/components/ui";
 import { useTransition } from "react";
 import { setUserRole } from "@/app/actions";
@@ -16,7 +17,7 @@ export function RoleSelect({ userId, role, name }: { userId: number; role: "supe
       onChange={(e) =>
         startTransition(async () => {
           const res = await setUserRole(userId, e.target.value as "super_admin" | "member");
-          if (!res.ok) alert(res.error);
+          if (!res.ok) notify({ message: "Couldn't change the role", detail: res.error, tone: "error" });
         })
       }
     >

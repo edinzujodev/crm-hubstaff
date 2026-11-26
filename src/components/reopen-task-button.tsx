@@ -18,7 +18,7 @@ export function ReopenTaskButton({ taskId, title, compact }: { taskId: number; t
       onClick={() =>
         start(async () => {
           const res = await setTaskStatus(taskId, "todo");
-          if (!res.ok) return alert(res.error);
+          if (!res.ok) return notify({ message: "Couldn't reopen the task", detail: res.error, tone: "error" });
           notify({ message: "Task reopened", detail: title, link: { href: "/tasks", label: "Open list" } });
         })
       }

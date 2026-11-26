@@ -1,16 +1,15 @@
 "use client";
 
-import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { deleteTeam } from "@/app/actions";
 import { EditTeamForm, type TeamEditData } from "@/components/edit-team-form";
 import type { PickerUser } from "@/components/member-picker";
-import { HoldToDelete } from "@/components/hold-to-delete";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { RowMenu } from "@/components/row-menu";
 import { Modal } from "@/components/modal";
 
-/** The ⋯ button at the end of a team row. Its menu has View, Edit and Delete (Delete asks for a press-and-hold). */
+/** The ⋯ button at the end of a team row. Its menu has View, Edit and Delete (Delete asks first). */
 export function TeamMenu({
   teamId,
   name,
@@ -49,17 +48,13 @@ export function TeamMenu({
         </Modal>
       )}
       {confirm && (
-        <Modal title="Delete team?" onClose={() => setConfirm(false)}>
-          <p className="text-sm">
-            Delete <span className="font-medium">{name}</span>?
-          </p>
-          <div className="flex items-center justify-end gap-2">
-            <Button type="button" severity="secondary" outlined onClick={() => setConfirm(false)}>
-              Cancel
-            </Button>
-            <HoldToDelete title={name} action={() => deleteTeam(teamId)} />
-          </div>
-        </Modal>
+        <ConfirmDelete
+          title="Delete team?"
+          what={name}
+          note="Its members stay, without a team."
+          action={() => deleteTeam(teamId)}
+          onClose={() => setConfirm(false)}
+        />
       )}
     </>
   );

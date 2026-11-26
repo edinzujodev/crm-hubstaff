@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/toast";
 import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
@@ -16,7 +17,7 @@ export function ConvertLeadButton({ leadId, name, compact }: { leadId: number; n
       onClick={() =>
         startTransition(async () => {
           const res = await convertLead(leadId);
-          if (!res.ok) alert(res.error);
+          if (!res.ok) notify({ message: "Couldn't convert the lead", detail: res.error, tone: "error" });
           else router.push(`/clients/${res.data.clientId}`);
         })
       }

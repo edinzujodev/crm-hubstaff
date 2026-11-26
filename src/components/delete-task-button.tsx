@@ -1,16 +1,17 @@
 "use client";
 
 import { deleteTask } from "@/app/actions";
-import { HoldToDelete } from "@/components/hold-to-delete";
+import { DeleteButton } from "@/components/delete-button";
 
-export function DeleteTaskButton({
-  taskId,
-  title,
-  redirectTo,
-}: {
-  taskId: number;
-  title: string;
-  redirectTo?: string;
-}) {
-  return <HoldToDelete title={title} redirectTo={redirectTo} action={() => deleteTask(taskId)} />;
+export function DeleteTaskButton({ taskId, title, redirectTo }: { taskId: number; title: string; redirectTo?: string }) {
+  return (
+    <DeleteButton
+      title="Delete task?"
+      what={title}
+      note="It moves to Deleted, where it can be restored."
+      redirectTo={redirectTo}
+      deletedLink
+      action={() => deleteTask(taskId)}
+    />
+  );
 }

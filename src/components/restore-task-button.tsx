@@ -15,10 +15,10 @@ export function RestoreTaskButton({ taskId, title, compact }: { taskId: number; 
       onClick={() =>
         startTransition(async () => {
           const res = await restoreTask(taskId);
-          if (!res.ok) alert(res.error);
+          if (!res.ok) notify({ message: "Couldn't restore the task", detail: res.error, tone: "error" });
           else notify({ message: "Task restored", detail: title });
           if (res.ok && res.data.hubstaffError)
-            alert(`Restored in the CRM, but Hubstaff could not be updated: ${res.data.hubstaffError}`);
+            notify({ message: "Restored in the CRM, but Hubstaff could not be updated", detail: res.data.hubstaffError, tone: "error" });
         })
       }
     >
