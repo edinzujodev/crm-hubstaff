@@ -220,12 +220,12 @@ export function TimeOffForm({
           {teamClash.names.length} ({teamClash.names.join(", ")}) off or waiting for approval. Pick other days.
         </p>
       )}
-      {single && (
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="halfDay" checked={halfDay} onChange={(e) => setHalfDay(e.target.checked)} />
-          Half a day
-        </label>
-      )}
+      {/* Always there (only usable for a single day), so the form doesn't change height when dates are picked. */}
+      <label className={`flex items-center gap-2 text-sm ${single ? "" : "text-muted"}`}>
+        <Checkbox name="halfDay" checked={halfDay && single} disabled={!single} onChange={(e) => setHalfDay(e.target.checked)} />
+        Half a day
+        {!single && <span className="text-xs">(single day only)</span>}
+      </label>
       <label className="flex flex-col gap-1 text-xs font-medium text-muted">
         Note <span className="sr-only">(optional)</span>
         <InputTextarea name="note" rows={2} maxLength={500} defaultValue={editing?.note ?? ""} autoResize className="w-full text-foreground" placeholder="Optional" />
@@ -238,11 +238,10 @@ export function TimeOffForm({
           {refused ? " Nobody can take time off then." : " You can still enter it as a super admin."}
         </p>
       )}
-      {days !== null && (
-        <p
-          className={`rounded-lg px-3 py-2 text-sm ${overLimit ? "bg-red-500/10 text-red-700 dark:text-red-300" : "bg-foreground/5"}`}
-        >
-          {days === 0 ? (
+      <p className={`rounded-lg px-3 py-2 text-sm ${overLimit ? "bg-red-500/10 text-red-700 dark:text-red-300" : "bg-foreground/5"}`}>
+          {days === null ? (
+            <span className="text-muted">Pick the dates to see how many days it takes.</span>
+          ) : days === 0 ? (
             "Only weekends or public holidays: nothing to take off."
           ) : (
             <>
@@ -250,8 +249,7 @@ export function TimeOffForm({
               {overLimit && " — that's more than you have left."}
             </>
           )}
-        </p>
-      )}
+      </p>
       {state && !state.ok && !state.canOverride && (
         <p role="alert" className="text-sm text-red-600">
           {state.error}
