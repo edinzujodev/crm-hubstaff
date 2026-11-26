@@ -104,6 +104,8 @@ export const teams = pgTable("teams", {
   // Urgency levels, set by the team leader: a task due in fewer hours than this is "approaching" / "critical".
   approachingHours: integer("approaching_hours").notNull().default(72),
   criticalHours: integer("critical_hours").notNull().default(24),
+  // At most this many of the team may be off at the same time (planned time off). Null: no limit.
+  maxOff: integer("max_off"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

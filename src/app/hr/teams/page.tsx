@@ -32,7 +32,7 @@ async function TeamsContent() {
       <DataGrid
         flush
         empty={admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
-        headers={["Team", "Leader", "Members"]}
+        headers={["Team", "Leader", "Members", "Off at once"]}
         rows={teams.map((t) => {
           const members = allUsers.filter((u) => u.teamId === t.id);
           const leader = allUsers.find((u) => u.id === t.leaderId);
@@ -68,6 +68,15 @@ async function TeamsContent() {
               ) : (
                 <span key="m" className="text-muted">
                   No members yet
+                </span>
+              ),
+              t.maxOff === null ? (
+                <span key="o" className="text-muted">
+                  No limit
+                </span>
+              ) : (
+                <span key="o" className="tabular-nums" title={`At most ${t.maxOff} of ${members.length} people off on the same day`}>
+                  {t.maxOff} / {members.length}
                 </span>
               ),
             ],

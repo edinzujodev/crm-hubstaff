@@ -1,9 +1,9 @@
-import { and, eq, inArray, lte } from "drizzle-orm";
+import { and, count, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Auth } from "@/lib/auth";
 import { ymd } from "@/lib/days";
 import { daysOffBetween } from "@/lib/holidays";
-import { countDays } from "@/lib/leave-days";
+import { countDays, workingDays } from "@/lib/leave-days";
 
 export * from "@/lib/leave-days";
 
@@ -20,6 +20,48 @@ export function canDecide(a: Auth, person: { id: number; teamId: number | null }
 /** Whose time off a person may enter or see in full: their own, and everyone they approve for. */
 export const canManagePerson = (a: Auth, person: { id: number; teamId: number | null }) =>
   person.id === a.user.id || canDecide(a, person);
+
+export type TeamLimitClash = { day: string; off: string[]; max: number; size: number; team: string };
+
+/**
+ * Checks a team's limit on how many of its people may be off at the same time. Everyone else's time off counts,
+ * sick leave included; with `withPending`, so do requests still waiting (first come, first served). Returns the first
+ * working day that is already full, or null when the time off fits (or the team has no limit).
+ */
+export async function teamLimitClash(
+  person: { id: number; teamId: number | null },
+  t: { startDate: string; endDate: string; halfDay: boolean },
+  { withPending, ignoreId }: { withPending: boolean; ignoreId?: number },
+): Promise<TeamLimitClash | null> {
+  if (person.teamId === null) return null;
+  const team = await db.query.teams.findFirst({ where: eq(schema.teams.id, person.teamId), columns: { name: true, maxOff: true } });
+  if (!team || team.maxOff === null) return null;
+
+  const [others, [{ size }], daysOff] = await Promise.all([
+    db
+      .select({ id: schema.timeOff.id, name: schema.users.name, startDate: schema.timeOff.startDate, endDate: schema.timeOff.endDate })
+      .from(schema.timeOff)
+      .innerJoin(schema.users, eq(schema.users.id, schema.timeOff.userId))
+      .where(
+        and(
+          eq(schema.users.teamId, person.teamId),
+          ne(schema.timeOff.userId, person.id),
+          inArray(schema.timeOff.status, withPending ? ["approved", "pending"] : ["approved"]),
+          lte(schema.timeOff.startDate, t.endDate),
+          gte(schema.timeOff.endDate, t.startDate),
+          ignoreId ? ne(schema.timeOff.id, ignoreId) : undefined,
+        ),
+      ),
+    db.select({ size: count() }).from(schema.users).where(eq(schema.users.teamId, person.teamId)),
+    daysOffBetween(t.startDate, t.endDate),
+  ]);
+
+  for (const day of workingDays(t, daysOff)) {
+    const off = [...new Set(others.filter((o) => o.startDate <= day && o.endDate >= day).map((o) => o.name))];
+    if (off.length >= team.maxOff) return { day, off, max: team.maxOff, size, team: team.name };
+  }
+  return null;
+}
 
 export type Balance = {
   year: number;

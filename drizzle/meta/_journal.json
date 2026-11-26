@@ -218,6 +218,13 @@
       "when": 1795617134161,
       "tag": "0030_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795639111193,
+      "tag": "0031_team_max_off",
+      "breakpoints": true
     }
   ]
 }

@@ -5,13 +5,13 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireAuth, requireRole, type Auth } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { fmtDays, fmtRange, isDay, weekday } from "@/lib/days";
+import { fmtDays, fmtRange, fmtShortDay, isDay, weekday } from "@/lib/days";
 import { REPEATS } from "@/lib/recurrence";
 import { localDay } from "@/lib/format";
 import { notifyTimeOffAdded, notifyTimeOffCancelled, notifyTimeOffDecided } from "@/lib/notifications";
 import { blockedBetween, builtInHolidays, daysOffBetween } from "@/lib/holidays";
 import { run, type Result } from "@/lib/result";
-import { balanceFor, blockable, blockedClash, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval } from "@/lib/time-off";
+import { balanceFor, blockable, blockedClash, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval, teamLimitClash } from "@/lib/time-off";
 
 const today = () => localDay(new Date(), config.timeZone);
 
@@ -38,6 +38,25 @@ async function checkNotBlocked(auth: Auth, t: { kind: (typeof schema.timeOffKind
   if (!blockable(t.kind) || auth.role === "super_admin") return;
   const clash = blockedClash(t, await blockedBetween(t.startDate, t.endDate));
   if (clash) throw new Error(`Nobody can take time off ${fmtRange(clash.startDate, clash.endDate)}: ${clash.reason}.`);
+}
+
+/**
+ * Refuses planned time off on a day when the team already has as many people off as it allows. Sick leave is never
+ * refused, and a super admin can still enter it.
+ */
+async function checkTeamLimit(
+  auth: Auth,
+  person: { id: number; name: string; teamId: number | null },
+  t: { kind: (typeof schema.timeOffKind.enumValues)[number]; startDate: string; endDate: string; halfDay: boolean },
+  opts: { withPending: boolean; ignoreId?: number },
+) {
+  if (!blockable(t.kind) || auth.role === "super_admin") return;
+  const clash = await teamLimitClash(person, t, opts);
+  if (!clash) return;
+  const names = clash.off.join(", ");
+  throw new Error(
+    `${clash.team} allows ${clash.max} of ${clash.size} people off at the same time, and ${fmtShortDay(clash.day)} already has ${clash.off.length} (${names})${opts.withPending ? " off or waiting for approval" : " off"}.`,
+  );
 }
 
 async function personFor(auth: Auth, userId: number) {
@@ -76,6 +95,7 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
     const forSomeoneElse = person.id !== auth.user.id;
 
     await checkNotBlocked(auth, input);
+    await checkTeamLimit(auth, person, input, { withPending: true });
 
     const daysOff = await daysOffBetween(input.startDate, input.endDate);
     const days = countDays(input, daysOff);
@@ -137,7 +157,10 @@ export async function decideTimeOff(id: number, approve: boolean, note?: string)
     const decisionNote = z.string().trim().max(500).optional().parse(note) || null;
     if (!approve && !decisionNote) throw new Error("Say why it's rejected, so they know.");
     // Blocked after it was asked for: a team leader can only reject it now.
-    if (approve) await checkNotBlocked(auth, row);
+    if (approve) {
+      await checkNotBlocked(auth, row);
+      await checkTeamLimit(auth, person, row, { withPending: false, ignoreId: row.id });
+    }
     const changed = await db
       .update(schema.timeOff)
       .set({ status: approve ? "approved" : "rejected", decidedById: auth.user.id, decidedAt: new Date(), decisionNote })
