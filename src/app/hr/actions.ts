@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireAuth, requireRole, type Auth } from "@/lib/auth";
@@ -8,7 +8,7 @@ import { config } from "@/lib/config";
 import { fmtDays, fmtRange, fmtShortDay, isDay, weekday } from "@/lib/days";
 import { REPEATS } from "@/lib/recurrence";
 import { localDay } from "@/lib/format";
-import { notifyTimeOffAdded, notifyTimeOffCancelled, notifyTimeOffDecided } from "@/lib/notifications";
+import { notifyTimeOffAdded, notifyTimeOffCancelled, notifyTimeOffChanged, notifyTimeOffDecided } from "@/lib/notifications";
 import { blockedBetween, builtInHolidays, daysOffBetween } from "@/lib/holidays";
 import { OverridableError, run, type Result } from "@/lib/result";
 import { balanceFor, blockable, blockedClash, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval, teamLimitClash } from "@/lib/time-off";
@@ -142,6 +142,61 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
     }).returning({ id: schema.timeOff.id });
     await quietly(() => notifyTimeOffAdded(auth.user, person, { ...input, id: row!.id }, approvedNow));
     return { status: approvedNow ? "approved" : "pending" };
+  });
+}
+
+/**
+ * Change the kind, dates or note of time off, as someone who approves for the person (a super admin: anyone's). The
+ * same checks as a new request apply; the person is told what changed.
+ */
+export async function updateTimeOff(id: number, _prev: unknown, formData: FormData): Promise<Result<{ status: string }>> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const row = await db.query.timeOff.findFirst({ where: eq(schema.timeOff.id, id) });
+    if (!row) throw new Error("That time off no longer exists.");
+    if (row.status === "rejected" || row.status === "cancelled") throw new Error("It's no longer on the calendar, so it can't be changed.");
+    const person = await db.query.users.findFirst({ where: eq(schema.users.id, row.userId) });
+    if (!person || !canDecide(auth, person)) throw new Error("You can't change this time off.");
+    const input = timeOffInput.parse(Object.fromEntries(formData));
+    const unchanged =
+      input.kind === row.kind && input.startDate === row.startDate && input.endDate === row.endDate && input.halfDay === row.halfDay && input.note === row.note;
+    if (unchanged) return { status: row.status };
+
+    await checkNotBlocked(auth, input);
+    await checkTeamLimit(auth, person, input, { withPending: true, ignoreId: id, override: formData.get("overrideLimit") === "on" });
+
+    const daysOff = await daysOffBetween(input.startDate < row.startDate ? input.startDate : row.startDate, input.endDate > row.endDate ? input.endDate : row.endDate);
+    if (!countDays(input, daysOff)) throw new Error("Those dates are only weekends or public holidays, so there's nothing to take off.");
+
+    const clash = await db.query.timeOff.findFirst({
+      where: and(
+        eq(schema.timeOff.userId, person.id),
+        ne(schema.timeOff.id, id),
+        inArray(schema.timeOff.status, ["pending", "approved"]),
+        lte(schema.timeOff.startDate, input.endDate),
+        gte(schema.timeOff.endDate, input.startDate),
+      ),
+    });
+    if (clash) throw new Error(`${person.name} already has ${KIND_LABEL[clash.kind].toLowerCase()} on some of these days.`);
+
+    // Vacation can't go past what is left, counting the days this time off already takes (a super admin can still enter it).
+    if (input.kind === "vacation" && auth.role !== "super_admin") {
+      for (let y = Number(input.startDate.slice(0, 4)); y <= Number(input.endDate.slice(0, 4)); y++) {
+        const [from, to] = [`${y}-01-01`, `${y}-12-31`];
+        const b = await balanceFor(person.id, y, today());
+        const already = row.kind === "vacation" ? countDays(row, daysOff, from, to) : 0;
+        const free = b.left - b.pending + already;
+        const wanted = countDays(input, daysOff, from, to);
+        if (wanted > free) throw new Error(`That's ${fmtDays(wanted)} of vacation in ${y}, but ${person.name} only has ${fmtDays(Math.max(0, free))} left.`);
+      }
+    }
+
+    // Sick leave counts straight away; otherwise it keeps its status (a waiting request still waits).
+    const status = needsApproval(input.kind) ? row.status : "approved";
+    const after = { kind: input.kind, startDate: input.startDate, endDate: input.endDate, halfDay: input.halfDay, note: input.note, status };
+    await db.update(schema.timeOff).set(after).where(eq(schema.timeOff.id, id));
+    await quietly(() => notifyTimeOffChanged(auth.user, person, row, { id, ...after }));
+    return { status };
   });
 }
 

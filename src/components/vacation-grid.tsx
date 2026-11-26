@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/avatar";
+import { GridEntryButton, type ManagedTimeOff } from "@/components/time-off-entry";
 import { eachDay, fmtShortDay, isWeekend } from "@/lib/days";
 import { KIND_LABEL, statusLabel, type TimeOffKind, type TimeOffStatus } from "@/lib/leave-days";
 
@@ -31,9 +32,15 @@ export type GridEntry = {
   /** "out" when the viewer may only know the person is away, not why. */
   kind: TimeOffKind | "out";
   note?: string | null;
+  /** Set when the viewer may change or cancel it: the entry opens on a click. */
+  manage?: ManagedTimeOff;
 };
 
 export type GridRow = { id: number; name: string; sub?: string; entries: GridEntry[] };
+
+const entryTitle = (name: string, e: GridEntry, d: string) =>
+  `${name} · ${e.kind === "out" ? "Out" : KIND_LABEL[e.kind]}${e.halfDay ? " (half day)" : ""} · ${fmtShortDay(d)} · ${statusLabel(e.kind, e.status)}${e.note ? ` · ${e.note}` : ""}`;
+const entryClass = (e: GridEntry) => `block w-full rounded-md ${e.halfDay ? "h-1/2" : "h-full"} ${e.status === "pending" ? PENDING[e.kind] : SOLID[e.kind]}`;
 
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -109,11 +116,10 @@ export function VacationGrid({
                   const e = off(d) ? undefined : r.entries.find((x) => x.startDate <= d && x.endDate >= d);
                   return (
                     <div key={d} className={`flex items-center justify-center p-[3px] ${off(d) ? "bg-foreground/[0.035]" : ""} ${weekStart(d, i) ? "border-l border-border" : ""}`}>
-                      {e ? (
-                        <span
-                          title={`${r.name} · ${e.kind === "out" ? "Out" : KIND_LABEL[e.kind]}${e.halfDay ? " (half day)" : ""} · ${fmtShortDay(d)} · ${statusLabel(e.kind, e.status)}${e.note ? ` · ${e.note}` : ""}`}
-                          className={`block w-full rounded-md ${e.halfDay ? "h-1/2" : "h-full"} ${e.status === "pending" ? PENDING[e.kind] : SOLID[e.kind]}`}
-                        />
+                      {e?.manage ? (
+                        <GridEntryButton t={e.manage} title={entryTitle(r.name, e, d)} className={entryClass(e)} />
+                      ) : e ? (
+                        <span title={entryTitle(r.name, e, d)} className={entryClass(e)} />
                       ) : (
                         <span className={`block h-full w-full rounded-md ${off(d) ? "" : "bg-foreground/[0.04]"}`} />
                       )}

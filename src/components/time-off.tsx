@@ -4,7 +4,7 @@ import { useActionState, useCallback, useEffect, useMemo, useOptimistic, useStat
 import { Button, Checkbox, InputTextarea, Select } from "@/components/ui";
 import { DateInput, type DayMark } from "@/components/date-input";
 import { Modal } from "@/components/modal";
-import { cancelTimeOff, decideTimeOff, requestTimeOff } from "@/app/hr/actions";
+import { cancelTimeOff, decideTimeOff, requestTimeOff, updateTimeOff } from "@/app/hr/actions";
 import { eachDay, fmtDays, fmtRange } from "@/lib/days";
 import {
   blockable,
@@ -50,6 +50,18 @@ export function StatusBadge({ status, kind }: { status: TimeOffStatus; kind?: Ti
 
 export type PersonOption = { id: number; name: string };
 
+/** Time off being changed by someone who approves for the person. */
+export type TimeOffEdit = {
+  id: number;
+  userId: number;
+  name: string;
+  kind: TimeOffKind;
+  startDate: string;
+  endDate: string;
+  halfDay: boolean;
+  note: string | null;
+};
+
 type FormProps = {
   me: PersonOption;
   /** Other people this person may enter time off for (their team, or everyone for a super admin). */
@@ -63,34 +75,53 @@ type FormProps = {
   selfApproves: boolean;
   /** Days nobody can take off. A super admin (selfApproves) can still enter time off on them. */
   blocked?: BlockedSpan[];
+  /** Change this time off instead of adding new time off. */
+  editing?: TimeOffEdit;
   onDone: () => void;
 };
 
+/** What the form needs to know besides what is being added or changed. */
+export type TimeOffFormContext = Omit<FormProps, "onDone" | "kind" | "editing">;
+
 const NO_BLOCKS: BlockedSpan[] = [];
 
-function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "vacation", selfApproves, blocked = NO_BLOCKS, onDone }: FormProps) {
-  const [state, action, pending] = useActionState(requestTimeOff, null);
-  const [userId, setUserId] = useState(String(me.id));
-  const [kind, setKind] = useState<TimeOffKind>(initialKind);
-  const [startDate, setStart] = useState("");
-  const [endDate, setEnd] = useState("");
-  const [halfDay, setHalfDay] = useState(false);
+export function TimeOffForm({
+  me,
+  people,
+  daysOff,
+  vacationLeft,
+  kind: initialKind = "vacation",
+  selfApproves,
+  blocked = NO_BLOCKS,
+  editing,
+  onDone,
+}: FormProps) {
+  const save = useMemo(() => (editing ? updateTimeOff.bind(null, editing.id) : requestTimeOff), [editing]);
+  const [state, action, pending] = useActionState(save, null);
+  const [userId, setUserId] = useState(String(editing?.userId ?? me.id));
+  const [kind, setKind] = useState<TimeOffKind>(editing?.kind ?? initialKind);
+  const [startDate, setStart] = useState(editing?.startDate ?? "");
+  const [endDate, setEnd] = useState(editing?.endDate ?? "");
+  const [halfDay, setHalfDay] = useState(editing?.halfDay ?? false);
   const offSet = useMemo(() => new Set(daysOff), [daysOff]);
   const single = !!startDate && (!endDate || endDate === startDate);
   const forMe = userId === String(me.id);
 
   useEffect(() => {
     if (!state?.ok) return;
-    notify({
-      message: state.data.status === "pending" ? "Request sent" : "Added to the calendar",
-      detail: state.data.status === "pending" ? "You'll see it here once it's approved." : undefined,
-    });
+    if (editing) notify({ message: "Time off changed", detail: editing.userId === me.id ? undefined : `${editing.name} gets a notification.` });
+    else
+      notify({
+        message: state.data.status === "pending" ? "Request sent" : "Added to the calendar",
+        detail: state.data.status === "pending" ? "You'll see it here once it's approved." : undefined,
+      });
     onDone();
-  }, [state, onDone]);
+  }, [state, onDone, editing, me.id]);
 
   const end = endDate || startDate;
   const days = startDate && end >= startDate ? countDays({ startDate, endDate: end, halfDay: halfDay && single }, offSet) : null;
-  const overLimit = forMe && kind === "vacation" && days !== null && days > vacationLeft;
+  // Changing time off: the days it already takes are in vacationLeft, so the warning would be wrong.
+  const overLimit = !editing && forMe && kind === "vacation" && days !== null && days > vacationLeft;
   const instant = !needsApproval(kind) || !forMe || selfApproves;
   const blocks = blockable(kind) ? blocked : [];
   const clash = startDate && end >= startDate ? blockedClash({ startDate, endDate: end }, blocks) : undefined;
@@ -106,7 +137,11 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
 
   return (
     <form action={action} className="space-y-4">
-      {people.length > 0 && (
+      {editing ? (
+        <p className="text-sm">
+          <span className="text-xs font-medium text-muted">For</span> <span className="font-medium">{editing.name}</span>
+        </p>
+      ) : people.length > 0 && (
         <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           For
           <Select name="userId" value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full">
@@ -156,7 +191,7 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
       )}
       <label className="flex flex-col gap-1 text-xs font-medium text-muted">
         Note <span className="sr-only">(optional)</span>
-        <InputTextarea name="note" rows={2} maxLength={500} autoResize className="w-full text-foreground" placeholder="Optional" />
+        <InputTextarea name="note" rows={2} maxLength={500} defaultValue={editing?.note ?? ""} autoResize className="w-full text-foreground" placeholder="Optional" />
       </label>
 
       {clash && (
@@ -197,8 +232,12 @@ function TimeOffForm({ me, people, daysOff, vacationLeft, kind: initialKind = "v
         </div>
       )}
       <div className="flex items-center justify-between gap-2 pt-1">
-        <span className="text-xs text-muted">{instant ? "Counts straight away." : "Needs approval."}</span>
-        <Button className="shrink-0 whitespace-nowrap" disabled={pending || !startDate || days === 0 || refused}>{pending ? "Saving…" : instant ? "Add" : "Send request"}</Button>
+        <span className="text-xs text-muted">
+          {editing ? (editing.userId === me.id ? "" : `${editing.name} gets a notification.`) : instant ? "Counts straight away." : "Needs approval."}
+        </span>
+        <Button className="shrink-0 whitespace-nowrap" disabled={pending || !startDate || days === 0 || refused}>
+          {pending ? "Saving…" : editing ? "Save changes" : instant ? "Add" : "Send request"}
+        </Button>
       </div>
     </form>
   );

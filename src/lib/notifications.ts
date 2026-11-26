@@ -7,7 +7,7 @@ import { KIND_LABEL, needsApproval, type TimeOffKind } from "@/lib/leave-days";
  * In-app notifications (the bell in the top bar). For now they cover time off:
  * - a request waits for approval → everyone who can decide on it;
  * - it is approved or rejected → the person who asked;
- * - an approver enters or cancels time off for someone → that person;
+ * - an approver enters, changes or cancels time off for someone → that person;
  * - someone records sick leave, or cancels their own time off → the people who approve for them.
  * Nobody is told about what they did themselves.
  */
@@ -17,6 +17,7 @@ export type NotificationKind =
   | "time_off_rejected"
   | "time_off_added"
   | "time_off_cancelled"
+  | "time_off_changed"
   | "sick_leave";
 
 type Person = { id: number; name: string; teamId: number | null };
@@ -130,6 +131,22 @@ export async function notifyTimeOffCancelled(actor: { id: number; name: string }
       timeOffId: r.id,
     });
   }
+}
+
+/** After someone who approves for the person changed the kind, dates or note of their time off. */
+export async function notifyTimeOffChanged(actor: { id: number; name: string }, person: Person, before: Request, after: Request) {
+  const moved = before.kind !== after.kind || before.startDate !== after.startDate || before.endDate !== after.endDate || before.halfDay !== after.halfDay;
+  await send(actor.id === person.id ? await approversFor(person) : [person.id], {
+    kind: "time_off_changed",
+    title:
+      actor.id === person.id
+        ? `${person.name} changed their ${KIND_LABEL[after.kind].toLowerCase()}`
+        : `${firstName(actor.name)} changed your ${KIND_LABEL[before.kind].toLowerCase()}`,
+    body: moved ? `Now ${what(after)} (was ${what(before)})` : `${what(after)} · the note changed`,
+    href: actor.id === person.id ? VACATIONS : MY_TIME_OFF,
+    actorId: actor.id,
+    timeOffId: after.id,
+  });
 }
 
 /** A request is no longer waiting: the "asked for" notices about it stop counting as unread for every approver. */

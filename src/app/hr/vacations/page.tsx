@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { MonthSwitch, WhoSwitch } from "@/components/hr-switches";
 import { TimeOffButton } from "@/components/time-off";
+import { TimeOffFormProvider } from "@/components/time-off-entry";
 import { VacationGrid, type GridEntry } from "@/components/vacation-grid";
 import { HR_ROLES, pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
@@ -12,7 +13,7 @@ import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween, holidaysBetween } from "@/lib/holidays";
 import { managedPeople } from "@/lib/hr";
 import { TIME_OFF_KINDS, type TimeOffKind } from "@/lib/leave-days";
-import { balanceFor, canManagePerson } from "@/lib/time-off";
+import { balanceFor, canDecide, canManagePerson } from "@/lib/time-off";
 
 /**
  * Who is away when, as a month planner. Everyone sees who is out; the kind of time off and requests still waiting
@@ -57,12 +58,16 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
 
   const rows = users.map((u) => {
     const full = canManagePerson(auth, u);
+    // Someone who approves for this person can open their time off to change or cancel it.
+    const manages = canDecide(auth, u);
     const mine: GridEntry[] = entries
       .filter((t) => t.userId === u.id && (full || t.status === "approved"))
       .map((t) => {
         const kind = full ? t.kind : "out";
         shownKinds.add(kind);
-        return { startDate: t.startDate, endDate: t.endDate, halfDay: t.halfDay, status: t.status, kind, note: full ? t.note : null };
+        const entry: GridEntry = { startDate: t.startDate, endDate: t.endDate, halfDay: t.halfDay, status: t.status, kind, note: full ? t.note : null };
+        if (manages) entry.manage = { ...t, name: u.name };
+        return entry;
       });
     return { id: u.id, name: u.name, sub: u.jobTitle ?? (u.teamId ? teamName.get(u.teamId) : undefined), entries: mine };
   });
@@ -91,14 +96,16 @@ async function VacationsContent({ params }: { params: Promise<{ m?: string; who?
         </>
       }
     >
-      <VacationGrid
+      <TimeOffFormProvider value={form}>
+        <VacationGrid
         first={first}
         last={last}
         today={today}
         rows={rows}
         holidays={new Map(holidays.filter((h) => h.dayOff).map((h) => [h.date, h.name]))}
-        kinds={kinds}
-      />
+          kinds={kinds}
+        />
+      </TimeOffFormProvider>
     </HrTabs>
   );
 }

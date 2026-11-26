@@ -7,13 +7,14 @@ import { fmtNum } from "@/components/balance-tiles";
 import { DataGrid } from "@/components/data-grid";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
 import { CancelTimeOffButton, DecideButtons, KindBadge, StatusBadge } from "@/components/time-off";
+import { ChangeTimeOffButton, TimeOffFormProvider } from "@/components/time-off-entry";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { addDays, fmtLongDay, fmtRange, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
-import { daysOffBetween } from "@/lib/holidays";
+import { blockedBetween, daysOffBetween } from "@/lib/holidays";
 import { managedPeople, waitingRequests } from "@/lib/hr";
-import { balancesFor, countDays } from "@/lib/time-off";
+import { balancesFor, canDecide, countDays } from "@/lib/time-off";
 
 function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
   return (
@@ -45,7 +46,7 @@ async function ApprovalsContent() {
         .from(schema.users)
     : people.map((p) => ({ ...p, annual: null }));
   const ids = everyone.map((p) => p.id);
-  const [balances, rows, allowanceRows, daysOff] = await Promise.all([
+  const [balances, rows, allowanceRows, daysOff, blocked] = await Promise.all([
     balancesFor(ids, year, today),
     ids.length
       ? db
@@ -62,8 +63,19 @@ async function ApprovalsContent() {
       : [],
     admin ? db.select().from(schema.leaveAllowances).where(eq(schema.leaveAllowances.year, year)) : [],
     daysOffBetween(ymd(year - 1, 1, 1), ymd(year + 1, 12, 31)),
+    blockedBetween(today, ymd(year + 1, 12, 31)),
   ]);
   const name = new Map(everyone.map((p) => [p.id, p.name]));
+  const byId = new Map(everyone.map((p) => [p.id, p]));
+  // For changing someone's time off from the list at the bottom.
+  const form = {
+    me: { id: auth.user.id, name: auth.user.name },
+    people: [],
+    daysOff: [...daysOff],
+    vacationLeft: 0,
+    selfApproves: admin,
+    blocked: blocked.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason })),
+  };
   const sorted = [...everyone].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -168,6 +180,7 @@ async function ApprovalsContent() {
         />
       </Section>
 
+      <TimeOffFormProvider value={form}>
       <Section title="Time off" sub="Approved, recorded (sick leave), rejected and cancelled, from the last 60 days on.">
         <DataGrid
           flush
@@ -191,10 +204,16 @@ async function ApprovalsContent() {
               <StatusBadge key="s" status={t.status} kind={t.kind} />,
             ],
             actions:
-              t.status === "approved" && t.userId !== auth.user.id ? <CancelTimeOffButton id={t.id} /> : undefined,
+              t.status === "approved" && canDecide(auth, byId.get(t.userId) ?? { id: t.userId, teamId: null }) ? (
+                <span className="flex items-center">
+                  <ChangeTimeOffButton t={{ ...t, name: name.get(t.userId) ?? "" }} />
+                  <CancelTimeOffButton id={t.id} />
+                </span>
+              ) : undefined,
           }))}
         />
       </Section>
+      </TimeOffFormProvider>
     </HrTabs>
   );
 }
