@@ -43,7 +43,9 @@ async function ProfileContent() {
     <div className="space-y-5">
       <section className="card space-y-4 p-5">
         <SectionHead as="h1" title="Personal details" sub="Only you can change these. Your colleagues see your photo, name and job title." />
+        {/* Keyed by the person: after switching person the form starts from their details, not the last one's. */}
         <ProfileForm
+          key={me.id}
           today={today}
           initial={{
             name: me.name,

@@ -15,7 +15,7 @@ async function ProfileNav() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4 md:flex-col md:items-stretch md:gap-3">
-        <ProfilePhoto userId={me.id} name={me.name} hasPhoto={me.photoVersion !== null} />
+        <ProfilePhoto key={me.id} userId={me.id} name={me.name} hasPhoto={me.photoVersion !== null} />
         <div className="min-w-0 md:px-1">
           <p className="truncate text-xl font-semibold">{me.name}</p>
           <p className="truncate text-sm text-muted">{me.jobTitle || ROLE_LABEL[auth.role]}</p>
