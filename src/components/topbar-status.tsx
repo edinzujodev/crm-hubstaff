@@ -5,7 +5,8 @@ import { db, schema } from "@/db";
 import { getAuth, taskScope } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { openTasks } from "@/lib/dashboard/data";
-import { fmtTime, truncate } from "@/lib/format";
+import { fmtTime, localDay, truncate } from "@/lib/format";
+import { fmtShortDay } from "@/lib/days";
 import { NotificationBell } from "@/components/notification-bell";
 import { unreadCount } from "@/lib/notifications";
 import { lastSyncAt } from "@/lib/sync";
@@ -53,12 +54,7 @@ export async function TopbarStatus() {
   // Overdue counts as critical, so this is the same set as the Critical tab on the Tasks page.
   const critical = open.filter((t) => t.urgency === "critical").length;
   const now = new Date();
-  const date = new Intl.DateTimeFormat("en-GB", {
-    timeZone: config.timeZone,
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(now);
+  const date = fmtShortDay(localDay(now, config.timeZone));
   const task = running[0];
 
   return (

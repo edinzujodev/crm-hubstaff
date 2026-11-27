@@ -1,3 +1,5 @@
+import { dmy } from "@/lib/days";
+
 export function fmtDuration(seconds: number): string {
   const m = Math.round(seconds / 60);
   const h = Math.floor(m / 60);
@@ -19,14 +21,9 @@ export function spanSince(from: Date): string {
   return fmtSpan(Date.now() - from.getTime());
 }
 
+/** "27/11/2026 14:05" in the given time zone. */
 export function fmtDateTime(d: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
+  return `${dmy(localDay(d, timeZone))} ${fmtTime(d, timeZone)}`;
 }
 
 export function fmtTime(d: Date, timeZone: string): string {
@@ -43,10 +40,7 @@ export function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1).trimEnd() + "…" : text;
 }
 
-/** `2026-11-13` -> `13 Nov`. */
+/** `2026-11-13` -> `13/11/2026`. */
 export function fmtDay(day: string): string {
-  const [y, m, d] = day.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }).format(
-    new Date(Date.UTC(y, m - 1, d)),
-  );
+  return dmy(day);
 }

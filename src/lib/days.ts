@@ -48,20 +48,18 @@ export function shiftMonth(month: string, n: number) {
 
 const fmt = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", ...opts });
 
-/** "3 Mar 2026" */
-export const fmtLongDay = (day: string) => fmt({ day: "numeric", month: "short", year: "numeric" }).format(toUtc(day));
-/** "Tue 3 Mar" */
-export const fmtShortDay = (day: string) => fmt({ weekday: "short", day: "numeric", month: "short" }).format(toUtc(day));
+/** Every date in the app is written dd/mm/yyyy: "2026-03-03" -> "03/03/2026". */
+export const dmy = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`;
+/** "03/03/2026" */
+export const fmtLongDay = (day: string) => dmy(day);
+/** "Tue 03/03/2026" */
+export const fmtShortDay = (day: string) => `${fmt({ weekday: "short" }).format(toUtc(day))} ${dmy(day)}`;
 /** "November 2026" */
 export const fmtMonth = (month: string) => fmt({ month: "long", year: "numeric" }).format(toUtc(`${month}-01`));
 
-/** "3–7 Mar 2026", "28 Feb – 3 Mar 2026" or one day. */
+/** "03/03/2026 – 07/03/2026", or one day. */
 export function fmtRange(from: string, to: string) {
-  if (from === to) return fmtLongDay(from);
-  const [a, b] = [toUtc(from), toUtc(to)];
-  if (a.getUTCFullYear() !== b.getUTCFullYear()) return `${fmtLongDay(from)} – ${fmtLongDay(to)}`;
-  if (a.getUTCMonth() !== b.getUTCMonth()) return `${fmt({ day: "numeric", month: "short" }).format(a)} – ${fmtLongDay(to)}`;
-  return `${a.getUTCDate()}–${fmtLongDay(to)}`;
+  return from === to ? dmy(from) : `${dmy(from)} – ${dmy(to)}`;
 }
 
 /** "1 day", "2.5 days" */

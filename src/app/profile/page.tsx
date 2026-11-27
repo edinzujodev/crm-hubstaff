@@ -9,16 +9,12 @@ import { pageGuard } from "@/lib/auth";
 import { authMode } from "@/lib/session";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
+import { dmy } from "@/lib/days";
 
 const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Staff" } as const;
 
-/** A yyyy-mm-dd day as "3 Mar 2024". */
-function fmtDate(day: string) {
-  const [y, m, d] = day.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }).format(
-    new Date(Date.UTC(y!, m! - 1, d!)),
-  );
-}
+/** A yyyy-mm-dd day as "03/03/2024". */
+const fmtDate = dmy;
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (

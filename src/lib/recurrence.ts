@@ -1,5 +1,5 @@
 /** Repeating events: which days an event happens on. No database here, so the form can describe a repeat too. */
-import { addDays, eachDay, toUtc, weekday, ymd } from "@/lib/days";
+import { addDays, dmy, eachDay, toUtc, weekday, ymd } from "@/lib/days";
 
 export const REPEATS = ["none", "daily", "weekly", "monthly", "yearly"] as const;
 export type Repeat = (typeof REPEATS)[number];
@@ -94,7 +94,7 @@ export function describeRepeat(rule: Omit<RepeatRule, "endDate">): string | null
     text = `Every year on ${new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "long" }).format(d)}`;
   }
   if (rule.repeatUntil) {
-    text += `, until ${new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }).format(toUtc(rule.repeatUntil))}`;
+    text += `, until ${dmy(rule.repeatUntil)}`;
   }
   return text;
 }

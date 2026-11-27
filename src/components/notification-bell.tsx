@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { dmy } from "@/lib/days";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
@@ -18,7 +19,7 @@ function ago(iso: string, now: number) {
   const d = Math.floor(s / 86400);
   if (d === 1) return "yesterday";
   if (d < 7) return `${d} days ago`;
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(iso));
+  return dmy(new Intl.DateTimeFormat("en-CA").format(new Date(iso)));
 }
 
 /** Marks notifications read on the server (all of them without ids). Returns the new unread count, if it answered. */
@@ -204,7 +205,7 @@ function dayLabel(iso: string, now: number, timeZone: string) {
   const d = new Date(iso).getTime();
   if (key(d) === key(now)) return "Today";
   if (key(d) === key(now - 86400000)) return "Yesterday";
-  return new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "long", day: "numeric", month: "long" }).format(d);
+  return `${new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "long" }).format(d)} ${dmy(key(d))}`;
 }
 
 /**

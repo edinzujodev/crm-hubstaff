@@ -4,80 +4,135 @@ import type { Balance } from "@/lib/time-off";
 
 export const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
-/** A number inside a ring; the ring fills by `share` (0–1), or stays an empty track without one. */
-function Ring({ value, share, tone }: { value: number; share?: number; tone: string }) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const fill = share === undefined ? 0 : Math.min(1, Math.max(0, share));
+const dayWord = (n: number) => (n === 1 ? "day" : "days");
+
+const OTHER_KINDS = ["sick", "personal", "religious", "unpaid"] as const satisfies TimeOffKind[];
+type OtherKind = (typeof OTHER_KINDS)[number];
+
+/** Short names and the same dots as the kinds of time off elsewhere (the requests list, the grids). */
+const OTHER: Record<OtherKind, { label: string; dot: string }> = {
+  sick: { label: "Sick", dot: "bg-rose-500" },
+  personal: { label: "Personal", dot: "bg-violet-500" },
+  religious: { label: "Religious", dot: "bg-amber-500" },
+  unpaid: { label: "Unpaid", dot: "bg-zinc-400" },
+};
+
+/** One entry of the key under a card's number: a dot, a name, and its days. */
+function KeyItem({ dot, label, value, title }: { dot: string; label: string; value: number; title?: string }) {
   return (
-    <span className={`relative inline-flex h-16 w-16 shrink-0 items-center justify-center ${tone}`}>
-      <svg viewBox="0 0 60 60" className="absolute inset-0 -rotate-90" aria-hidden>
-        <circle cx="30" cy="30" r={r} fill="none" stroke="currentColor" strokeOpacity={0.15} strokeWidth="2.5" />
-        {fill > 0 && (
-          <circle
-            cx="30"
-            cy="30"
-            r={r}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeDasharray={`${c * fill} ${c}`}
-          />
-        )}
-      </svg>
-      <span className="font-mono text-lg font-semibold tabular-nums">{fmtNum(value)}</span>
-    </span>
+    <li className="flex items-center gap-1.5" title={title}>
+      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden />
+      {label}
+      <span className={`tabular-nums ${value ? "font-medium text-foreground" : ""}`}>{fmtNum(value)}</span>
+    </li>
   );
 }
-
-function Tile({ ring, title, children }: { ring: React.ReactNode; title: string; children: React.ReactNode }) {
-  return (
-    <div className="card flex items-center gap-4 p-4 sm:flex-col sm:items-start sm:p-5">
-      {ring}
-      <div className="min-w-0">
-        <h3 className="font-semibold">{title}</h3>
-        <div className="space-y-0.5 text-xs text-muted">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-const OTHER_KINDS = ["personal", "religious", "unpaid"] as const satisfies TimeOffKind[];
 
 /**
- * This year at a glance: vacation days left out of the year's total, sick days taken (no limit), and the other
- * kinds of leave taken. `taken` holds the approved days of each kind this year.
+ * A summary card. Every card has the same parts in the same sizes: an icon and title (and the year), the big number
+ * with what it counts, then the details at the bottom.
+ */
+function Card({
+  icon,
+  tone,
+  title,
+  year,
+  value,
+  unit,
+  children,
+}: {
+  icon: string;
+  tone: string;
+  title: string;
+  year: number;
+  value: number;
+  unit: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="card flex flex-col gap-4 p-5" aria-label={title}>
+      <div className="flex items-center gap-2.5">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tone}`} aria-hidden>
+          <i className={`pi ${icon} text-sm`} />
+        </span>
+        <h3 className="font-semibold">{title}</h3>
+        <span className="ml-auto text-xs text-muted">{year}</span>
+      </div>
+      <p className="flex items-baseline gap-2">
+        <span className="text-4xl font-semibold tabular-nums">{fmtNum(value)}</span>
+        <span className="text-sm text-muted">{unit}</span>
+      </p>
+      <div className="mt-auto space-y-2.5 text-xs text-muted">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * This year at a glance, in two cards. Vacation: the days left out of the year's total, with a bar of the days taken
+ * and waiting for approval (the rest of the bar is what is left). Other leave: all other days taken this year, by
+ * kind. `taken` holds the approved days of each kind this year.
  */
 export function LeaveTiles({ b, taken, today }: { b: Balance; taken: Record<TimeOffKind, number>; today: string }) {
   const total = b.allowance + b.carriedOver - b.expired;
-  const carryHint = b.carriedOver
+  const left = Math.max(0, b.left);
+  const carry = b.carriedOver
     ? b.expired
-      ? `${fmtDays(b.expired)} from ${b.year - 1} expired`
+      ? { text: `${fmtDays(b.expired)} carried over from ${b.year - 1} expired`, warn: false }
       : today <= b.carryOverUntil
-        ? `${fmtDays(b.carriedOver)} from ${b.year - 1}, use by ${fmtLongDay(b.carryOverUntil)}`
+        ? { text: `${fmtDays(b.carriedOver)} carried over from ${b.year - 1}: use them by ${fmtLongDay(b.carryOverUntil)}`, warn: true }
         : undefined
     : undefined;
+  const bar = [
+    { key: "used", value: b.used, className: "bg-sky-500" },
+    { key: "pending", value: b.pending, className: "bg-sky-500/40" },
+    { key: "rest", value: Math.max(0, left - b.pending), className: "bg-foreground/10" },
+  ].filter((p) => p.value > 0);
   const other = OTHER_KINDS.reduce((n, k) => n + taken[k], 0);
-  const otherParts = OTHER_KINDS.filter((k) => taken[k]).map((k) => `${fmtNum(taken[k])} ${KIND_LABEL[k].toLowerCase()}`);
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-      <Tile title="Vacation" ring={<Ring value={b.left} share={total ? b.left / total : 0} tone="text-sky-500" />}>
-        <p>
-          {fmtNum(b.left)}/{fmtNum(total)} days available in {b.year}
-        </p>
-        {b.pending > 0 && <p className="text-amber-600 dark:text-amber-400">{fmtDays(b.pending)} waiting for approval</p>}
-        {carryHint && <p>{carryHint}</p>}
-      </Tile>
-      <Tile title="Sick leave" ring={<Ring value={taken.sick} tone="text-rose-500" />}>
-        <p>{taken.sick ? `${fmtDays(taken.sick)} taken in ${b.year}` : `None taken in ${b.year}`}</p>
-        <p>No limit, no approval needed</p>
-      </Tile>
-      <Tile title="Other leave" ring={<Ring value={other} tone="text-violet-500" />}>
-        <p>{other ? `${fmtDays(other)} taken in ${b.year}` : `None taken in ${b.year}`}</p>
-        <p>{otherParts.length ? otherParts.join(" · ") : "Personal days, religious holidays, unpaid"}</p>
-      </Tile>
+    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+      <Card
+        icon="pi-sun"
+        tone="bg-sky-500/15 text-sky-600 dark:text-sky-400"
+        title="Vacation"
+        year={b.year}
+        value={left}
+        unit={`${dayWord(left)} left of ${fmtNum(total)}`}
+      >
+        <div
+          className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-foreground/10"
+          role="img"
+          aria-label={`${fmtDays(b.used)} taken, ${fmtDays(b.pending)} waiting for approval, ${fmtDays(left)} left`}
+        >
+          {total > 0 &&
+            bar.map((p) => <span key={p.key} className={`h-full ${p.className}`} style={{ flexGrow: p.value, flexBasis: 0 }} />)}
+        </div>
+        <ul className="flex flex-wrap gap-x-4 gap-y-1">
+          <KeyItem dot="bg-sky-500" label="Taken" value={b.used} />
+          <KeyItem dot="bg-sky-500/40" label="Waiting for approval" value={b.pending} />
+        </ul>
+        {carry && (
+          <p className={`flex items-center gap-1.5 ${carry.warn ? "text-amber-700 dark:text-amber-400" : ""}`}>
+            <i className="pi pi-history text-[11px]" aria-hidden />
+            {carry.text}
+          </p>
+        )}
+      </Card>
+
+      <Card
+        icon="pi-calendar"
+        tone="bg-violet-500/15 text-violet-600 dark:text-violet-400"
+        title="Other leave"
+        year={b.year}
+        value={other}
+        unit={`${dayWord(other)} in ${b.year}`}
+      >
+        <ul className="flex flex-wrap gap-x-4 gap-y-1">
+          {OTHER_KINDS.map((k) => (
+            <KeyItem key={k} dot={OTHER[k].dot} label={OTHER[k].label} value={taken[k]} title={KIND_LABEL[k]} />
+          ))}
+        </ul>
+      </Card>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { fmtShortDay } from "@/lib/days";
 /** A clean axis: `step` is 1, 2 or 5 times a power of ten, and `top` is the first multiple of it above `max`. */
 export function niceScale(max: number, target = 4) {
   if (!(max > 0)) return { step: 1, top: 1 };
@@ -14,14 +15,12 @@ export function hoursTick(h: number, top: number) {
   return `${+h.toFixed(1)}h`;
 }
 
-/** "3 Nov" from "2026-11-03". */
+/** "03/11" from "2026-11-03": the chart axes have no room for the year (the period is shown above them). */
 export function shortDay(day: string) {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }).format(new Date(day));
+  return `${day.slice(8, 10)}/${day.slice(5, 7)}`;
 }
 
-/** "Mon 3 Nov" from "2026-11-03". */
+/** "Mon 03/11/2026" from "2026-11-03". */
 export function longDay(day: string) {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(
-    new Date(day),
-  );
+  return fmtShortDay(day);
 }
