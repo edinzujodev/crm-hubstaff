@@ -68,7 +68,8 @@ const SIZES = {
   md: "h-9 w-9 text-sm",
   lg: "h-11 w-11 text-sm",
   xl: "h-12 w-12 text-base md:h-14 md:w-14 md:text-lg",
-  "2xl": "h-20 w-20 text-2xl",
+  // The profile's own big photo: fills its column on wider screens.
+  hero: "h-24 w-24 text-3xl md:h-auto md:w-full md:aspect-square md:text-6xl",
 };
 
 /**

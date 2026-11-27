@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import { Avatar } from "@/components/avatar";
 import { connection } from "next/server";
 import { HrNavLinks } from "@/components/hr-nav";
+import { ProfilePhoto } from "@/components/photo-picker";
 import { getAuth } from "@/lib/auth";
 
 const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Member" } as const;
 
-/** Who you are, then the profile's pages: your details, and your time off. */
+/** Who you are (your photo, big: click it to change it), then the profile's pages: your details, and your time off. */
 async function ProfileNav() {
   await connection();
   const auth = await getAuth();
@@ -14,11 +14,11 @@ async function ProfileNav() {
   const me = auth.user;
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 md:flex-col md:items-start md:px-3">
-        <Avatar name={me.name} userId={me.id} size="xl" solid />
-        <div className="min-w-0">
-          <p className="truncate font-semibold">{me.name}</p>
-          <p className="truncate text-xs text-muted">{me.jobTitle || ROLE_LABEL[auth.role]}</p>
+      <div className="flex items-center gap-4 md:flex-col md:items-stretch md:gap-3">
+        <ProfilePhoto userId={me.id} name={me.name} hasPhoto={me.photoVersion !== null} />
+        <div className="min-w-0 md:px-1">
+          <p className="truncate text-xl font-semibold">{me.name}</p>
+          <p className="truncate text-sm text-muted">{me.jobTitle || ROLE_LABEL[auth.role]}</p>
         </div>
       </div>
       <HrNavLinks
@@ -41,7 +41,7 @@ async function ProfileNav() {
 function NavSkeleton() {
   return (
     <div className="space-y-4" aria-hidden>
-      <span className="block h-12 w-12 animate-pulse rounded-full bg-foreground/5 md:mx-3 md:h-14 md:w-14" />
+      <span className="block h-24 w-24 animate-pulse rounded-full bg-foreground/5 md:aspect-square md:h-auto md:w-full" />
       <div className="flex gap-2 md:flex-col">
         {[0, 1].map((i) => (
           <span key={i} className="h-9 w-32 animate-pulse rounded-md bg-foreground/5 md:w-full" />
@@ -54,7 +54,7 @@ function NavSkeleton() {
 export default function ProfileLayout({ children }: LayoutProps<"/profile">) {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 md:flex-row md:items-start">
-      <aside className="md:sticky md:top-16 md:w-48 md:shrink-0">
+      <aside className="md:sticky md:top-16 md:w-60 md:shrink-0">
         <Suspense fallback={<NavSkeleton />}>
           <ProfileNav />
         </Suspense>
