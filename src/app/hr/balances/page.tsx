@@ -16,8 +16,8 @@ import { balancesFor, countDays } from "@/lib/time-off";
 
 /**
  * Vacation days per person this year: allowance, carried over, taken, waiting and left, and next to them the sick
- * leave recorded this year. A super admin sees everyone and sets their days; a team leader sees the people they look
- * after.
+ * leave recorded this year. A super admin sees everyone and sets their days; a team lead sees and sets the days of
+ * the people in the teams they lead.
  */
 async function BalancesContent() {
   await connection();
@@ -30,12 +30,17 @@ async function BalancesContent() {
     ? await db
         .select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId, annual: schema.users.annualLeaveDays })
         .from(schema.users)
-    : (await managedPeople(auth)).map((p) => ({ ...p, annual: null }));
+    : await managedPeople(auth);
   const ids = everyone.map((p) => p.id);
   const [yearStart, yearEnd] = [ymd(year, 1, 1), ymd(year, 12, 31)];
   const [balances, allowanceRows, sickRows, daysOff] = await Promise.all([
     balancesFor(ids, year, today),
-    admin ? db.select().from(schema.leaveAllowances).where(eq(schema.leaveAllowances.year, year)) : [],
+    ids.length
+      ? db
+          .select()
+          .from(schema.leaveAllowances)
+          .where(and(eq(schema.leaveAllowances.year, year), inArray(schema.leaveAllowances.userId, ids)))
+      : [],
     ids.length
       ? db
           .select({ userId: schema.timeOff.userId, startDate: schema.timeOff.startDate, endDate: schema.timeOff.endDate, halfDay: schema.timeOff.halfDay })
@@ -103,20 +108,20 @@ async function BalancesContent() {
                 {sick.get(p.id) ? fmtNum(sick.get(p.id)!) : "—"}
               </span>,
             ],
-            actions: admin ? (
+            actions: (
               <AllowanceButton
                 data={{
                   userId: p.id,
                   name: p.name,
                   year,
-                  annual: p.annual ?? b.allowance,
+                  annual: p.annual,
                   days: row?.days ?? null,
                   carriedOver: row?.carriedOver ?? null,
                   carryOverUntil: row?.carryOverUntil ?? null,
                   computedCarry: b.carryWorkedOut,
                 }}
               />
-            ) : undefined,
+            ),
           };
         })}
       />

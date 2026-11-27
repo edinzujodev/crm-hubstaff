@@ -18,6 +18,7 @@ export type NotificationKind =
   | "time_off_added"
   | "time_off_cancelled"
   | "time_off_changed"
+  | "time_off_taken"
   | "sick_leave";
 
 type Person = { id: number; name: string; teamId: number | null };
@@ -89,6 +90,16 @@ export async function notifyTimeOffAdded(actor: { id: number; name: string }, pe
     await send(await approversFor(person), {
       kind: "sick_leave",
       title: `${person.name} is off sick`,
+      body: fmtRange(r.startDate, r.endDate),
+      href: VACATIONS,
+      actorId: actor.id,
+      timeOffId: r.id,
+    });
+  } else {
+    // A team lead's own time off is approved straight away; whoever would have approved it is told.
+    await send(await approversFor(person), {
+      kind: "time_off_taken",
+      title: `${person.name} is taking ${KIND_LABEL[r.kind].toLowerCase()}`,
       body: fmtRange(r.startDate, r.endDate),
       href: VACATIONS,
       actorId: actor.id,

@@ -26,7 +26,7 @@ export async function managedPeople(a: Auth) {
   const scope = decidesFor(a);
   if (scope === null) return [];
   return db
-    .select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId })
+    .select({ id: schema.users.id, name: schema.users.name, teamId: schema.users.teamId, annual: schema.users.annualLeaveDays })
     .from(schema.users)
     .where(scope)
     .orderBy(asc(schema.users.name));
