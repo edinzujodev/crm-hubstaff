@@ -41,12 +41,45 @@ async function croppedJpeg(src: string, area: Area): Promise<Blob> {
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode"))), "image/jpeg", 0.85));
 }
 
+/** The picked photo itself, shrunk to at most ORIGINAL_SIDE on its longer side, as a JPEG: kept to place it again. */
+const ORIGINAL_SIDE = 1280;
+
+async function originalJpeg(src: string): Promise<{ blob: Blob; scale: number }> {
+  const img = await loadImage(src);
+  const scale = Math.min(1, ORIGINAL_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.naturalWidth * scale);
+  canvas.height = Math.round(img.naturalHeight * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode"))), "image/jpeg", 0.85),
+  );
+  return { blob, scale };
+}
+
 /**
  * Move the circle over the picked photo and zoom, then save what is in the circle. The cropper itself moves the photo
  * under a fixed circle; here a drag is turned around, so the circle follows the pointer instead. The circle may go
  * up to the photo's edges but never past them, so the saved photo is exactly what is in the circle.
  */
-function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area) => Promise<void>; onCancel: () => void }) {
+function CropPhoto({
+  src,
+  initialArea,
+  onSave,
+  onReplace,
+  onCancel,
+}: {
+  src: string;
+  /** Where the circle was last time (in this photo's pixels), when placing the same photo again. */
+  initialArea?: Area;
+  onSave: (area: Area) => Promise<void>;
+  onReplace: () => void;
+  onCancel: () => void;
+}) {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<Area | null>(null);
@@ -103,6 +136,7 @@ function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area
         {ready && (
           <Cropper
             image={src}
+            initialCroppedAreaPixels={initialArea}
             crop={crop}
             zoom={zoom}
             minZoom={MIN_ZOOM}
@@ -156,7 +190,8 @@ function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area
         <i className="pi pi-plus text-[10px]" aria-hidden />
       </label>
       <p className="text-xs text-muted">Drag the circle over your face. Zoom with the slider or the mouse wheel.</p>
-      <div className="flex justify-end gap-2 pt-1">
+      <div className="flex flex-wrap justify-end gap-2 pt-1">
+        <Button type="button" severity="secondary" text icon="pi pi-upload" label="Replace photo" onClick={onReplace} disabled={saving} />
         <Button type="button" severity="secondary" outlined onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
@@ -180,9 +215,12 @@ function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area
   );
 }
 
+/** The photo in the popup: a newly picked file, or the one already saved (to place it again). */
+type Placing = { src: string; fresh: boolean; area?: Area };
+
 /**
- * Your photo, big, at the top of the profile (initials until you add one). Clicking it opens a small menu: add or
- * change the photo (placed in the circle in a popup next), or remove it.
+ * Your photo, big, at the top of the profile (initials until you add one). Clicking it opens a small menu: edit the
+ * photo (place it in the circle again, or replace it with another one) or delete it; without one, upload one.
  */
 export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name: string; hasPhoto: boolean }) {
   const input = useRef<HTMLInputElement>(null);
@@ -190,15 +228,16 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
   const [has, setHas] = useState(hasPhoto);
-  // The picked file, shown in the crop popup while it is open.
-  const [picked, setPicked] = useState<string | null>(null);
+  // The photo in the popup while it is open.
+  const [placing, setPlacing] = useState<Placing | null>(null);
   const [ask, confirmModal] = useConfirm();
 
-  // The picked file's temporary URL is let go once the popup closes.
+  // The photo's temporary URL is let go once it is replaced or the popup closes.
+  const src = placing?.src;
   useEffect(() => {
-    if (!picked) return;
-    return () => URL.revokeObjectURL(picked);
-  }, [picked]);
+    if (!src) return;
+    return () => URL.revokeObjectURL(src);
+  }, [src]);
 
   // The menu closes on a click elsewhere or Escape.
   useEffect(() => {
@@ -215,8 +254,9 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
     };
   }, [menu]);
 
-  const closeCrop = useCallback(() => setPicked(null), []);
+  const closeCrop = useCallback(() => setPlacing(null), []);
 
+  /** A file picked to upload, or to replace the photo in the popup. */
   async function pick(file: File) {
     const url = URL.createObjectURL(file);
     try {
@@ -226,20 +266,44 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
       notify({ message: "Couldn't read that photo", detail: "Try a JPG or PNG.", tone: "error" });
       return;
     }
-    setPicked(url);
+    setPlacing({ src: url, fresh: true });
+  }
+
+  /** The saved photo, to place it in the circle again where it was. */
+  async function edit() {
+    setMenu(false);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/avatar/${userId}/original`, { cache: "no-store" });
+      if (!res.ok) throw new Error("load");
+      const header = res.headers.get("X-Photo-Crop");
+      const area = header ? (JSON.parse(header) as Area) : undefined;
+      setPlacing({ src: URL.createObjectURL(await res.blob()), fresh: false, area });
+    } catch {
+      notify({ message: "Couldn't open your photo", detail: "Try again, or upload it again.", tone: "error" });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function save(area: Area) {
-    if (!picked) return;
-    let blob: Blob;
+    if (!placing) return;
+    const data = new FormData();
     try {
-      blob = await croppedJpeg(picked, area);
+      data.set("photo", new File([await croppedJpeg(placing.src, area)], "photo.jpg", { type: "image/jpeg" }));
+      if (placing.fresh) {
+        // The original is kept shrunk, so the square is kept in the shrunk photo's pixels.
+        const { blob, scale } = await originalJpeg(placing.src);
+        data.set("original", new File([blob], "original.jpg", { type: "image/jpeg" }));
+        data.set("crop", JSON.stringify({ x: area.x * scale, y: area.y * scale, width: area.width * scale, height: area.height * scale }));
+      } else {
+        data.set("keepOriginal", "1");
+        data.set("crop", JSON.stringify(area));
+      }
     } catch {
       notify({ message: "Couldn't read that photo", detail: "Try a JPG or PNG.", tone: "error" });
       return;
     }
-    const data = new FormData();
-    data.set("photo", new File([blob], "photo.jpg", { type: "image/jpeg" }));
     const r = await setMyPhoto(data);
     if (!r.ok) {
       notify({ message: "Couldn't save the photo", detail: r.error, tone: "error" });
@@ -247,16 +311,16 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
     }
     setPhotoVersion(userId, r.data.version);
     setHas(true);
-    setPicked(null);
+    setPlacing(null);
     notify({ message: "Photo saved" });
   }
 
   async function remove() {
     setMenu(false);
     const sure = await ask({
-      title: "Remove your photo?",
+      title: "Delete your photo?",
       message: "Your initials show instead.",
-      confirmLabel: "Remove",
+      confirmLabel: "Delete",
       tone: "danger",
     });
     if (!sure) return;
@@ -264,12 +328,12 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
     const r = await removeMyPhoto();
     setBusy(false);
     if (!r.ok) {
-      notify({ message: "Couldn't remove the photo", detail: r.error, tone: "error" });
+      notify({ message: "Couldn't delete the photo", detail: r.error, tone: "error" });
       return;
     }
     setPhotoVersion(userId, null);
     setHas(false);
-    notify({ message: "Photo removed" });
+    notify({ message: "Photo deleted" });
   }
 
   const item = "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm hover:bg-foreground/5 disabled:opacity-50";
@@ -282,8 +346,8 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
         onClick={() => setMenu((m) => !m)}
         aria-haspopup="menu"
         aria-expanded={menu}
-        aria-label={has ? "Change or remove your photo" : "Add a photo"}
-        title={has ? "Change or remove your photo" : "Add a photo"}
+        aria-label={has ? "Edit or delete your photo" : "Add a photo"}
+        title={has ? "Edit or delete your photo" : "Add a photo"}
         className="group relative block w-full cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Avatar name={name} userId={userId} size="hero" solid />
@@ -298,22 +362,29 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
 
       {menu && (
         <div role="menu" className="absolute left-0 top-full z-30 mt-2 w-48 rounded-lg border border-border bg-surface p-1 shadow-lg md:left-auto md:right-0">
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={() => {
-              setMenu(false);
-              input.current?.click();
-            }}
-          >
-            <i className="pi pi-upload text-xs text-muted" aria-hidden />
-            {has ? "Change photo" : "Upload a photo"}
-          </button>
-          {has && (
-            <button type="button" role="menuitem" className={`${item} text-red-600 dark:text-red-400`} onClick={remove}>
-              <i className="pi pi-trash text-xs" aria-hidden />
-              Remove photo
+          {has ? (
+            <>
+              <button type="button" role="menuitem" className={item} onClick={edit}>
+                <i className="pi pi-pencil text-xs text-muted" aria-hidden />
+                Edit photo
+              </button>
+              <button type="button" role="menuitem" className={`${item} text-red-600 dark:text-red-400`} onClick={remove}>
+                <i className="pi pi-trash text-xs" aria-hidden />
+                Delete photo
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              role="menuitem"
+              className={item}
+              onClick={() => {
+                setMenu(false);
+                input.current?.click();
+              }}
+            >
+              <i className="pi pi-upload text-xs text-muted" aria-hidden />
+              Upload a photo
             </button>
           )}
         </div>
@@ -330,9 +401,17 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
           if (file) void pick(file);
         }}
       />
-      {picked && (
-        <Modal title="Place your photo" onClose={closeCrop}>
-          <CropPhoto src={picked} onSave={save} onCancel={closeCrop} />
+      {placing && (
+        <Modal title={has ? "Edit photo" : "Place your photo"} onClose={closeCrop}>
+          {/* Another photo starts afresh: the cropper is made again for it. */}
+          <CropPhoto
+            key={placing.src}
+            src={placing.src}
+            initialArea={placing.area}
+            onSave={save}
+            onReplace={() => input.current?.click()}
+            onCancel={closeCrop}
+          />
         </Modal>
       )}
       {confirmModal}
