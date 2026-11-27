@@ -41,7 +41,11 @@ function textOf(node: ReactNode): string {
 
 const asSortValue = (text: string): string | number => {
   const t = text.trim();
-  return /^-?\d+([.,]\d+)?$/.test(t) ? Number(t.replace(",", ".")) : t.toLowerCase();
+  if (/^-?\d+([.,]\d+)?$/.test(t)) return Number(t.replace(",", "."));
+  // Dates are written dd/mm/yyyy (maybe after a weekday): sorted as yyyy-mm-dd, so they go in date order.
+  const date = /^(?:[A-Za-z]{3},? )?(\d{2})\/(\d{2})\/(\d{4})(.*)$/.exec(t);
+  if (date) return `${date[3]}-${date[2]}-${date[1]}${date[4]!.toLowerCase()}`;
+  return t.toLowerCase();
 };
 
 const PAGE = 20;

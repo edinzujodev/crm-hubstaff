@@ -399,7 +399,7 @@ export function WithdrawTimeOffButton({ id }: { id: number }) {
   }
   return (
     <>
-      <Button size="small" text severity="danger" label="Withdraw" onClick={() => void withdraw()} />
+      <Button size="small" outlined severity="danger" label="Withdraw" onClick={() => void withdraw()} />
       {confirmModal}
     </>
   );
@@ -436,7 +436,7 @@ export function RequestStatus({
         <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
         {statusLabel(kind, shown)}
       </span>
-      {cancellable && !gone && <Button size="small" text severity="danger" label="Withdraw" onClick={() => void withdraw()} />}
+      {cancellable && !gone && <Button size="small" outlined severity="danger" label="Withdraw" onClick={() => void withdraw()} />}
       {confirmModal}
     </>
   );

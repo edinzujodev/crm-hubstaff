@@ -178,7 +178,7 @@ export function ChangeTimeOffButton({ t }: { t: ManagedTimeOff }) {
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
-      <Button size="small" text label="Change" onClick={() => setOpen(true)} />
+      <Button size="small" outlined severity="secondary" icon="pi pi-pencil" label="Change" onClick={() => setOpen(true)} />
       {open && <ManageTimeOff t={t} startEditing onClose={close} />}
     </>
   );
