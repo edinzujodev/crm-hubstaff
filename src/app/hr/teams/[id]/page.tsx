@@ -117,7 +117,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
           <h3 className="text-sm font-medium">Who reviews the team lead&apos;s own tasks</h3>
           <p className="text-xs text-muted">
             The team lead reviews everyone else&apos;s finished tasks. Pick the team lead who reviews{" "}
-            {leader?.name ?? "this team’s team lead"}&apos;s own tasks.
+            {leader?.name ?? "the team lead"}&apos;s own tasks.
           </p>
           {admin ? (
             <ReportsToSelect
