@@ -83,7 +83,7 @@ async function BalancesContent() {
             key: p.id,
             cells: [
               <span key="p" className="flex items-center gap-2 font-medium">
-                <Avatar name={p.name} size="sm" />
+                <Avatar name={p.name} userId={p.id} size="sm" />
                 {p.name}
               </span>,
               <span key="a" className="font-mono tabular-nums" title={b.custom.days ? "Set by hand for this year" : undefined}>

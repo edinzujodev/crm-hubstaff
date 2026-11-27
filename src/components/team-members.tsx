@@ -24,7 +24,7 @@ export function TeamMembers({ members, canEdit }: { members: Member[]; canEdit: 
       <ul className="divide-y divide-border">
         {members.map((m) => (
           <li key={m.id} className="flex items-center gap-3 py-2">
-            <Avatar name={m.name} size="sm" />
+            <Avatar name={m.name} userId={m.id} size="sm" />
             <span className="flex-1">
               <span className="text-sm font-medium">{m.name}</span>
               {m.isLeader && <span className="ml-2 text-xs text-muted">Team lead</span>}

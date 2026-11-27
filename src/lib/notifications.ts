@@ -182,6 +182,7 @@ export type NotificationItem = {
   body: string | null;
   href: string | null;
   actor: string | null;
+  actorId: number | null;
   createdAt: string;
   read: boolean;
 };
@@ -214,6 +215,7 @@ export async function latestNotifications(userId: number, { limit = 20, unreadOn
     body: n.body,
     href: n.href,
     actor,
+    actorId: n.actorId,
     createdAt: n.createdAt.toISOString(),
     read: n.readAt !== null,
   }));

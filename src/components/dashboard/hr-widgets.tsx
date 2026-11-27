@@ -279,7 +279,7 @@ export async function HrAwayWidget({ auth, raw }: { auth: Auth; raw: unknown }) 
         <ul className="divide-y divide-border">
           {entries.map((e) => (
             <li key={e.id} className={`flex items-center gap-3 py-2 text-sm ${e.status === "pending" ? "opacity-70" : ""}`}>
-              <Avatar name={e.name} size="sm" />
+              <Avatar name={e.name} userId={e.userId} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{e.name}</span>
                 <span className="block truncate text-xs text-muted">
@@ -459,7 +459,7 @@ export async function HrApprovalsWidget({ auth, raw }: { auth: Auth; raw: unknow
           {shown.map(({ request: t, person }) => (
             <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm transition-opacity has-data-pending:opacity-50">
               <span className="flex min-w-0 items-center gap-2.5">
-                <Avatar name={person.name} size="sm" />
+                <Avatar name={person.name} userId={person.id} size="sm" />
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{person.name}</span>
                   <span className="block truncate text-xs text-muted">

@@ -165,7 +165,7 @@ export function PeopleList({
           key: p.id,
           cells: [
             <div key="p" className="flex items-center gap-3">
-              <Avatar name={p.name} />
+              <Avatar name={p.name} userId={p.id} />
               <div className="min-w-0">
                 <p className="flex flex-wrap items-center gap-x-2">
                   <Link

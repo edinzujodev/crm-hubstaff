@@ -43,7 +43,7 @@ function NotificationRow({ n, now, onOpen }: { n: NotificationItem; now: number;
       onClick={() => onOpen(n)}
       className={`flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-foreground/5 ${n.read ? "" : "bg-primary/5"}`}
     >
-      {n.actor ? <Avatar name={n.actor} size="sm" /> : <span className="h-7 w-7 shrink-0" />}
+      {n.actor ? <Avatar name={n.actor} userId={n.actorId} size="sm" /> : <span className="h-7 w-7 shrink-0" />}
       <span className="min-w-0 flex-1">
         <span className={`block text-sm ${n.read ? "text-foreground/80" : "font-medium"}`}>{n.title}</span>
         {n.body && <span className="block truncate text-xs text-muted">{n.body}</span>}

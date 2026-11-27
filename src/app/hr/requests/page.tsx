@@ -82,7 +82,7 @@ async function RequestsContent() {
             key: t.id,
             cells: [
               <span key="p" className="flex items-center gap-2 font-medium">
-                <Avatar name={person.name} size="sm" />
+                <Avatar name={person.name} userId={person.id} size="sm" />
                 {person.name}
               </span>,
               <span key="d" className="whitespace-nowrap">

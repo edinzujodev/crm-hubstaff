@@ -80,7 +80,7 @@ export function VacationGrid({
           <div className="flex h-12 items-end border-b border-border px-4 pb-2 text-xs font-medium text-muted">People</div>
           {rows.map((r) => (
             <div key={r.id} className="flex h-11 items-center gap-2.5 border-b border-border px-3 last:border-b-0 sm:px-4">
-              <Avatar name={r.name} size="sm" />
+              <Avatar name={r.name} userId={r.id} size="sm" />
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">{r.name}</span>
                 {r.sub && <span className="block truncate text-[11px] text-muted">{r.sub}</span>}

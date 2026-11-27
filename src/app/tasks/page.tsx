@@ -727,7 +727,7 @@ async function TaskList({
                               className="inline-flex"
                               title={assigneeName}
                             >
-                              <Avatar name={assigneeName} size="sm" />
+                              <Avatar name={assigneeName} userId={task.assigneeId} size="sm" />
                               <span className="sr-only">{assigneeName}</span>
                             </span>
                           ) : (

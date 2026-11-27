@@ -19,7 +19,7 @@ function TeamMembers({ members, leaderId }: { members: User[]; leaderId: number 
       {sorted.map((m) => (
         <li key={m.id} className="grid grid-cols-1 items-center gap-x-4 gap-y-1 px-3 py-2 text-sm sm:grid-cols-[16rem_18rem_1fr]">
           <span className="flex min-w-0 items-center gap-2.5">
-            <Avatar name={m.name} size="sm" />
+            <Avatar name={m.name} userId={m.id} size="sm" />
             <span className="min-w-0">
               <span className="flex items-center gap-1.5 font-medium">
                 <span className="truncate">{m.name}</span>
@@ -75,7 +75,7 @@ async function TeamsContent() {
               </Link>,
               leader ? (
                 <span key="l" className="flex items-center gap-2">
-                  <Avatar name={leader.name} size="sm" />
+                  <Avatar name={leader.name} userId={leader.id} size="sm" />
                   {leader.name}
                 </span>
               ) : (
@@ -88,7 +88,7 @@ async function TeamsContent() {
                   <span className="flex -space-x-2">
                     {members.slice(0, 4).map((m) => (
                       <span key={m.id} title={m.name} className="rounded-full ring-2 ring-surface">
-                        <Avatar name={m.name} size="sm" />
+                        <Avatar name={m.name} userId={m.id} size="sm" />
                       </span>
                     ))}
                   </span>
