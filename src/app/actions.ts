@@ -1367,11 +1367,9 @@ const nullableText = z
   .optional()
   .transform((v) => v || null);
 
-const editedUser = z.object({
+/** What a team lead may change about the people in the teams they lead. */
+const editedDetails = z.object({
   name: z.string().trim().min(1, "Name is required"),
-  email: z.email("Enter a valid email address"),
-  teamId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
-  role: z.enum(["super_admin", "member"]),
   hubstaffUserId: z.coerce
     .number({ error: "The Hubstaff user id must be a number" })
     .int()
@@ -1382,20 +1380,41 @@ const editedUser = z.object({
   startedOn: nullableText.refine((v) => v === null || /^\d{4}-\d{2}-\d{2}$/.test(v), "Pick a valid start date"),
 });
 
+/** A super admin also changes the sign-in email, the team and the role. */
+const editedUser = editedDetails.extend({
+  email: z.email("Enter a valid email address"),
+  teamId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+  role: z.enum(["super_admin", "member"]),
+});
+
 /**
- * The super admin edits a person in one go: name, sign-in email, team, role, Hubstaff id, job title and start date.
- * Moving someone out of the team they lead makes them stop leading it; the last super admin stays super admin.
+ * Edits a person in one go. A super admin changes everything: name, sign-in email, team, role, Hubstaff id, job title
+ * and start date; moving someone out of the team they lead makes them stop leading it, and the last super admin stays
+ * super admin. A team lead changes the name, Hubstaff id, job title and start date of people in the teams they lead.
  */
 export async function updateUser(userId: number, _prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
-    await requireRole("super_admin");
-    const input = editedUser.parse(Object.fromEntries(formData));
-    const teamId = input.teamId ?? null;
-    if (input.role === "member") {
-      const admins = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.role, "super_admin"));
-      if (admins.length <= 1 && admins[0]?.id === userId) throw new Error("There must be at least one super admin.");
-    }
+    const auth = await requireRole("super_admin", "leader");
+    const fields = Object.fromEntries(formData);
     try {
+      if (auth.role !== "super_admin") {
+        const person = await db.query.users.findFirst({ where: eq(schema.users.id, userId), columns: { teamId: true } });
+        if (!person || person.teamId === null || !auth.ledTeamIds.includes(person.teamId)) {
+          throw new Error("You can only edit people in the teams you lead.");
+        }
+        const input = editedDetails.parse(fields);
+        await db
+          .update(schema.users)
+          .set({ name: input.name, hubstaffUserId: input.hubstaffUserId ?? null, jobTitle: input.jobTitle, startedOn: input.startedOn })
+          .where(eq(schema.users.id, userId));
+        return undefined;
+      }
+      const input = editedUser.parse(fields);
+      const teamId = input.teamId ?? null;
+      if (input.role === "member") {
+        const admins = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.role, "super_admin"));
+        if (admins.length <= 1 && admins[0]?.id === userId) throw new Error("There must be at least one super admin.");
+      }
       await db.transaction(async (tx) => {
         await tx
           .update(schema.users)

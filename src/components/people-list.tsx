@@ -63,7 +63,7 @@ function TwoFactorCell({ person }: { person: Person }) {
 
 type Team = { id: number; name: string };
 
-/** Everyone the viewer manages, with search and filters. Super admins edit a person in a popup (the pencil). */
+/** Everyone the viewer manages, with search and filters. The pencil edits a person in a popup: a super admin everything, a team lead the details of their team's people. */
 export function PeopleList({
   people,
   teams,
@@ -202,7 +202,7 @@ export function PeopleList({
                 ]
               : []),
           ],
-          actions: admin ? <EditPersonButton person={p} teams={teams} /> : undefined,
+          actions: <EditPersonButton person={p} teams={teams} full={admin} />,
         }))}
       />
     </div>
