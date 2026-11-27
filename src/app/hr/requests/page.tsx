@@ -54,8 +54,10 @@ async function RequestsContent() {
     ymd(year + 1, 12, 31),
   );
   const name = new Map(everyone.map((p) => [p.id, p.name]));
-  // Who approved or rejected each time off: they may be outside the people listed (a super admin, a lead above).
-  const deciderIds = [...new Set(rows.map((t) => t.decidedById).filter((id): id is number => id !== null))];
+  // The last say on each time off: who cancelled it, or else who approved or rejected it. They may be outside the
+  // people listed (a super admin, a lead above).
+  const decidedBy = (t: (typeof rows)[number]) => (t.status === "cancelled" ? t.cancelledById : t.decidedById);
+  const deciderIds = [...new Set(rows.map(decidedBy).filter((id): id is number => id !== null))];
   const deciders = new Map(
     deciderIds.length
       ? (await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, deciderIds))).map(
@@ -126,7 +128,7 @@ async function RequestsContent() {
           headers={["Person", "Dates", "Kind", { label: "Days", align: "right" }, "Status", "Decided by"]}
           rows={rows.map((t) => ({
             key: t.id,
-            sort: [name.get(t.userId), t.startDate, t.kind, null, t.status, t.decidedById ? deciders.get(t.decidedById) : ""],
+            sort: [name.get(t.userId), t.startDate, t.kind, null, t.status, deciders.get(decidedBy(t) ?? -1) ?? ""],
             cells: [
               <span key="p" className="font-medium">
                 {name.get(t.userId)}
@@ -140,8 +142,8 @@ async function RequestsContent() {
                 {fmtNum(countDays(t, daysOff))}
               </span>,
               <StatusBadge key="s" status={t.status} kind={t.kind} />,
-              <span key="by" className={t.decidedById ? "" : "text-muted"}>
-                {(t.decidedById && deciders.get(t.decidedById)) || "—"}
+              <span key="by" className={decidedBy(t) ? "" : "text-muted"}>
+                {deciders.get(decidedBy(t) ?? -1) ?? "—"}
               </span>,
             ],
             actions:

@@ -247,7 +247,10 @@ export async function cancelTimeOff(id: number): Promise<Result> {
     const allowed =
       canDecide(auth, person) || (own && (row.status === "pending" || row.kind === "sick" || row.startDate > today()));
     if (!allowed) throw new Error("Time off that has already started can only be revoked by your team lead.");
-    await db.update(schema.timeOff).set({ status: "cancelled" }).where(eq(schema.timeOff.id, id));
+    await db
+      .update(schema.timeOff)
+      .set({ status: "cancelled", cancelledById: auth.user.id, cancelledAt: new Date() })
+      .where(eq(schema.timeOff.id, id));
     await quietly(() => notifyTimeOffCancelled(auth.user, person, row));
     return undefined;
   });

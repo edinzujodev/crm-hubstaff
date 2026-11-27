@@ -42,9 +42,10 @@ async function TimeOffContent() {
   for (const t of history) {
     if (t.status === "approved") taken[t.kind] += countDays(t, daysOff, yearStart, yearEnd);
   }
-  // Who approved or rejected each request (not shown when it was the person themselves: their own time off is
-  // approved straight away for team leads and super admins).
-  const deciderIds = [...new Set(history.map((t) => t.decidedById).filter((id): id is number => id !== null && id !== me.id))];
+  // Who approved, rejected or revoked each request. Not shown when it was the person themselves (their own time off
+  // is approved straight away for team leads and super admins; withdrawing is their own doing).
+  const decidedBy = (t: (typeof history)[number]) => (t.status === "cancelled" ? t.cancelledById : t.decidedById);
+  const deciderIds = [...new Set(history.map(decidedBy).filter((id): id is number => id !== null && id !== me.id))];
   const deciders = new Map(
     deciderIds.length
       ? (await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, deciderIds))).map(
@@ -61,7 +62,7 @@ async function TimeOffContent() {
     halfDay: t.halfDay,
     days: countDays(t, daysOff),
     decisionNote: t.decisionNote,
-    decidedBy: t.decidedById ? (deciders.get(t.decidedById) ?? null) : null,
+    decidedBy: deciders.get(decidedBy(t) ?? -1) ?? null,
     // Requests still waiting, and time off that hasn't started yet (sick leave: that isn't over), can be withdrawn.
     // Nothing that is already over.
     cancellable:
