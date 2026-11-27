@@ -11,7 +11,8 @@ import { notify } from "@/lib/toast";
 
 /** Photos are stored as a 512×512 JPEG: sharp on a high-density screen at the largest size they are shown (the profile). */
 const SIDE = 512;
-const MIN_ZOOM = 0.5;
+// At 1× the circle exactly fits the photo's shorter side; it never gets bigger than the photo.
+const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 
 type Point = { x: number; y: number };
@@ -26,7 +27,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** What is inside the circle, shrunk to SIDE×SIDE, as a JPEG. Parts of the circle past the photo's edge are white. */
+/** What is inside the circle, shrunk to SIDE×SIDE, as a JPEG. */
 async function croppedJpeg(src: string, area: Area): Promise<Blob> {
   const img = await loadImage(src);
   const canvas = document.createElement("canvas");
@@ -43,7 +44,7 @@ async function croppedJpeg(src: string, area: Area): Promise<Blob> {
 /**
  * Move the circle over the picked photo and zoom, then save what is in the circle. The cropper itself moves the photo
  * under a fixed circle; here a drag is turned around, so the circle follows the pointer instead. The circle may go
- * past the photo's edges, but its middle stays on the photo.
+ * up to the photo's edges but never past them, so the saved photo is exactly what is in the circle.
  */
 function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area) => Promise<void>; onCancel: () => void }) {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -51,6 +52,8 @@ function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area
   const [area, setArea] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
   const media = useRef<MediaSize | null>(null);
+  // The circle's diameter on screen.
+  const circle = useRef(0);
   // Where the photo was when the drag started (null: not dragging).
   const dragStart = useRef<Point | null>(null);
   const drags = useRef(0);
@@ -74,8 +77,9 @@ function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area
   const clamp = useCallback(
     (p: Point, z = zoom): Point => {
       if (!media.current) return p;
-      const maxX = (media.current.width * z) / 2;
-      const maxY = (media.current.height * z) / 2;
+      // How far the photo may move before an edge of it would come inside the circle.
+      const maxX = Math.max(0, (media.current.width * z - circle.current) / 2);
+      const maxY = Math.max(0, (media.current.height * z - circle.current) / 2);
       return { x: Math.max(-maxX, Math.min(maxX, p.x)), y: Math.max(-maxY, Math.min(maxY, p.y)) };
     },
     [zoom],
@@ -108,6 +112,7 @@ function CropPhoto({ src, onSave, onCancel }: { src: string; onSave: (area: Area
             showGrid={false}
             restrictPosition={false}
             onMediaLoaded={(m) => (media.current = m)}
+            onCropSizeChange={(s) => (circle.current = s.width)}
             onInteractionStart={({ source }) => {
               if (source === "mouse" || source === "touch") {
                 drags.current++;

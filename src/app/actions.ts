@@ -100,27 +100,51 @@ export async function updateProfile(_prev: unknown, formData: FormData): Promise
   });
 }
 
-/** The browser crops and shrinks the photo first (see components/photo-picker), so a real one is far below this. */
+/** The browser crops and shrinks the photos first (see components/photo-picker), so real ones are far below these. */
 const MAX_PHOTO_BYTES = 400 * 1024;
+const MAX_ORIGINAL_BYTES = 900 * 1024;
 
-/** The signed-in person sets their own profile photo: a square JPEG, made in the browser. */
+const photoCrop = z.object({
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().positive().finite(),
+  height: z.number().positive().finite(),
+});
+
+/** A JPEG made in the browser, as base64; it starts with FF D8 FF, so anything else is refused. */
+async function jpegBase64(value: FormDataEntryValue | null, max: number): Promise<string | null> {
+  if (!(value instanceof File) || !value.size) return null;
+  if (value.size > max) throw new Error("That photo is too big.");
+  const bytes = Buffer.from(await value.arrayBuffer());
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) throw new Error("That file isn't a photo.");
+  return bytes.toString("base64");
+}
+
+/**
+ * The signed-in person sets their own profile photo: "photo", the square cut out in the browser, and "crop", where
+ * that square sits in the picked photo. A new photo also sends "original" (the picked photo, shrunk); placing the same
+ * photo again sends "keepOriginal" instead.
+ */
 export async function setMyPhoto(formData: FormData): Promise<Result<{ version: number }>> {
   return run(async () => {
     const auth = await requireAuth();
-    const file = formData.get("photo");
-    if (!(file instanceof File) || !file.size) throw new Error("Pick a photo.");
-    if (file.size > MAX_PHOTO_BYTES) throw new Error("That photo is too big.");
-    const bytes = Buffer.from(await file.arrayBuffer());
-    // A JPEG starts with FF D8 FF; anything else isn't what the browser made.
-    if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) throw new Error("That file isn't a photo.");
-    const version = Math.floor(Date.now() / 1000);
-    await db.transaction(async (tx) => {
-      const data = bytes.toString("base64");
+    const data = await jpegBase64(formData.get("photo"), MAX_PHOTO_BYTES);
+    if (!data) throw new Error("Pick a photo.");
+    const original = await jpegBase64(formData.get("original"), MAX_ORIGINAL_BYTES);
+    const keepOriginal = formData.get("keepOriginal") === "1";
+    const rawCrop = formData.get("crop");
+    const crop = typeof rawCrop === "string" && rawCrop ? photoCrop.parse(JSON.parse(rawCrop)) : null;
+    const kept = keepOriginal && !original ? {} : { original };
+    const version = await db.transaction(async (tx) => {
       await tx
         .insert(schema.userPhotos)
-        .values({ userId: auth.user.id, data })
-        .onConflictDoUpdate({ target: schema.userPhotos.userId, set: { data, updatedAt: new Date() } });
-      await tx.update(schema.users).set({ photoVersion: version }).where(eq(schema.users.id, auth.user.id));
+        .values({ userId: auth.user.id, data, crop, original })
+        .onConflictDoUpdate({ target: schema.userPhotos.userId, set: { data, crop, ...kept, updatedAt: new Date() } });
+      // A new number every time (even twice in one second), so the photo's URL changes and browsers fetch it again.
+      const [me] = await tx.select({ v: schema.users.photoVersion }).from(schema.users).where(eq(schema.users.id, auth.user.id));
+      const next = Math.max(Math.floor(Date.now() / 1000), (me?.v ?? 0) + 1);
+      await tx.update(schema.users).set({ photoVersion: next }).where(eq(schema.users.id, auth.user.id));
+      return next;
     });
     return { version };
   });

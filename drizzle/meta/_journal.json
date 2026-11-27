@@ -239,6 +239,13 @@
       "when": 1795779200962,
       "tag": "0033_user_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795783153326,
+      "tag": "0034_user_photo_original",
+      "breakpoints": true
     }
   ]
 }

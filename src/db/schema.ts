@@ -60,6 +60,10 @@ export const userPhotos = pgTable("user_photos", {
     .primaryKey()
     .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
   data: text("data").notNull(),
+  // The photo the person picked (shrunk to at most 1280px, JPEG, base64) and the square they cut from it, in its
+  // pixels: so the photo can be placed again later. Null for photos saved before these were kept.
+  original: text("original"),
+  crop: jsonb("crop").$type<{ x: number; y: number; width: number; height: number }>(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
