@@ -38,7 +38,7 @@ async function Account() {
   if (!auth) return null;
   const quickSwitch = authMode() === "mock";
   const users = quickSwitch ? await db.select().from(schema.users).orderBy(asc(schema.users.name)) : [];
-  const roleLabel = { super_admin: "Super admin", leader: "Team leader", worker: "Member" }[auth.role];
+  const roleLabel = { super_admin: "Super admin", leader: "Team lead", worker: "Member" }[auth.role];
   return (
     <>
     <IdleSignOut />

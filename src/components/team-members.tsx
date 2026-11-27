@@ -27,7 +27,7 @@ export function TeamMembers({ members, canEdit }: { members: Member[]; canEdit: 
             <Avatar name={m.name} size="sm" />
             <span className="flex-1">
               <span className="text-sm font-medium">{m.name}</span>
-              {m.isLeader && <span className="ml-2 text-xs text-muted">Leader</span>}
+              {m.isLeader && <span className="ml-2 text-xs text-muted">Team lead</span>}
               <span className="block text-xs text-muted">{m.email}</span>
             </span>
             {canEdit && (

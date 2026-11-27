@@ -131,7 +131,7 @@ export function Toaster() {
             )}
             .
             {notice.inReview
-              ? " Your team leader will approve it or return it with a reason."
+              ? " Your team lead will approve it or return it with a reason."
               : ""}
           </p>
           {notice.nextTaskId ? (

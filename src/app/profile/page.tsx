@@ -10,7 +10,7 @@ import { authMode } from "@/lib/session";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
 
-const ROLE_LABEL = { super_admin: "Super admin", leader: "Team leader", worker: "Member" } as const;
+const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Member" } as const;
 
 /** A yyyy-mm-dd day as "3 Mar 2024". */
 function fmtDate(day: string) {
@@ -60,11 +60,11 @@ async function ProfileContent() {
       </section>
 
       <section className="card space-y-4 p-5">
-        <SectionHead title="Work" sub="Set by a super admin or your team leader in HR." />
+        <SectionHead title="Work" sub="Set by a super admin or your team lead in HR." />
         <dl className="grid gap-4 sm:grid-cols-3">
           <Fact label="Role">{ROLE_LABEL[auth.role]}</Fact>
           <Fact label="Team">{team?.name ?? "No team"}</Fact>
-          <Fact label="Team leader">{team?.leaderId === me.id ? "You" : (leader?.name ?? "—")}</Fact>
+          <Fact label="Team lead">{team?.leaderId === me.id ? "You" : (leader?.name ?? "—")}</Fact>
           <Fact label="Hubstaff user id">
             <span className="font-mono">{me.hubstaffUserId ?? "Not linked"}</span>
           </Fact>

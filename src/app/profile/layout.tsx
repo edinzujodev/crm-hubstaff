@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { HrNavLinks } from "@/components/hr-nav";
 import { getAuth } from "@/lib/auth";
 
-const ROLE_LABEL = { super_admin: "Super admin", leader: "Team leader", worker: "Member" } as const;
+const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Member" } as const;
 
 /** Who you are, then the profile's pages: your details, and your time off. */
 async function ProfileNav() {

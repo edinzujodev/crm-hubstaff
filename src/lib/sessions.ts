@@ -58,7 +58,7 @@ export async function startSession(taskId: number, userId: number) {
   // A task stays with its assignee until someone reassigns it. Unassigned tasks are claimed by whoever starts them.
   if (task.assigneeId && task.assigneeId !== user.id) {
     const owner = await db.query.users.findFirst({ where: eq(schema.users.id, task.assigneeId) });
-    throw new Error(`This task is assigned to ${owner?.name ?? "someone else"}. Ask a team leader to reassign it.`);
+    throw new Error(`This task is assigned to ${owner?.name ?? "someone else"}. Ask a team lead to reassign it.`);
   }
 
   const hubstaffTaskId = await ensureHubstaffTask(task, user);

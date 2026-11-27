@@ -440,7 +440,7 @@ async function TaskDetail({
             <span className="font-medium">On review.</span>{" "}
             {reviewer
               ? `${reviewer.name} will approve it or return it with a reason.`
-              : "Waiting for the team leader."}
+              : "Waiting for the team lead."}
           </span>
           {canReview && <ReviewActions taskId={task.id} title={label} />}
         </div>

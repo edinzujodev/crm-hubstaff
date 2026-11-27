@@ -87,7 +87,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
       const res = await setTaskStatus(taskId, "done");
       if (!res.ok) return setMessage({ tone: "error", text: res.error });
       setNextId(res.data.nextTaskId);
-      setMessage({ tone: "ok", text: res.data.inReview ? "Sent to your team leader for review." : "Task finished." });
+      setMessage({ tone: "ok", text: res.data.inReview ? "Sent to your team lead for review." : "Task finished." });
       notifyFinished({ taskId, title, ...res.data });
     });
 
@@ -120,7 +120,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
             disabled={pending || done || !!lockedTo}
             title={
               lockedTo
-                ? `Assigned to ${lockedTo}. Only they can start it. A team leader can reassign it.`
+                ? `Assigned to ${lockedTo}. Only they can start it. A team lead can reassign it.`
                 : otherTask
                   ? `Stops your session on "${otherTask.title}"`
                   : undefined

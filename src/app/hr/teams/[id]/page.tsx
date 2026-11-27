@@ -59,7 +59,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
         <div>
           <h1 className="text-xl font-semibold">{team.name}</h1>
           <Crumb name={team.name} />
-          <p className="text-sm text-muted">Leader: {leader?.name ?? "none yet"}</p>
+          <p className="text-sm text-muted">Team lead: {leader?.name ?? "none yet"}</p>
         </div>
         <div className="flex gap-2">
           {admin && (
@@ -114,10 +114,10 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
           <h2 className="font-semibold">Team settings</h2>
         </header>
         <div className="space-y-2 p-4">
-          <h3 className="text-sm font-medium">Who reviews the leader&apos;s own tasks</h3>
+          <h3 className="text-sm font-medium">Who reviews the team lead&apos;s own tasks</h3>
           <p className="text-xs text-muted">
-            The leader of this team reviews everyone else&apos;s finished tasks. Pick the team leader who reviews{" "}
-            {leader?.name ?? "this team’s leader"}&apos;s own tasks.
+            The team lead reviews everyone else&apos;s finished tasks. Pick the team lead who reviews{" "}
+            {leader?.name ?? "this team’s team lead"}&apos;s own tasks.
           </p>
           {admin ? (
             <ReportsToSelect

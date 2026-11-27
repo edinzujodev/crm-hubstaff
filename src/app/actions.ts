@@ -727,7 +727,7 @@ async function requireReviewer(taskId: number) {
   const task = await db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
   if (!task) throw new Error("Task not found");
   if (task.status !== "review") throw new Error("This task isn't waiting for review.");
-  if (!canReviewTask(auth, task)) throw new Error("Only the team leader of the person who has this task can review it.");
+  if (!canReviewTask(auth, task)) throw new Error("Only the team lead of the person who has this task can review it.");
   return { auth, task };
 }
 

@@ -21,16 +21,16 @@ export function EditTeamForm({ team, users, onDone }: { team: TeamEditData; user
         <InputText name="name" required autoFocus defaultValue={team.name} className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
-        Team leader
+        Team lead
         <Select name="leaderId" className="w-full text-foreground" defaultValue={team.leaderId ?? ""}>
-          <option value="">No leader</option>
+          <option value="">No team lead</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
             </option>
           ))}
         </Select>
-        <span>The leader is always a member of the team.</span>
+        <span>The team lead is always a member of the team.</span>
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Most people off at the same time

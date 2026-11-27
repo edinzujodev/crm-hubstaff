@@ -27,16 +27,16 @@ export function NewTeamForm({
         <InputText name="name" required autoFocus placeholder="e.g. Payroll team" className="w-full text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
-        Team leader (optional)
+        Team lead (optional)
         <Select name="leaderId" className="w-full text-foreground" defaultValue="">
-          <option value="">No leader yet</option>
+          <option value="">No team lead yet</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
             </option>
           ))}
         </Select>
-        <span>The leader is added to the team and sees its tasks and reports.</span>
+        <span>The team lead is added to the team and sees its tasks and reports.</span>
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Most people off at the same time

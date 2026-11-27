@@ -83,7 +83,7 @@ export async function TopbarStatus() {
       <Link
         href={reviewMine ? "/tasks?scope=team" : "/tasks"}
         className={`${pill} ${reviewMine ? "border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400" : "text-muted"}`}
-        title="Finished tasks waiting for the team leader's check"
+        title="Finished tasks waiting for the team lead's check"
       >
         {reviewMine ? `${reviewMine} to review` : reviewTotal ? `${reviewTotal} on review` : "Nothing on review"}
       </Link>

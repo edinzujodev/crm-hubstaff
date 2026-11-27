@@ -19,7 +19,7 @@ export function ReportsToSelect({
   return (
     <div className="space-y-1">
       <Select
-        aria-label="Leader's tasks are reviewed by"
+        aria-label="Team lead's tasks are reviewed by"
         className="w-auto text-sm"
         defaultValue={value ?? ""}
         disabled={pending}
@@ -30,7 +30,7 @@ export function ReportsToSelect({
           })
         }
       >
-        <option value="">Nobody (the leader&apos;s tasks skip review)</option>
+        <option value="">Nobody (the team lead&apos;s tasks skip review)</option>
         {teams
           .filter((t) => t.id !== teamId && t.leaderName)
           .map((t) => (

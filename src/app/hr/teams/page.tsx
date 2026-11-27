@@ -24,7 +24,7 @@ function TeamMembers({ members, leaderId }: { members: User[]; leaderId: number 
               <span className="flex items-center gap-1.5 font-medium">
                 <span className="truncate">{m.name}</span>
                 {m.id === leaderId && (
-                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">Leader</span>
+                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">Team lead</span>
                 )}
               </span>
               <span className="block truncate text-xs text-muted">{m.jobTitle ?? "No job title"}</span>
@@ -63,7 +63,7 @@ async function TeamsContent() {
       <DataGrid
         flush
         empty={admin ? "No teams yet. Use “New team” to add the first one." : "You don't lead a team yet."}
-        headers={["Team", "Leader", "Members", "Off at once"]}
+        headers={["Team", "Team lead", "Members", "Off at once"]}
         rows={teams.map((t) => {
           const members = allUsers.filter((u) => u.teamId === t.id);
           const leader = allUsers.find((u) => u.id === t.leaderId);

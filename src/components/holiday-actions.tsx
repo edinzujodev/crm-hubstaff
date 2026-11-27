@@ -212,7 +212,7 @@ function BlockDaysForm({ onDone }: { onDone: () => void }) {
         <InputText name="reason" required maxLength={200} placeholder="e.g. Product launch" className="w-full text-foreground" />
       </label>
       <p className="text-xs text-muted">
-        Nobody can ask for time off on these days, and team leaders can&apos;t approve requests for them. Sick leave can
+        Nobody can ask for time off on these days, and team leads can&apos;t approve requests for them. Sick leave can
         still be recorded, and super admins can still enter time off.
       </p>
       {state && !state.ok && (

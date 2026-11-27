@@ -175,7 +175,7 @@ export function PeopleList({
                   >
                     {p.name}
                   </Link>
-                  {p.isLeader && <span className="badge">Leader</span>}
+                  {p.isLeader && <span className="badge">Team lead</span>}
                   {p.role === "super_admin" && (
                     <span className="badge">Super admin</span>
                   )}
