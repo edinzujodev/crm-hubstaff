@@ -36,6 +36,8 @@ async function PeopleContent() {
     role: u.role,
     hubstaffUserId: u.hubstaffUserId,
     isLeader: leaderIds.has(u.id),
+    jobTitle: u.jobTitle,
+    startedOn: u.startedOn,
     twoFactor: !!u.totpEnabledAt,
   }));
   const missingIds = people.filter((p) => p.hubstaffUserId === null).length;

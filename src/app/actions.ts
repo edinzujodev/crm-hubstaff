@@ -1333,14 +1333,6 @@ export async function deleteTeam(teamId: number) {
   });
 }
 
-export async function setHubstaffUserId(userId: number, formData: FormData) {
-  await requireRole("super_admin");
-  const raw = formData.get("hubstaffUserId");
-  const hubstaffUserId = raw ? z.coerce.number().int().positive().parse(raw) : null;
-  await db.update(schema.users).set({ hubstaffUserId }).where(eq(schema.users.id, userId));
-  refresh();
-}
-
 const levels = z
   .object({
     approachingHours: z.coerce.number({ error: "Approaching must be a number of hours" }).int().min(1).max(24 * 90),
@@ -1368,15 +1360,64 @@ export async function setUrgencyLevels(_prev: unknown, formData: FormData): Prom
   });
 }
 
-/** Makes someone super admin, or back to a regular member. The last super admin can't be removed. */
-export async function setUserRole(userId: number, role: "super_admin" | "member") {
+/** Empty or missing → null, so a cleared field is cleared in the database. */
+const nullableText = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => v || null);
+
+const editedUser = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  email: z.email("Enter a valid email address"),
+  teamId: z.coerce.number().int().positive().optional().or(z.literal("").transform(() => undefined)),
+  role: z.enum(["super_admin", "member"]),
+  hubstaffUserId: z.coerce
+    .number({ error: "The Hubstaff user id must be a number" })
+    .int()
+    .positive("The Hubstaff user id must be a number")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  jobTitle: nullableText,
+  startedOn: nullableText.refine((v) => v === null || /^\d{4}-\d{2}-\d{2}$/.test(v), "Pick a valid start date"),
+});
+
+/**
+ * The super admin edits a person in one go: name, sign-in email, team, role, Hubstaff id, job title and start date.
+ * Moving someone out of the team they lead makes them stop leading it; the last super admin stays super admin.
+ */
+export async function updateUser(userId: number, _prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
     await requireRole("super_admin");
-    if (role === "member") {
+    const input = editedUser.parse(Object.fromEntries(formData));
+    const teamId = input.teamId ?? null;
+    if (input.role === "member") {
       const admins = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.role, "super_admin"));
       if (admins.length <= 1 && admins[0]?.id === userId) throw new Error("There must be at least one super admin.");
     }
-    await db.update(schema.users).set({ role }).where(eq(schema.users.id, userId));
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(schema.users)
+          .set({
+            name: input.name,
+            email: input.email,
+            teamId,
+            role: input.role,
+            hubstaffUserId: input.hubstaffUserId ?? null,
+            jobTitle: input.jobTitle,
+            startedOn: input.startedOn,
+          })
+          .where(eq(schema.users.id, userId));
+        const leads = and(eq(schema.teams.leaderId, userId), teamId ? ne(schema.teams.id, teamId) : undefined);
+        await tx.update(schema.teams).set({ leaderId: null }).where(leads);
+      });
+    } catch (e) {
+      const cause = String(e instanceof Error ? (e.cause ?? e) : e);
+      if (cause.includes("users_email_unique")) throw new Error("Someone else already signs in with this email.");
+      if (cause.includes("users_hubstaff_user_id_unique")) throw new Error("This Hubstaff user id already belongs to someone else.");
+      throw e;
+    }
     return undefined;
   });
 }

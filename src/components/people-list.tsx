@@ -3,13 +3,12 @@
 import { Button, InputText, Select } from "@/components/ui";
 import Link from "next/link";
 import { useState } from "react";
-import { resetTwoFactor, setHubstaffUserId } from "@/app/actions";
+import { resetTwoFactor } from "@/app/actions";
 import { notify } from "@/lib/toast";
 import { DataGrid } from "@/components/data-grid";
 import { Avatar } from "@/components/avatar";
 import { useConfirm } from "@/components/confirm-modal";
-import { RoleSelect } from "@/components/role-select";
-import { TeamSelect } from "@/components/team-select";
+import { EditPersonButton } from "@/components/edit-person-button";
 
 export type Person = {
   id: number;
@@ -19,6 +18,8 @@ export type Person = {
   role: "super_admin" | "member";
   hubstaffUserId: number | null;
   isLeader: boolean;
+  jobTitle: string | null;
+  startedOn: string | null;
   /** Two-step verification (authenticator app) is set up. */
   twoFactor: boolean;
 };
@@ -62,7 +63,7 @@ function TwoFactorCell({ person }: { person: Person }) {
 
 type Team = { id: number; name: string };
 
-/** Everyone the viewer manages, with search and filters. Super admins can edit team, role and Hubstaff id inline. */
+/** Everyone the viewer manages, with search and filters. Super admins edit a person in a popup (the pencil). */
 export function PeopleList({
   people,
   teams,
@@ -182,48 +183,26 @@ export function PeopleList({
                 <p className="truncate text-xs text-muted">{p.email}</p>
               </div>
             </div>,
-            admin ? (
-              <TeamSelect
-                key="t"
-                userId={p.id}
-                teamId={p.teamId}
-                teams={teams}
-                name={p.name}
-              />
-            ) : (
-              <span key="t" className="text-muted">
-                {teamName.get(p.teamId ?? -1) ?? "No team"}
-              </span>
-            ),
+            <span key="t" className={p.teamId === null ? "text-muted" : ""}>
+              {teamName.get(p.teamId ?? -1) ?? "No team"}
+            </span>,
             ...(admin
               ? [
-                  <RoleSelect
-                    key="r"
-                    userId={p.id}
-                    role={p.role}
-                    name={p.name}
-                  />,
-                  <form
-                    key="h"
-                    action={setHubstaffUserId.bind(null, p.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <InputText
-                      name="hubstaffUserId"
-                      defaultValue={p.hubstaffUserId ?? ""}
-                      inputMode="numeric"
-                      placeholder="Not set"
-                      aria-label={`Hubstaff user id for ${p.name}`}
-                      className={`w-28 font-mono ${p.hubstaffUserId === null ? "border-amber-500/60" : ""}`}
-                    />
-                    <Button severity="secondary" outlined>
-                      Save
-                    </Button>
-                  </form>,
+                  <span key="r">{p.role === "super_admin" ? "Super admin" : "Member"}</span>,
+                  p.hubstaffUserId === null ? (
+                    <span key="h" className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                      Not set
+                    </span>
+                  ) : (
+                    <span key="h" className="font-mono tabular-nums">
+                      {p.hubstaffUserId}
+                    </span>
+                  ),
                   <TwoFactorCell key="2fa" person={p} />,
                 ]
               : []),
           ],
+          actions: admin ? <EditPersonButton person={p} teams={teams} /> : undefined,
         }))}
       />
     </div>
