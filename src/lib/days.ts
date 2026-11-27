@@ -62,5 +62,14 @@ export function fmtRange(from: string, to: string) {
   return from === to ? dmy(from) : `${dmy(from)} – ${dmy(to)}`;
 }
 
+/** A due day from today: "Today", "Tomorrow", "In 3 days", "1 day overdue", "4 days overdue". */
+export function dueIn(day: string, today: string) {
+  const n = Math.round((toUtc(day).getTime() - toUtc(today).getTime()) / 86_400_000);
+  if (n === 0) return "Today";
+  if (n === 1) return "Tomorrow";
+  if (n > 1) return `In ${n} days`;
+  return `${-n} ${n === -1 ? "day" : "days"} overdue`;
+}
+
 /** "1 day", "2.5 days" */
 export const fmtDays = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)} ${n === 1 ? "day" : "days"}`;

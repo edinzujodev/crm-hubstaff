@@ -1,4 +1,5 @@
 import { ListSkeleton } from "@/components/page-skeleton";
+import { dueIn } from "@/lib/days";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { TaskScopeToggle } from "@/components/task-scope-toggle";
@@ -772,24 +773,30 @@ async function TaskList({
                       {fmtDay(localDay(task.createdAt, config.timeZone))}
                     </span>,
                     task.dueDate ? (
+                      // How far away it is, with the date under it (a finished task: only the date).
                       <span
                         key="due"
-                        className="flex items-center gap-2 whitespace-nowrap"
+                        className="flex flex-col whitespace-nowrap leading-tight"
+                        title={
+                          urgency === "critical" || urgency === "approaching"
+                            ? timeLeftLabel(task.dueDate, config.timeZone)
+                            : undefined
+                        }
                       >
-                        <span
-                          className={
-                            urgency === "critical"
-                              ? "font-medium text-red-600 dark:text-red-400"
-                              : urgency === "approaching"
-                                ? "font-medium text-amber-700 dark:text-amber-400"
-                                : undefined
-                          }
-                          title={
-                            urgency === "critical" || urgency === "approaching"
-                              ? timeLeftLabel(task.dueDate, config.timeZone)
-                              : undefined
-                          }
-                        >
+                        {task.status !== "done" && (
+                          <span
+                            className={
+                              urgency === "critical"
+                                ? "font-medium text-red-600 dark:text-red-400"
+                                : urgency === "approaching"
+                                  ? "font-medium text-amber-700 dark:text-amber-400"
+                                  : undefined
+                            }
+                          >
+                            {dueIn(task.dueDate, today)}
+                          </span>
+                        )}
+                        <span className={task.status === "done" ? undefined : "text-xs text-muted"}>
                           {fmtDay(task.dueDate)}
                         </span>
                       </span>

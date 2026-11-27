@@ -16,6 +16,7 @@ import { NewProjectButton, ProjectActions } from "@/components/project-actions";
 import { config } from "@/lib/config";
 import { fmtDateTime, fmtDay, fmtDuration, localDay } from "@/lib/format";
 import { periodLabel } from "@/lib/recurring";
+import { dueIn } from "@/lib/days";
 import { KIND_LABEL } from "@/lib/project-kind";
 import { getClientReport } from "@/lib/report";
 import { pageGuard, taskScope } from "@/lib/auth";
@@ -262,8 +263,16 @@ async function ClientDetail({
                 <span key="c" className="whitespace-nowrap text-muted">
                   {fmtDay(localDay(task.createdAt, tz))}
                 </span>,
-                <span key="d" className="whitespace-nowrap text-muted">
-                  {task.dueDate ? fmtDay(task.dueDate) : "—"}
+                // How far away it is, with the date under it (a finished task: only the date).
+                <span key="d" className="flex flex-col whitespace-nowrap leading-tight text-muted">
+                  {task.dueDate ? (
+                    <>
+                      {task.status !== "done" && <span>{dueIn(task.dueDate, localDay(new Date(), tz))}</span>}
+                      <span className={task.status === "done" ? undefined : "text-xs"}>{fmtDay(task.dueDate)}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </span>,
                 <span key="f" className="whitespace-nowrap text-muted">
                   {task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}

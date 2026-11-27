@@ -36,6 +36,34 @@ function Cell({ label, children, className = "" }: { label: string; children: Re
   );
 }
 
+/** Who approved, rejected or withdrew a request (and why it was rejected), as a small box under it. */
+function DecisionBox({ t }: { t: LeaveRequest }) {
+  const rejected = t.status === "rejected";
+  const verb = rejected ? "Rejected" : t.status === "cancelled" ? "Withdrawn" : "Approved";
+  return (
+    <div
+      className={`col-span-full -mt-1 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
+        rejected ? "border-red-500/25 bg-red-500/5 text-red-800 dark:text-red-300" : "border-border bg-foreground/[0.03] text-muted"
+      }`}
+    >
+      <i className={`pi ${rejected ? "pi-times-circle" : "pi-info-circle"} mt-px text-xs`} aria-hidden />
+      <p className="min-w-0">
+        {t.decidedBy && (
+          <>
+            {verb} by <span className="font-medium">{t.decidedBy}</span>
+          </>
+        )}
+        {rejected && t.decisionNote && (
+          <>
+            {t.decidedBy && " · "}
+            <span className="font-medium">Reason:</span> {t.decisionNote}
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 /** The same columns for the header and every row. */
 const COLS = "grid grid-cols-2 gap-x-4 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_15rem]";
 
@@ -75,22 +103,7 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
             <div className="col-span-2 flex min-h-8 items-center justify-between gap-3 sm:col-span-1">
               <RequestStatus id={t.id} kind={t.kind} status={t.status} cancellable={t.cancellable} />
             </div>
-            {(t.decidedBy || (t.status === "rejected" && t.decisionNote)) && (
-              <p className="col-span-full -mt-1 text-xs text-muted">
-                {t.decidedBy && (
-                  <>
-                    {t.status === "rejected" ? "Rejected" : t.status === "cancelled" ? "Withdrawn" : "Approved"} by{" "}
-                    <span className="font-medium text-foreground/80">{t.decidedBy}</span>
-                  </>
-                )}
-                {t.decidedBy && t.status === "rejected" && t.decisionNote && " · "}
-                {t.status === "rejected" && t.decisionNote && (
-                  <>
-                    <span className="font-medium text-foreground/80">Reason:</span> {t.decisionNote}
-                  </>
-                )}
-              </p>
-            )}
+            {(t.decidedBy || (t.status === "rejected" && t.decisionNote)) && <DecisionBox t={t} />}
           </li>
         );
       })}
