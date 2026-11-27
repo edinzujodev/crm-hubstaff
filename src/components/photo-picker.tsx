@@ -278,7 +278,8 @@ export function ProfilePhoto({ userId, name, hasPhoto }: { userId: number; name:
       if (!res.ok) throw new Error("load");
       const header = res.headers.get("X-Photo-Crop");
       const area = header ? (JSON.parse(header) as Area) : undefined;
-      setPlacing({ src: URL.createObjectURL(await res.blob()), fresh: false, area });
+      // A photo saved before originals were kept comes without a place: it becomes the original from now on.
+      setPlacing({ src: URL.createObjectURL(await res.blob()), fresh: !area, area });
     } catch {
       notify({ message: "Couldn't open your photo", detail: "Try again, or upload it again.", tone: "error" });
     } finally {
