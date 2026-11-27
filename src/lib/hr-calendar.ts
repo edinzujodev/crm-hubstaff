@@ -108,7 +108,6 @@ export async function companyCalendar(auth: Auth, from: string, to: string, team
         details: [
           time ? `Time: ${time}` : "All day",
           repeats ? `Repeats: ${repeats}` : "",
-          e.location ? `Place: ${e.location}` : "",
           `For: ${e.teamId ? (teamName.get(e.teamId) ?? "a team") : "the whole company"}`,
           e.description ?? "",
         ].filter(Boolean),

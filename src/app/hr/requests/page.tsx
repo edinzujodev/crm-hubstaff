@@ -5,7 +5,7 @@ import { Avatar } from "@/components/avatar";
 import { fmtNum } from "@/components/balance-tiles";
 import { DataGrid } from "@/components/data-grid";
 import { HrSuspense, HrTabs } from "@/components/hr-tabs";
-import { DecideButtons, KindBadge, RevokeTimeOffButton, StatusBadge } from "@/components/time-off";
+import { DecideButtons, KindBadge, StatusBadge, WithdrawTimeOffButton } from "@/components/time-off";
 import { ChangeTimeOffButton, TimeOffFormProvider } from "@/components/time-off-entry";
 import { pageGuard } from "@/lib/auth";
 import { config } from "@/lib/config";
@@ -150,7 +150,7 @@ async function RequestsContent() {
               t.status === "approved" && canDecide(auth, byId.get(t.userId) ?? { id: t.userId, teamId: null }) ? (
                 <span className="flex items-center">
                   {/* Time off that is already over can't be taken back. */}
-                  {t.endDate >= today && <RevokeTimeOffButton id={t.id} />}
+                  {t.endDate >= today && <WithdrawTimeOffButton id={t.id} />}
                   <ChangeTimeOffButton t={{ ...t, name: name.get(t.userId) ?? "" }} />
                 </span>
               ) : undefined,

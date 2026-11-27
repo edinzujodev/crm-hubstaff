@@ -188,7 +188,7 @@ export function PeopleList({
             </span>,
             ...(admin
               ? [
-                  <span key="r">{p.role === "super_admin" ? "Super admin" : "Member"}</span>,
+                  <span key="r">{p.role === "super_admin" ? "Super admin" : "Staff"}</span>,
                   p.hubstaffUserId === null ? (
                     <span key="h" className="text-xs font-medium text-amber-700 dark:text-amber-400">
                       Not set

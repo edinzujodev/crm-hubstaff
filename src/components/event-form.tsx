@@ -203,10 +203,6 @@ export function EventForm({
         </Select>
       </label>
       <label className={field}>
-        Place <span className="sr-only">(optional)</span>
-        <InputText name="location" defaultValue={event?.location ?? ""} maxLength={200} placeholder="Optional" className="w-full text-foreground" />
-      </label>
-      <label className={field}>
         Details <span className="sr-only">(optional)</span>
         <InputTextarea name="description" defaultValue={event?.description ?? ""} rows={3} maxLength={2000} autoResize placeholder="Optional" className="w-full text-foreground" />
       </label>

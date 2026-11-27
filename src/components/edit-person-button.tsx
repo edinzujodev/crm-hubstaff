@@ -69,7 +69,7 @@ function EditPersonForm({ person, teams, full, onDone }: { person: EditablePerso
             <label className={field}>
               Role
               <Select name="role" defaultValue={person.role} className="w-full text-foreground">
-                <option value="member">Member</option>
+                <option value="member">Staff</option>
                 <option value="super_admin">Super admin</option>
               </Select>
             </label>
@@ -87,7 +87,7 @@ function EditPersonForm({ person, teams, full, onDone }: { person: EditablePerso
           </div>
           <div>
             <dt className="text-xs text-muted">Role</dt>
-            <dd>{person.isLeader ? "Team lead" : person.role === "super_admin" ? "Super admin" : "Member"}</dd>
+            <dd>{person.isLeader ? "Team lead" : person.role === "super_admin" ? "Super admin" : "Staff"}</dd>
           </div>
           <p className="col-span-2 text-xs text-muted">Email, team and role are changed by a super admin.</p>
         </dl>

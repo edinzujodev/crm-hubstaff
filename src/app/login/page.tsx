@@ -71,7 +71,7 @@ async function LoginContent({ searchParams }: { searchParams: Promise<{ [key: st
           accounts={users.map((u) => ({
             name: u.name,
             email: u.email,
-            role: u.role === "super_admin" ? "Super admin" : "Member",
+            role: u.role === "super_admin" ? "Super admin" : "Staff",
           }))}
         />
       )}

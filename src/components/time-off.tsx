@@ -350,16 +350,16 @@ export function TimeOffButton({
 /**
  * Taking time off back, optimistically: `gone` turns true on the click and stays so until the server's answer (with
  * the refreshed page) arrives. If the server refuses, it goes back to false by itself and a notice says why.
- * "withdraw" is the person taking back their own request or time off; "revoke" is an approver taking back someone
- * else's (they get a notification). The "Are you sure?" modal comes back too, for the caller to render.
+ * "own" is the person taking back their own request or time off; "other" is an approver taking back someone else's
+ * (they get a notification). Both are called withdrawing. The "Are you sure?" modal comes back too, for the caller to render.
  */
-function useWithdrawTimeOff(id: number, mode: "withdraw" | "revoke", pending = false) {
+function useWithdrawTimeOff(id: number, mode: "own" | "other", pending = false) {
   const [gone, setGone] = useOptimistic(false);
   const [, startTransition] = useTransition();
   const [ask, confirmModal] = useConfirm();
   const run = async () => {
     const sure = await ask(
-      mode === "withdraw"
+      mode === "own"
         ? {
             title: pending ? "Withdraw this request?" : "Withdraw this time off?",
             message: pending ? "It won't go to your approver any more." : "It comes off the calendar, and any days it took are given back.",
@@ -367,9 +367,9 @@ function useWithdrawTimeOff(id: number, mode: "withdraw" | "revoke", pending = f
             cancelLabel: "Keep it",
           }
         : {
-            title: "Revoke this time off?",
+            title: "Withdraw this time off?",
             message: "It comes off the calendar, any days it took are given back, and they get a notification.",
-            confirmLabel: "Revoke",
+            confirmLabel: "Withdraw",
             cancelLabel: "Keep it",
           },
     );
@@ -379,8 +379,8 @@ function useWithdrawTimeOff(id: number, mode: "withdraw" | "revoke", pending = f
       const r = await cancelTimeOff(id);
       notify(
         r.ok
-          ? { message: mode === "withdraw" ? (pending ? "Request withdrawn" : "Time off withdrawn") : "Time off revoked" }
-          : { message: mode === "withdraw" ? "Couldn't withdraw it" : "Couldn't revoke it", detail: r.error, tone: "error" },
+          ? { message: pending ? "Request withdrawn" : "Time off withdrawn" }
+          : { message: "Couldn't withdraw it", detail: r.error, tone: "error" },
       );
     });
   };
@@ -388,18 +388,18 @@ function useWithdrawTimeOff(id: number, mode: "withdraw" | "revoke", pending = f
 }
 
 /** An approver taking back someone's time off. `data-pending` lets the row fade (has-data-pending:) until the server confirms. */
-export function RevokeTimeOffButton({ id }: { id: number }) {
-  const [gone, revoke, confirmModal] = useWithdrawTimeOff(id, "revoke");
+export function WithdrawTimeOffButton({ id }: { id: number }) {
+  const [gone, withdraw, confirmModal] = useWithdrawTimeOff(id, "other");
   if (gone) {
     return (
       <span data-pending="" className="text-xs font-medium text-muted">
-        Revoked
+        Withdrawn
       </span>
     );
   }
   return (
     <>
-      <Button size="small" text severity="danger" label="Revoke" onClick={() => void revoke()} />
+      <Button size="small" text severity="danger" label="Withdraw" onClick={() => void withdraw()} />
       {confirmModal}
     </>
   );
@@ -427,7 +427,7 @@ export function RequestStatus({
   status: TimeOffStatus;
   cancellable: boolean;
 }) {
-  const [gone, withdraw, confirmModal] = useWithdrawTimeOff(id, "withdraw", status === "pending");
+  const [gone, withdraw, confirmModal] = useWithdrawTimeOff(id, "own", status === "pending");
   const shown = gone ? "cancelled" : status;
   const [dot, tone] = kind === "sick" && shown === "approved" ? ["bg-zinc-500", "text-foreground/70"] : STATUS_DOT[shown];
   return (

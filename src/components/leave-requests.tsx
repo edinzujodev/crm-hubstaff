@@ -21,7 +21,7 @@ export type LeaveRequest = {
   /** Leave days it takes (working days, half days as 0.5). */
   days: number;
   decisionNote: string | null;
-  /** Who approved, rejected or revoked it (null: nobody else, e.g. sick leave or the person's own entry). */
+  /** Who approved, rejected or withdrew it (null: nobody else, e.g. sick leave or the person's own entry). */
   decidedBy: string | null;
   cancellable: boolean;
 };
@@ -79,7 +79,7 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
               <p className="col-span-full -mt-1 text-xs text-muted">
                 {t.decidedBy && (
                   <>
-                    {t.status === "rejected" ? "Rejected" : t.status === "cancelled" ? "Revoked" : "Approved"} by{" "}
+                    {t.status === "rejected" ? "Rejected" : t.status === "cancelled" ? "Withdrawn" : "Approved"} by{" "}
                     <span className="font-medium text-foreground/80">{t.decidedBy}</span>
                   </>
                 )}

@@ -4,7 +4,7 @@ import { HrNavLinks } from "@/components/hr-nav";
 import { ProfilePhoto } from "@/components/photo-picker";
 import { getAuth } from "@/lib/auth";
 
-const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Member" } as const;
+const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Staff" } as const;
 
 /** Who you are (your photo, big: click it to change it), then the profile's pages: your details, and your time off. */
 async function ProfileNav() {

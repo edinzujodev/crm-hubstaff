@@ -10,7 +10,7 @@ import { authMode } from "@/lib/session";
 import { config } from "@/lib/config";
 import { localDay } from "@/lib/format";
 
-const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Member" } as const;
+const ROLE_LABEL = { super_admin: "Super admin", leader: "Team lead", worker: "Staff" } as const;
 
 /** A yyyy-mm-dd day as "3 Mar 2024". */
 function fmtDate(day: string) {

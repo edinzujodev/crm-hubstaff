@@ -26,7 +26,7 @@ export const STATUS_LABEL: Record<TimeOffStatus, string> = {
   pending: "Waiting for approval",
   approved: "Approved",
   rejected: "Rejected",
-  cancelled: "Cancelled",
+  cancelled: "Withdrawn",
 };
 
 /**

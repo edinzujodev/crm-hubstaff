@@ -61,14 +61,13 @@ function ManageTimeOff({
   const own = form?.me.id === t.userId;
   // Time off that is already over can't be taken back.
   const over = !!form?.today && t.endDate < form.today;
-  const verb = own ? "Withdraw" : "Revoke";
   const [ask, confirmModal] = useConfirm();
 
   const cancel = async () => {
     const sure = await ask({
-      title: own ? "Withdraw your time off?" : `Revoke ${t.name}'s ${KIND_LABEL[t.kind].toLowerCase()}?`,
+      title: own ? "Withdraw your time off?" : `Withdraw ${t.name}'s ${KIND_LABEL[t.kind].toLowerCase()}?`,
       message: `${fmtRange(t.startDate, t.endDate)} comes off the calendar${own ? "." : `, and ${t.name} gets a notification.`}`,
-      confirmLabel: verb,
+      confirmLabel: "Withdraw",
       cancelLabel: "Keep it",
     });
     if (!sure) return;
@@ -77,10 +76,10 @@ function ManageTimeOff({
       notify(
         r.ok
           ? {
-              message: own ? "Time off withdrawn" : "Time off revoked",
+              message: "Time off withdrawn",
               detail: own ? undefined : `${t.name} gets a notification.`,
             }
-          : { message: own ? "Couldn't withdraw it" : "Couldn't revoke it", detail: r.error, tone: "error" },
+          : { message: "Couldn't withdraw it", detail: r.error, tone: "error" },
       );
       if (r.ok) onClose();
     });
@@ -127,7 +126,7 @@ function ManageTimeOff({
               severity="danger"
               outlined
               disabled={busy}
-              label={busy ? (own ? "Withdrawing…" : "Revoking…") : verb}
+              label={busy ? "Withdrawing…" : "Withdraw"}
               onClick={() => void cancel()}
             />
           )}

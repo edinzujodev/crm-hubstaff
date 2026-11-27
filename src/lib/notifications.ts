@@ -121,7 +121,7 @@ export async function notifyTimeOffDecided(actor: { id: number; name: string }, 
   });
 }
 
-/** After time off is cancelled, by the person or by someone who approves for them. */
+/** After time off is withdrawn, by the person or by someone who approves for them. */
 export async function notifyTimeOffCancelled(actor: { id: number; name: string }, person: Person, r: Request) {
   await settleRequest(r.id);
   if (actor.id === person.id) {
@@ -136,7 +136,7 @@ export async function notifyTimeOffCancelled(actor: { id: number; name: string }
   } else {
     await send([person.id], {
       kind: "time_off_cancelled",
-      title: `${firstName(actor.name)} revoked your ${what(r)}`,
+      title: `${firstName(actor.name)} withdrew your ${what(r)}`,
       href: MY_TIME_OFF,
       actorId: actor.id,
       timeOffId: r.id,

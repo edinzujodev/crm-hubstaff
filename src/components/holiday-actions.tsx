@@ -179,7 +179,7 @@ function BlockDaysForm({ onDone }: { onDone: () => void }) {
     const n = state.data.affected;
     notify({
       message: "Days blocked",
-      detail: n ? `${n} ${n === 1 ? "request is" : "requests are"} already on those days. They aren't cancelled; check them under Requests.` : undefined,
+      detail: n ? `${n} ${n === 1 ? "request is" : "requests are"} already on those days. They aren't withdrawn; check them under Requests.` : undefined,
     });
     onDone();
   }, [state, onDone]);
