@@ -13,7 +13,7 @@ import { fmtLongDay, fmtRange, ymd } from "@/lib/days";
 import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween } from "@/lib/holidays";
 import { managedPeople, waitingRequests } from "@/lib/hr";
-import { balancesFor, canDecide, countDays } from "@/lib/time-off";
+import { canDecide, countDays } from "@/lib/time-off";
 
 /**
  * For team leaders and super admins: requests waiting for a decision, and the recent time off of the people they look
@@ -33,8 +33,7 @@ async function RequestsContent() {
         .from(schema.users)
     : people.map((p) => ({ ...p, annual: null }));
   const ids = everyone.map((p) => p.id);
-  const [balances, rows, blocked] = await Promise.all([
-    balancesFor(ids, year, today),
+  const [rows, blocked] = await Promise.all([
     ids.length
       ? db
           .select()
@@ -55,6 +54,15 @@ async function RequestsContent() {
     ymd(year + 1, 12, 31),
   );
   const name = new Map(everyone.map((p) => [p.id, p.name]));
+  // Who approved or rejected each time off: they may be outside the people listed (a super admin, a lead above).
+  const deciderIds = [...new Set(rows.map((t) => t.decidedById).filter((id): id is number => id !== null))];
+  const deciders = new Map(
+    deciderIds.length
+      ? (await db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(inArray(schema.users.id, deciderIds))).map(
+          (u) => [u.id, u.name],
+        )
+      : [],
+  );
   const byId = new Map(everyone.map((p) => [p.id, p]));
   // For changing someone's time off from the list at the bottom.
   const form = {
@@ -94,12 +102,7 @@ async function RequestsContent() {
                 {fmtNum(countDays(t, daysOff))}
               </span>,
               <span key="note" className="text-sm text-muted">
-                {t.note}
-                {t.kind === "vacation" && balances.get(person.id) && (
-                  <span className="block text-xs">
-                    {fmtNum(balances.get(person.id)!.left)} vacation days left before this
-                  </span>
-                )}
+                {t.note || "—"}
               </span>,
               <span key="a" className="whitespace-nowrap text-xs text-muted">
                 {fmtLongDay(localDay(t.createdAt, config.timeZone))}
@@ -120,10 +123,10 @@ async function RequestsContent() {
           flush
           pageSize={10}
           empty="No time off yet."
-          headers={["Person", "Dates", "Kind", { label: "Days", align: "right" }, "Status"]}
+          headers={["Person", "Dates", "Kind", { label: "Days", align: "right" }, "Status", "Decided by"]}
           rows={rows.map((t) => ({
             key: t.id,
-            sort: [name.get(t.userId), t.startDate, t.kind, null, t.status],
+            sort: [name.get(t.userId), t.startDate, t.kind, null, t.status, t.decidedById ? deciders.get(t.decidedById) : ""],
             cells: [
               <span key="p" className="font-medium">
                 {name.get(t.userId)}
@@ -137,6 +140,9 @@ async function RequestsContent() {
                 {fmtNum(countDays(t, daysOff))}
               </span>,
               <StatusBadge key="s" status={t.status} kind={t.kind} />,
+              <span key="by" className={t.decidedById ? "" : "text-muted"}>
+                {(t.decidedById && deciders.get(t.decidedById)) || "—"}
+              </span>,
             ],
             actions:
               t.status === "approved" && canDecide(auth, byId.get(t.userId) ?? { id: t.userId, teamId: null }) ? (

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Cropper, { type Area, type CropperProps } from "react-easy-crop";
 import { removeMyPhoto, setMyPhoto } from "@/app/actions";
 import { Avatar, setPhotoVersion } from "@/components/avatar";
 import { useConfirm } from "@/components/confirm-modal";
@@ -15,8 +14,8 @@ const SIDE = 512;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 
-type Point = { x: number; y: number };
-type MediaSize = Parameters<NonNullable<CropperProps["onMediaLoaded"]>>[0];
+/** A square in the photo, in its own pixels. */
+type Area = { x: number; y: number; width: number; height: number };
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -62,9 +61,10 @@ async function originalJpeg(src: string): Promise<{ blob: Blob; scale: number }>
 }
 
 /**
- * Move the circle over the picked photo and zoom, then save what is in the circle. The cropper itself moves the photo
- * under a fixed circle; here a drag is turned around, so the circle follows the pointer instead. The circle may go
- * up to the photo's edges but never past them, so the saved photo is exactly what is in the circle.
+ * Place the circle over the photo, then save what is in it. The photo stays still and the circle follows the pointer
+ * (or the arrow keys); zooming in makes the circle smaller. The circle always stays inside the photo, so the saved
+ * photo is exactly what is in the circle. Positions are kept in the photo's own pixels, so what is on screen and what
+ * is saved always match.
  */
 function CropPhoto({
   src,
@@ -80,95 +80,138 @@ function CropPhoto({
   onReplace: () => void;
   onCancel: () => void;
 }) {
-  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [area, setArea] = useState<Area | null>(null);
-  const [saving, setSaving] = useState(false);
-  const media = useRef<MediaSize | null>(null);
-  // The circle's diameter on screen.
-  const circle = useRef(0);
-  // Where the photo was when the drag started (null: not dragging).
-  const dragStart = useRef<Point | null>(null);
-  const drags = useRef(0);
-  // The cropper measures the photo once, when it appears. The popup opens with a zoom-in animation, so it only
-  // appears once the popup has its full size; measured mid-animation, the saved area would not match the circle.
   const box = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
+  // The photo's own size, and the box it is shown in (layout size: not affected by the popup's opening animation).
+  const [photo, setPhoto] = useState<{ w: number; h: number } | null>(null);
+  const [frame, setFrame] = useState<{ w: number; h: number } | null>(null);
+  // The circle: its middle and diameter, in the photo's pixels.
+  const [circle, setCircle] = useState<{ x: number; y: number; d: number } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const drag = useRef<{ id: number; x: number; y: number; cx: number; cy: number } | null>(null);
+
   useEffect(() => {
-    let frame = 0;
-    const started = performance.now();
-    const check = () => {
-      const el = box.current;
-      const settled = el && Math.abs(el.getBoundingClientRect().width - el.offsetWidth) < 0.5;
-      if (settled || performance.now() - started > 1500) setReady(true);
-      else frame = requestAnimationFrame(check);
+    let alive = true;
+    loadImage(src).then((img) => {
+      if (!alive) return;
+      const w = img.naturalWidth, h = img.naturalHeight;
+      setPhoto({ w, h });
+      const side = Math.min(w, h);
+      const a = initialArea;
+      setCircle(
+        a && a.width > 0
+          ? fit({ x: a.x + a.width / 2, y: a.y + a.height / 2, d: Math.min(a.width, side) }, w, h)
+          : { x: w / 2, y: h / 2, d: side },
+      );
+    });
+    return () => {
+      alive = false;
     };
-    frame = requestAnimationFrame(check);
-    return () => cancelAnimationFrame(frame);
+  }, [src, initialArea]);
+
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => setFrame({ w: el.offsetWidth, h: el.offsetHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
-  const clamp = useCallback(
-    (p: Point, z = zoom): Point => {
-      if (!media.current) return p;
-      // How far the photo may move before an edge of it would come inside the circle.
-      const maxX = Math.max(0, (media.current.width * z - circle.current) / 2);
-      const maxY = Math.max(0, (media.current.height * z - circle.current) / 2);
-      return { x: Math.max(-maxX, Math.min(maxX, p.x)), y: Math.max(-maxY, Math.min(maxY, p.y)) };
+  // Screen pixels per photo pixel, and where the photo sits in the box.
+  const scale = photo && frame ? Math.min(frame.w / photo.w, frame.h / photo.h) : 0;
+  const left = photo && frame ? (frame.w - photo.w * scale) / 2 : 0;
+  const top = photo && frame ? (frame.h - photo.h * scale) / 2 : 0;
+  const side = photo ? Math.min(photo.w, photo.h) : 1;
+  const zoom = circle ? side / circle.d : 1;
+
+  const setZoom = useCallback(
+    (z: number) => {
+      if (!photo) return;
+      const d = side / Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+      setCircle((c) => (c ? fit({ ...c, d }, photo.w, photo.h) : c));
     },
-    [zoom],
+    [photo, side],
   );
 
-  const onCropChange = useCallback(
-    (next: Point) => {
-      const start = dragStart.current;
-      // The cropper moves the photo with the pointer; the opposite way moves the circle with it.
-      setCrop(clamp(start ? { x: 2 * start.x - next.x, y: 2 * start.y - next.y } : next));
-    },
-    [clamp],
-  );
-  // Reported after every change of position or zoom, from what is on screen (the "complete" report at the end of a
-  // drag can come before the turned-around position is applied).
-  const onCropAreaChange = useCallback((_: Area, pixels: Area) => setArea(pixels), []);
+  // The mouse wheel zooms (a listener of our own, so the page doesn't scroll at the same time).
+  useEffect(() => {
+    const el = box.current;
+    if (!el || !photo) return;
+    const smallest = side / MAX_ZOOM;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // Scrolling up zooms in: a smaller circle.
+      setCircle((c) => (c ? fit({ ...c, d: Math.max(smallest, c.d * Math.exp(e.deltaY / 500)) }, photo.w, photo.h) : c));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [photo, side]);
 
+  const move = (dx: number, dy: number) => {
+    if (!photo) return;
+    setCircle((c) => (c ? fit({ ...c, x: c.x + dx, y: c.y + dy }, photo.w, photo.h) : c));
+  };
+
+  const ready = !!(photo && frame && circle && scale);
   return (
     <div className="space-y-4">
-      <div ref={box} className="relative h-72 overflow-hidden rounded-lg bg-zinc-900 sm:h-80">
+      <div
+        ref={box}
+        className="relative h-72 touch-none select-none overflow-hidden rounded-lg bg-zinc-900 sm:h-80"
+        onPointerDown={(e) => {
+          if (!circle || e.button !== 0) return;
+          // Keep following the pointer even when it leaves the box; not every pointer can be captured.
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {}
+          drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: circle.x, cy: circle.y };
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current;
+          if (!d || d.id !== e.pointerId || !photo || !scale) return;
+          // The circle moves exactly as far as the pointer.
+          setCircle((c) =>
+            c ? fit({ ...c, x: d.cx + (e.clientX - d.x) / scale, y: d.cy + (e.clientY - d.y) / scale }, photo.w, photo.h) : c,
+          );
+        }}
+        onPointerUp={() => (drag.current = null)}
+        onPointerCancel={() => (drag.current = null)}
+      >
         {ready && (
-          <Cropper
-            image={src}
-            initialCroppedAreaPixels={initialArea}
-            crop={crop}
-            zoom={zoom}
-            minZoom={MIN_ZOOM}
-            maxZoom={MAX_ZOOM}
-            aspect={1}
-            cropShape="round"
-            showGrid={false}
-            restrictPosition={false}
-            onMediaLoaded={(m) => (media.current = m)}
-            onCropSizeChange={(s) => (circle.current = s.width)}
-            onInteractionStart={({ source }) => {
-              if (source === "mouse" || source === "touch") {
-                drags.current++;
-                dragStart.current = crop;
-              }
-            }}
-            onInteractionEnd={() => {
-              // The cropper may still send the drag's last move in the next frame: keep turning it around until then.
-              const drag = drags.current;
-              requestAnimationFrame(() =>
-                requestAnimationFrame(() => {
-                  if (drags.current === drag) dragStart.current = null;
-                }),
-              );
-            }}
-            onCropChange={onCropChange}
-            onZoomChange={(z) => {
-              setZoom(z);
-              setCrop((c) => clamp(c, z));
-            }}
-            onCropAreaChange={onCropAreaChange}
-          />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a local file being placed, not a page image */}
+            <img
+              src={src}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute max-w-none"
+              style={{ left, top, width: photo!.w * scale, height: photo!.h * scale }}
+            />
+            <div
+              role="slider"
+              tabIndex={0}
+              aria-label="Circle position: drag, or use the arrow keys"
+              aria-valuemin={0}
+              aria-valuemax={photo!.w}
+              aria-valuenow={Math.round(circle!.x)}
+              aria-valuetext={`${Math.round(circle!.x)}, ${Math.round(circle!.y)}`}
+              onKeyDown={(e) => {
+                const step = (e.shiftKey ? 40 : 8) / scale;
+                const keys: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+                if (!keys[e.key]) return;
+                e.preventDefault();
+                move(...keys[e.key]!);
+              }}
+              className="absolute cursor-move rounded-full border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] outline-none focus-visible:border-sky-400"
+              style={{
+                left: left + (circle!.x - circle!.d / 2) * scale,
+                top: top + (circle!.y - circle!.d / 2) * scale,
+                width: circle!.d * scale,
+                height: circle!.d * scale,
+              }}
+            />
+          </>
         )}
       </div>
       <label className="flex items-center gap-3 text-xs text-muted">
@@ -179,11 +222,7 @@ function CropPhoto({
           max={MAX_ZOOM}
           step={0.01}
           value={zoom}
-          onChange={(e) => {
-            const z = Number(e.target.value);
-            setZoom(z);
-            setCrop((c) => clamp(c, z));
-          }}
+          onChange={(e) => setZoom(Number(e.target.value))}
           aria-label="Zoom"
           className="h-1.5 flex-1 cursor-pointer accent-(--primary)"
         />
@@ -197,12 +236,12 @@ function CropPhoto({
         </Button>
         <Button
           type="button"
-          disabled={!area || saving}
+          disabled={!circle || saving}
           onClick={async () => {
-            if (!area) return;
+            if (!circle) return;
             setSaving(true);
             try {
-              await onSave(area);
+              await onSave({ x: circle.x - circle.d / 2, y: circle.y - circle.d / 2, width: circle.d, height: circle.d });
             } finally {
               setSaving(false);
             }
@@ -213,6 +252,13 @@ function CropPhoto({
       </div>
     </div>
   );
+}
+
+/** Keeps the whole circle inside the photo. */
+function fit(c: { x: number; y: number; d: number }, w: number, h: number) {
+  const d = Math.min(c.d, w, h);
+  const r = d / 2;
+  return { d, x: Math.min(w - r, Math.max(r, c.x)), y: Math.min(h - r, Math.max(r, c.y)) };
 }
 
 /** The photo in the popup: a newly picked file, or the one already saved (to place it again). */

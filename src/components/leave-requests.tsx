@@ -21,6 +21,8 @@ export type LeaveRequest = {
   /** Leave days it takes (working days, half days as 0.5). */
   days: number;
   decisionNote: string | null;
+  /** Who approved or rejected it (null: nobody else, e.g. sick leave or the person's own entry). */
+  decidedBy: string | null;
   cancellable: boolean;
 };
 
@@ -73,9 +75,19 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
             <div className="col-span-2 flex min-h-8 items-center justify-between gap-3 sm:col-span-1">
               <RequestStatus id={t.id} kind={t.kind} status={t.status} cancellable={t.cancellable} />
             </div>
-            {t.status === "rejected" && t.decisionNote && (
+            {(t.decidedBy || (t.status === "rejected" && t.decisionNote)) && (
               <p className="col-span-full -mt-1 text-xs text-muted">
-                <span className="font-medium text-foreground/80">Reason:</span> {t.decisionNote}
+                {t.decidedBy && (
+                  <>
+                    {t.status === "rejected" ? "Rejected" : "Approved"} by <span className="font-medium text-foreground/80">{t.decidedBy}</span>
+                  </>
+                )}
+                {t.decidedBy && t.status === "rejected" && t.decisionNote && " · "}
+                {t.status === "rejected" && t.decisionNote && (
+                  <>
+                    <span className="font-medium text-foreground/80">Reason:</span> {t.decisionNote}
+                  </>
+                )}
               </p>
             )}
           </li>
