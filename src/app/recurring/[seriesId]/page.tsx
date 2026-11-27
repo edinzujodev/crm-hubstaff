@@ -183,7 +183,7 @@ async function SeriesDetail({
                       {o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}
                     </span>,
                     <div key="t" className="flex items-center gap-2">
-                      <span className="w-16 font-mono tabular-nums">
+                      <span className="w-16 tabular-nums">
                         {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
                       </span>
                       <span
@@ -215,17 +215,17 @@ async function SeriesDetail({
             <section className="grid gap-3 sm:grid-cols-3">
               <div className="card p-4">
                 <p className="text-xs text-muted">Done</p>
-                <p className="mt-1 font-mono text-2xl tabular-nums">
+                <p className="mt-1 text-2xl tabular-nums">
                   {summary.done} <span className="text-base text-muted">of {summary.occurrences}</span>
                 </p>
               </div>
               <div className="card p-4">
                 <p className="text-xs text-muted">Total time</p>
-                <p className="mt-1 font-mono text-2xl tabular-nums">{fmtDuration(summary.trackedSeconds)}</p>
+                <p className="mt-1 text-2xl tabular-nums">{fmtDuration(summary.trackedSeconds)}</p>
               </div>
               <div className="card p-4">
                 <p className="text-xs text-muted">Average per finished one</p>
-                <p className="mt-1 font-mono text-2xl tabular-nums">{doneOnes.length ? fmtDuration(average) : "—"}</p>
+                <p className="mt-1 text-2xl tabular-nums">{doneOnes.length ? fmtDuration(average) : "—"}</p>
               </div>
             </section>
           )}

@@ -18,7 +18,7 @@ function YearSwitch({ year }: { year: number }) {
       <Link href={`/hr/holidays?year=${year - 1}`} className={link} aria-label={`Holidays in ${year - 1}`}>
         <i className="pi pi-chevron-left text-xs" aria-hidden />
       </Link>
-      <span className="w-12 text-center font-mono tabular-nums">{year}</span>
+      <span className="w-12 text-center tabular-nums">{year}</span>
       <Link href={`/hr/holidays?year=${year + 1}`} className={link} aria-label={`Holidays in ${year + 1}`}>
         <i className="pi pi-chevron-right text-xs" aria-hidden />
       </Link>

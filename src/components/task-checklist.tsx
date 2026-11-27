@@ -122,7 +122,7 @@ export function TaskChecklist({
             <h2 className="font-semibold">Checklist</h2>
             {items.length > 0 && !template && (
               <span className="text-sm text-muted">
-                <span className="font-mono tabular-nums">
+                <span className="tabular-nums">
                   {doneCount}/{items.length}
                 </span>{" "}
                 checked

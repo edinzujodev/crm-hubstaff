@@ -34,7 +34,7 @@ function AllowanceForm({ data, onDone }: { data: AllowanceData; onDone: () => vo
     <form action={action} className="space-y-4">
       <label className={field}>
         Vacation days per year
-        <InputText name="annual" defaultValue={String(data.annual)} inputMode="decimal" required className="w-full font-mono text-foreground" />
+        <InputText name="annual" defaultValue={String(data.annual)} inputMode="decimal" required className="w-full tabular-nums text-foreground" />
         <span className="font-normal">Used for every year that isn&apos;t set differently below.</span>
       </label>
       <fieldset className="space-y-3 rounded-lg border border-border p-3">
@@ -46,7 +46,7 @@ function AllowanceForm({ data, onDone }: { data: AllowanceData; onDone: () => vo
             defaultValue={data.days === null ? "" : String(data.days)}
             placeholder={`${data.annual} (default)`}
             inputMode="decimal"
-            className="w-full font-mono text-foreground"
+            className="w-full tabular-nums text-foreground"
           />
           <span className="font-normal">For example fewer days for someone who started mid-year.</span>
         </label>
@@ -57,7 +57,7 @@ function AllowanceForm({ data, onDone }: { data: AllowanceData; onDone: () => vo
             defaultValue={data.carriedOver === null ? "" : String(data.carriedOver)}
             placeholder={`${data.computedCarry} (worked out)`}
             inputMode="decimal"
-            className="w-full font-mono text-foreground"
+            className="w-full tabular-nums text-foreground"
           />
         </label>
         <label className={field}>

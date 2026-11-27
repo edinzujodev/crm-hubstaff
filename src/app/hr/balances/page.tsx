@@ -86,25 +86,25 @@ async function BalancesContent() {
                 <Avatar name={p.name} userId={p.id} size="sm" />
                 {p.name}
               </span>,
-              <span key="a" className="font-mono tabular-nums" title={b.custom.days ? "Set by hand for this year" : undefined}>
+              <span key="a" className="tabular-nums" title={b.custom.days ? "Set by hand for this year" : undefined}>
                 {fmtNum(b.allowance)}
                 {b.custom.days && "*"}
               </span>,
-              <span key="c" className="font-mono tabular-nums" title={b.expired ? `${fmtNum(b.expired)} expired` : undefined}>
+              <span key="c" className="tabular-nums" title={b.expired ? `${fmtNum(b.expired)} expired` : undefined}>
                 {fmtNum(b.carriedOver)}
                 {b.custom.carriedOver && "*"}
                 {b.expired > 0 && <span className="text-muted"> (−{fmtNum(b.expired)})</span>}
               </span>,
-              <span key="u" className="font-mono tabular-nums">
+              <span key="u" className="tabular-nums">
                 {fmtNum(b.used)}
               </span>,
-              <span key="w" className="font-mono tabular-nums">
+              <span key="w" className="tabular-nums">
                 {b.pending ? fmtNum(b.pending) : "—"}
               </span>,
-              <span key="l" className={`font-mono font-semibold tabular-nums ${b.left < 0 ? "text-red-600" : ""}`}>
+              <span key="l" className={`font-semibold tabular-nums ${b.left < 0 ? "text-red-600" : ""}`}>
                 {fmtNum(b.left)}
               </span>,
-              <span key="s" className={`font-mono tabular-nums ${sick.get(p.id) ? "text-rose-600 dark:text-rose-400" : "text-muted"}`}>
+              <span key="s" className={`tabular-nums ${sick.get(p.id) ? "text-rose-600 dark:text-rose-400" : "text-muted"}`}>
                 {sick.get(p.id) ? fmtNum(sick.get(p.id)!) : "—"}
               </span>,
             ],

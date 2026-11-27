@@ -42,7 +42,7 @@ export function LeadEditForm({ lead, users, onDone }: { lead: Lead; users: Optio
           name="expectedMonthlyValue"
           inputMode="numeric"
           defaultValue={lead.expectedMonthlyValue ?? ""}
-          className="w-full font-mono text-foreground"
+          className="w-full tabular-nums text-foreground"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">

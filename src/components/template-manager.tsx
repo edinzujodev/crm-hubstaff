@@ -36,7 +36,7 @@ export function TemplateManager({ templates }: { templates: TemplateOption[] }) 
             <span key="d" className="text-muted">
               {t.description ? t.description.slice(0, 140) : "—"}
             </span>,
-            <span key="i" className="font-mono tabular-nums">
+            <span key="i" className="tabular-nums">
               {t.items.length}
             </span>,
           ],

@@ -64,7 +64,7 @@ async function ProfileContent() {
           <Fact label="Team">{team?.name ?? "No team"}</Fact>
           <Fact label="Team lead">{team?.leaderId === me.id ? "You" : (leader?.name ?? "—")}</Fact>
           <Fact label="Hubstaff user id">
-            <span className="font-mono">{me.hubstaffUserId ?? "Not linked"}</span>
+            {me.hubstaffUserId !== null ? <span className="font-mono">{me.hubstaffUserId}</span> : "Not linked"}
           </Fact>
           <Fact label="Started">{me.startedOn ? fmtDate(me.startedOn) : "—"}</Fact>
         </dl>

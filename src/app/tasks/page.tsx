@@ -149,10 +149,10 @@ function SeriesTable({
                 Stopped
               </span>
             ),
-            <span key="d" className="font-mono tabular-nums">
+            <span key="d" className="tabular-nums">
               {s.done} / {s.occurrences}
             </span>,
-            <span key="tt" className="font-mono tabular-nums">
+            <span key="tt" className="tabular-nums">
               {s.trackedSeconds ? fmtDuration(s.trackedSeconds) : "—"}
             </span>,
             <span key="n" className="text-muted">
@@ -232,7 +232,7 @@ function SeriesTable({
                     <span key="f" className="text-muted">
                       {o.doneAt ? fmtDateTime(o.doneAt, config.timeZone) : "—"}
                     </span>,
-                    <span key="tm" className="font-mono tabular-nums">
+                    <span key="tm" className="tabular-nums">
                       {o.trackedSeconds ? fmtDuration(o.trackedSeconds) : "—"}
                     </span>,
                   ],

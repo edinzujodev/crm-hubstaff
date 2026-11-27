@@ -62,17 +62,17 @@ async function LeadList({ filter }: { filter: Promise<string | undefined> }) {
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="card p-4">
           <p className="text-xs text-muted">Open leads</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">{open.length}</p>
+          <p className="mt-1 text-2xl tabular-nums">{open.length}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-muted">Open pipeline (per month)</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">
+          <p className="mt-1 text-2xl tabular-nums">
             {money.format(pipeline)}
           </p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-muted">Win rate</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">
+          <p className="mt-1 text-2xl tabular-nums">
             {decided ? `${Math.round((won / decided) * 100)}%` : "—"}{" "}
             <span className="text-sm text-muted">
               {won} won · {lost} lost
@@ -124,7 +124,7 @@ async function LeadList({ filter }: { filter: Promise<string | undefined> }) {
               <span key="o" className="text-muted">
                 {ownerName ?? "—"}
               </span>,
-              <span key="m" className="font-mono tabular-nums">
+              <span key="m" className="tabular-nums">
                 {lead.expectedMonthlyValue != null
                   ? money.format(lead.expectedMonthlyValue)
                   : "—"}

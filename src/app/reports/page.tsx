@@ -43,10 +43,10 @@ function Table({ title, rows, firstColumn }: { title: string; rows: Row[]; first
             ) : (
               r.label
             ),
-            <span key="t" className="font-mono tabular-nums">
+            <span key="t" className="tabular-nums">
               {fmtDuration(r.tracked)}
             </span>,
-            <span key="b" className="font-mono tabular-nums text-muted">
+            <span key="b" className="tabular-nums text-muted">
               {fmtDuration(r.billable)}
             </span>,
             <span key="a" className="text-xs text-muted">
@@ -239,21 +239,21 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
       <section className="grid gap-3 sm:grid-cols-4">
         <div className="card p-4">
           <p className="text-xs text-muted">Tracked</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">{fmtDuration(report.total.tracked)}</p>
+          <p className="mt-1 text-2xl tabular-nums">{fmtDuration(report.total.tracked)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-muted">Billable</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">{fmtDuration(report.total.billable)}</p>
+          <p className="mt-1 text-2xl tabular-nums">{fmtDuration(report.total.billable)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-muted">Activity</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">
+          <p className="mt-1 text-2xl tabular-nums">
             {report.activityPercent === null ? "—" : `${report.activityPercent}%`}
           </p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-muted">Days with time</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">{report.daysWorked}</p>
+          <p className="mt-1 text-2xl tabular-nums">{report.daysWorked}</p>
         </div>
       </section>
 
@@ -291,11 +291,11 @@ async function Report({ searchParams }: { searchParams: Promise<{ [key: string]:
                   row.label
                 ),
                 ...row.cells.map((c, i) => (
-                  <span key={i} className="font-mono tabular-nums text-muted">
+                  <span key={i} className="tabular-nums text-muted">
                     {c.tracked ? fmtDuration(c.tracked) : "—"}
                   </span>
                 )),
-                <span key="total" className="font-mono tabular-nums">
+                <span key="total" className="tabular-nums">
                   {fmtDuration(row.tracked)}
                 </span>,
               ],

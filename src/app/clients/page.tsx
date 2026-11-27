@@ -88,13 +88,13 @@ async function ClientList({ show }: { show?: string }) {
             <span key="k" className="text-muted">
               {[c.contactName, c.email].filter(Boolean).join(" · ") || "—"}
             </span>,
-            <span key="o" className="font-mono tabular-nums">
+            <span key="o" className="tabular-nums">
               {inProgress.get(c.id) ?? 0}
             </span>,
-            <span key="p" className="font-mono tabular-nums">
+            <span key="p" className="tabular-nums">
               {projectsOf.get(c.id) ?? 0}
             </span>,
-            <span key="t" className="font-mono tabular-nums">
+            <span key="t" className="tabular-nums">
               {tracked.get(c.id) ? fmtDuration(tracked.get(c.id)!) : "—"}
             </span>,
           ],

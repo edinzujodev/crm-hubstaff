@@ -69,7 +69,7 @@ function Card({
 
 /**
  * This year at a glance, in two cards. Vacation: the days left out of the year's total, with a bar of the days taken
- * and waiting for approval (the rest of the bar is what is left). Other leave: all other days taken this year, by
+ * and waiting for approval (the rest of the bar is what is left). Absences: all other days taken this year, by
  * kind. `taken` holds the approved days of each kind this year.
  */
 export function LeaveTiles({ b, taken, today }: { b: Balance; taken: Record<TimeOffKind, number>; today: string }) {
@@ -122,7 +122,7 @@ export function LeaveTiles({ b, taken, today }: { b: Balance; taken: Record<Time
       <Card
         icon="pi-calendar"
         tone="bg-violet-500/15 text-violet-600 dark:text-violet-400"
-        title="Other leave"
+        title="Absences"
         year={b.year}
         value={other}
         unit={`${dayWord(other)} in ${b.year}`}

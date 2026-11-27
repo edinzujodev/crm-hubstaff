@@ -55,7 +55,7 @@ function LeadForm({ users, onDone }: { users: Option[]; onDone: () => void }) {
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Est. monthly fee
-        <InputText name="expectedMonthlyValue" inputMode="numeric" className="w-full font-mono text-foreground" />
+        <InputText name="expectedMonthlyValue" inputMode="numeric" className="w-full tabular-nums text-foreground" />
       </label>
       <label className="flex flex-col gap-1 text-xs text-muted">
         Owner

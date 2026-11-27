@@ -76,7 +76,7 @@ async function TeamDetail({ params }: { params: Promise<{ id: string }> }) {
 
       <section className="card border-amber-500/40 p-4">
         <h2 className="mb-2 font-semibold">
-          Waiting for review <span className="font-mono text-sm font-normal text-muted">{toReview.length}</span>
+          Waiting for review <span className="tabular-nums text-sm font-normal text-muted">{toReview.length}</span>
         </h2>
         {toReview.length === 0 ? (
           <p className="text-sm text-muted">Nothing to review. Finished tasks from {leader?.name ?? "the team"}&apos;s team land here.</p>

@@ -87,7 +87,7 @@ export function LinkTabs({ tabs, active }: { tabs: LinkTab[]; active: number }) 
               <span className={options.labelClassName}>{item.label}</span>
               {t.count !== undefined && (
                 <span
-                  className={`ml-1.5 font-mono text-xs tabular-nums ${t.alarm ? "font-semibold text-red-600 dark:text-red-400" : "opacity-70"}`}
+                  className={`ml-1.5 text-xs tabular-nums ${t.alarm ? "font-semibold text-red-600 dark:text-red-400" : "opacity-70"}`}
                 >
                   {t.count}
                 </span>

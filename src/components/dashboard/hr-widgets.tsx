@@ -270,7 +270,7 @@ export async function HrAwayWidget({ auth, raw }: { auth: Auth; raw: unknown }) 
   return (
     <>
       <p className="mb-3 text-sm">
-        <span className="font-mono text-2xl font-semibold tabular-nums">{outToday.length}</span>{" "}
+        <span className="text-2xl font-semibold tabular-nums">{outToday.length}</span>{" "}
         <span className="text-muted">{outToday.length === 1 ? "person is" : "people are"} off today</span>
       </p>
       {entries.length === 0 ? (
@@ -310,7 +310,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
   return (
     <div className="min-w-0 rounded-md border border-border p-3">
       <p className="truncate text-xs text-muted">{label}</p>
-      <p className={`mt-1 font-mono text-2xl tabular-nums ${tone ?? ""}`}>{value}</p>
+      <p className={`mt-1 text-2xl tabular-nums ${tone ?? ""}`}>{value}</p>
     </div>
   );
 }
@@ -367,7 +367,7 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
       </div>
     ) : (
       <div className="mb-3 flex items-end gap-3">
-        <span className="font-mono text-3xl font-semibold tabular-nums text-sky-600 dark:text-sky-400">{num(b.left)}</span>
+        <span className="text-3xl font-semibold tabular-nums text-sky-600 dark:text-sky-400">{num(b.left)}</span>
         <span className="pb-1 text-sm text-muted">
           of {num(total)} vacation days left in {year}
           {b.pending > 0 && <span className="text-amber-600 dark:text-amber-400"> · {fmtDays(b.pending)} waiting</span>}
@@ -449,7 +449,7 @@ export async function HrApprovalsWidget({ auth, raw }: { auth: Auth; raw: unknow
   return (
     <>
       <p className="mb-2 text-sm">
-        <span className={`font-mono text-2xl font-semibold tabular-nums ${waiting.length ? "text-amber-600 dark:text-amber-400" : ""}`}>{waiting.length}</span>{" "}
+        <span className={`text-2xl font-semibold tabular-nums ${waiting.length ? "text-amber-600 dark:text-amber-400" : ""}`}>{waiting.length}</span>{" "}
         <span className="text-muted">{waiting.length === 1 ? "request is" : "requests are"} waiting for you</span>
       </p>
       {shown.length === 0 ? (

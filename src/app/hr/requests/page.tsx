@@ -100,7 +100,7 @@ async function RequestsContent() {
                 {t.halfDay && <span className="text-muted"> · half day</span>}
               </span>,
               <KindBadge key="k" kind={t.kind} />,
-              <span key="n" className="font-mono tabular-nums">
+              <span key="n" className="tabular-nums">
                 {fmtNum(countDays(t, daysOff))}
               </span>,
               <span key="note" className="text-sm text-muted">
@@ -138,7 +138,7 @@ async function RequestsContent() {
                 {t.halfDay && <span className="text-muted"> · half day</span>}
               </span>,
               <KindBadge key="k" kind={t.kind} />,
-              <span key="n" className="font-mono tabular-nums">
+              <span key="n" className="tabular-nums">
                 {fmtNum(countDays(t, daysOff))}
               </span>,
               <StatusBadge key="s" status={t.status} kind={t.kind} />,

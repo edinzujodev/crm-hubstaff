@@ -146,17 +146,17 @@ async function ClientDetail({
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="card p-4">
           <p className="text-xs text-muted">Tracked in Hubstaff</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">{fmtDuration(report.trackedSeconds)}</p>
+          <p className="mt-1 text-2xl tabular-nums">{fmtDuration(report.trackedSeconds)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-muted">Activity</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">
+          <p className="mt-1 text-2xl tabular-nums">
             {report.activityPercent === null ? "—" : `${report.activityPercent}%`}
           </p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-muted">Tasks</p>
-          <p className="mt-1 font-mono text-2xl tabular-nums">
+          <p className="mt-1 text-2xl tabular-nums">
             {report.openTaskCount} <span className="text-sm text-muted">open of {report.taskCount}</span>
           </p>
         </div>
@@ -190,10 +190,10 @@ async function ClientDetail({
               <span key="k" className="badge">
                 {KIND_LABEL[project.kind]}
               </span>,
-              <span key="o" className="font-mono tabular-nums">
+              <span key="o" className="tabular-nums">
                 {open} <span className="text-xs text-muted">of {tasks}</span>
               </span>,
-              <span key="t" className="font-mono tabular-nums">
+              <span key="t" className="tabular-nums">
                 {tracked ? fmtDuration(tracked) : "—"}
               </span>,
             ],
@@ -277,7 +277,7 @@ async function ClientDetail({
                 <span key="f" className="whitespace-nowrap text-muted">
                   {task.doneAt ? fmtDateTime(task.doneAt, tz) : "—"}
                 </span>,
-                <span key="t" className="font-mono tabular-nums">
+                <span key="t" className="tabular-nums">
                   {tracked ? fmtDuration(tracked) : "—"}
                 </span>,
                 <span key="x" className="text-xs text-muted">
@@ -312,7 +312,7 @@ function TotalsTable({ rows }: { rows: { label: string; tracked: number; active:
         key: r.label,
         cells: [
           r.label,
-          <span key="t" className="font-mono tabular-nums">
+          <span key="t" className="tabular-nums">
             {fmtDuration(r.tracked)}
           </span>,
           <span key="a" className="text-xs text-muted">

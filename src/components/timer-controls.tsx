@@ -103,7 +103,7 @@ export function TimerControls({ taskId, title, lockedTo, done, runningSince, oth
         {runningSince && (
           <span
             suppressHydrationWarning
-            className="font-mono text-sm tabular-nums text-emerald-700 dark:text-emerald-400"
+            className="text-sm tabular-nums text-emerald-700 dark:text-emerald-400"
           >
             {elapsed(runningSince)}
           </span>

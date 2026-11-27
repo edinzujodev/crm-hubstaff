@@ -19,7 +19,7 @@ export function BarList({ data }: { data: BarDatum[] }) {
               <span className="truncate">{d.label}</span>
             )}
             <span className="shrink-0">
-              <span className="font-mono tabular-nums">{d.display}</span>
+              <span className="tabular-nums">{d.display}</span>
               <span className="ml-2 text-xs text-muted">{d.share}</span>
             </span>
           </div>

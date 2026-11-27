@@ -10,7 +10,7 @@ function Tile({ label, value, tone, hint }: { label: string; value: number; tone
   return (
     <div className="px-4 py-3" title={hint}>
       <p className="text-xs text-muted">{label}</p>
-      <p className={`mt-0.5 font-mono text-xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}>{value}</p>
+      <p className={`mt-0.5 text-xl tabular-nums ${tone === "warn" ? "text-amber-700 dark:text-amber-400" : ""}`}>{value}</p>
     </div>
   );
 }

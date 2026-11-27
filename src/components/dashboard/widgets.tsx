@@ -34,7 +34,7 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
   return (
     <div className="min-w-0 rounded-md border border-border p-3">
       <p className="truncate text-xs text-muted">{label}</p>
-      <p className={`mt-1 font-mono text-2xl tabular-nums ${color}`}>{value}</p>
+      <p className={`mt-1 text-2xl tabular-nums ${color}`}>{value}</p>
     </div>
   );
 }
@@ -275,16 +275,16 @@ async function ClientsWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
               <Link key="n" href={`/clients/${c.id}`} className="hover:underline">
                 {c.name}
               </Link>,
-              <span key="o" className="font-mono tabular-nums">
+              <span key="o" className="tabular-nums">
                 {c.open}
               </span>,
               <span
                 key="l"
-                className={`font-mono tabular-nums ${c.late ? "text-red-600 dark:text-red-400" : "text-muted"}`}
+                className={`tabular-nums ${c.late ? "text-red-600 dark:text-red-400" : "text-muted"}`}
               >
                 {c.late}
               </span>,
-              <span key="t" className="font-mono tabular-nums">
+              <span key="t" className="tabular-nums">
                 {c.tracked ? fmtDuration(c.tracked) : "—"}
               </span>,
             ],
@@ -371,16 +371,16 @@ async function TeamWorkloadWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
                     </span>
                   )}
                 </div>,
-                <span key="o" className="font-mono tabular-nums">
+                <span key="o" className="tabular-nums">
                   {p.open}
                 </span>,
                 <span
                   key="l"
-                  className={`font-mono tabular-nums ${p.late ? "text-red-600 dark:text-red-400" : "text-muted"}`}
+                  className={`tabular-nums ${p.late ? "text-red-600 dark:text-red-400" : "text-muted"}`}
                 >
                   {p.late}
                 </span>,
-                <span key="t" className="font-mono tabular-nums">
+                <span key="t" className="tabular-nums">
                   {p.tracked ? fmtDuration(p.tracked) : "—"}
                 </span>,
               ],
@@ -393,10 +393,10 @@ async function TeamWorkloadWidget({ auth, raw }: { auth: Auth; raw: unknown }) {
                       <span key="n" className="text-muted">
                         Unassigned
                       </span>,
-                      <span key="o" className="font-mono tabular-nums">
+                      <span key="o" className="tabular-nums">
                         {unassigned.length}
                       </span>,
-                      <span key="l" className="font-mono tabular-nums text-muted">
+                      <span key="l" className="tabular-nums text-muted">
                         {unassigned.filter((t) => t.hours !== null && t.hours < 0).length}
                       </span>,
                       <span key="t" className="text-muted">
@@ -481,7 +481,7 @@ async function LeadsWidget() {
           <li key={s.stage} className="text-sm">
             <div className="mb-1 flex justify-between gap-3">
               <span>{STAGE_LABEL[s.stage]}</span>
-              <span className="font-mono tabular-nums">{s.count}</span>
+              <span className="tabular-nums">{s.count}</span>
             </div>
             <div className="h-2">
               <div

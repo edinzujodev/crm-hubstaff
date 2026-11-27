@@ -514,13 +514,13 @@ async function TaskDetail({
               <section className="grid gap-3 sm:grid-cols-3">
                 <div className="card p-4">
                   <p className="text-xs text-muted">Tracked in Hubstaff</p>
-                  <p className="mt-1 font-mono text-2xl tabular-nums">
+                  <p className="mt-1 text-2xl tabular-nums">
                     {fmtDuration(report.trackedSeconds)}
                   </p>
                 </div>
                 <div className="card p-4">
                   <p className="text-xs text-muted">Activity</p>
-                  <p className="mt-1 font-mono text-2xl tabular-nums">
+                  <p className="mt-1 text-2xl tabular-nums">
                     {report.activityPercent === null
                       ? "—"
                       : `${report.activityPercent}%`}
@@ -577,11 +577,11 @@ async function TaskDetail({
                       </span>,
                       <span
                         key="o"
-                        className="font-mono tabular-nums text-muted"
+                        className="tabular-nums text-muted"
                       >
                         {fmtDuration(s.openSeconds)}
                       </span>,
-                      <span key="h" className="font-mono tabular-nums">
+                      <span key="h" className="tabular-nums">
                         {fmtDuration(s.trackedSeconds)}
                       </span>,
                       <div
@@ -744,7 +744,7 @@ function TotalsTable({
         key: r.label,
         cells: [
           r.label,
-          <span key="t" className="font-mono tabular-nums">
+          <span key="t" className="tabular-nums">
             {fmtDuration(r.tracked)}
           </span>,
           <span key="a" className="text-xs text-muted">
