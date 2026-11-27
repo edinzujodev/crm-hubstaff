@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { PhotoPicker } from "@/components/photo-picker";
 import { ProfileForm } from "@/components/profile-form";
 import { SectionHead } from "@/components/section-head";
 import { pageGuard } from "@/lib/auth";
@@ -46,7 +47,8 @@ async function ProfileContent() {
   return (
     <div className="space-y-5">
       <section className="card space-y-4 p-5">
-        <SectionHead as="h1" title="Personal details" sub="Only you can change these. Your colleagues see your name and job title." />
+        <SectionHead as="h1" title="Personal details" sub="Only you can change these. Your colleagues see your photo, name and job title." />
+        <PhotoPicker userId={me.id} name={me.name} hasPhoto={me.photoVersion !== null} />
         <ProfileForm
           today={today}
           initial={{

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Avatar } from "@/components/avatar";
 import { connection } from "next/server";
 import { HrNavLinks } from "@/components/hr-nav";
 import { getAuth } from "@/lib/auth";
@@ -11,18 +12,10 @@ async function ProfileNav() {
   const auth = await getAuth();
   if (!auth) return null;
   const me = auth.user;
-  const initials = me.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 md:flex-col md:items-start md:px-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-base font-semibold text-(--primary-fg) md:h-14 md:w-14 md:text-lg">
-          {initials}
-        </span>
+        <Avatar name={me.name} userId={me.id} size="xl" solid />
         <div className="min-w-0">
           <p className="truncate font-semibold">{me.name}</p>
           <p className="truncate text-xs text-muted">{me.jobTitle || ROLE_LABEL[auth.role]}</p>

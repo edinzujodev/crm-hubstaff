@@ -42,7 +42,7 @@ async function Account() {
   return (
     <>
     <IdleSignOut />
-    <ProfileMenu name={auth.user.name} email={auth.user.email} role={roleLabel}>
+    <ProfileMenu userId={auth.user.id} name={auth.user.name} email={auth.user.email} role={roleLabel}>
       <section className="space-y-2 border-t border-border pt-3">
         <h2 className="text-xs font-medium text-muted">Hubstaff</h2>
         <div className="flex flex-wrap items-center justify-between gap-2">

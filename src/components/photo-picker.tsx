@@ -84,9 +84,14 @@ export function PhotoPicker({ userId, name, hasPhoto }: { userId: number; name: 
       <Avatar name={name} userId={userId} size="2xl" solid />
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="small" icon="pi pi-camera" disabled={busy} onClick={() => input.current?.click()}>
-            {busy ? "Saving…" : has ? "Change photo" : "Upload photo"}
-          </Button>
+          <Button
+            type="button"
+            size="small"
+            icon="pi pi-camera"
+            label={busy ? "Saving…" : has ? "Change photo" : "Upload photo"}
+            disabled={busy}
+            onClick={() => input.current?.click()}
+          />
           {has && (
             <Button type="button" size="small" severity="secondary" outlined disabled={busy} onClick={remove}>
               Remove

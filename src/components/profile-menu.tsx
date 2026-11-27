@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Avatar } from "@/components/avatar";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
@@ -8,11 +9,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * Sign out. The panel is hidden, not removed, when closed, so the background sync inside it keeps running.
  */
 export function ProfileMenu({
+  userId,
   name,
   email,
   role,
   children,
 }: {
+  userId: number;
   name: string;
   email: string;
   role: string;
@@ -35,13 +38,6 @@ export function ProfileMenu({
     };
   }, [open]);
 
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
-
   return (
     <div ref={root} className="relative w-full">
       <button
@@ -51,9 +47,7 @@ export function ProfileMenu({
         onClick={() => setOpen((o) => !o)}
         className="sb-profile flex w-full cursor-pointer items-center gap-2 rounded-full border border-border py-1 pl-1 pr-3 text-sm transition-colors duration-200 hover:bg-primary/10"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-(--primary-fg)">
-          {initials}
-        </span>
+        <Avatar name={name} userId={userId} size="sm" solid />
         <span className="sb-label min-w-0 flex-1 truncate text-left font-medium">{name}</span>
         <span aria-hidden className="sb-label text-xs text-muted">
           {open ? "▴" : "▾"}
@@ -67,9 +61,7 @@ export function ProfileMenu({
         className="card absolute left-0 top-full z-40 mt-2 w-80 md:bottom-full md:top-auto md:mb-2 md:mt-0 max-w-[calc(100vw-2rem)] space-y-4 p-4 shadow-lg"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-(--primary-fg)">
-            {initials}
-          </span>
+          <Avatar name={name} userId={userId} size="lg" solid />
           <div className="min-w-0">
             <p className="truncate font-medium">{name}</p>
             <p className="truncate text-xs text-muted">{email}</p>
