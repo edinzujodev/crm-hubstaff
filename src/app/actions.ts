@@ -100,6 +100,44 @@ export async function updateProfile(_prev: unknown, formData: FormData): Promise
   });
 }
 
+/** The browser crops and shrinks the photo first (see components/photo-picker), so a real one is far below this. */
+const MAX_PHOTO_BYTES = 400 * 1024;
+
+/** The signed-in person sets their own profile photo: a square JPEG, made in the browser. */
+export async function setMyPhoto(formData: FormData): Promise<Result<{ version: number }>> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const file = formData.get("photo");
+    if (!(file instanceof File) || !file.size) throw new Error("Pick a photo.");
+    if (file.size > MAX_PHOTO_BYTES) throw new Error("That photo is too big.");
+    const bytes = Buffer.from(await file.arrayBuffer());
+    // A JPEG starts with FF D8 FF; anything else isn't what the browser made.
+    if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) throw new Error("That file isn't a photo.");
+    const version = Math.floor(Date.now() / 1000);
+    await db.transaction(async (tx) => {
+      const data = bytes.toString("base64");
+      await tx
+        .insert(schema.userPhotos)
+        .values({ userId: auth.user.id, data })
+        .onConflictDoUpdate({ target: schema.userPhotos.userId, set: { data, updatedAt: new Date() } });
+      await tx.update(schema.users).set({ photoVersion: version }).where(eq(schema.users.id, auth.user.id));
+    });
+    return { version };
+  });
+}
+
+/** Removes the signed-in person's photo: their initials show again. */
+export async function removeMyPhoto(): Promise<Result> {
+  return run(async () => {
+    const auth = await requireAuth();
+    await db.transaction(async (tx) => {
+      await tx.delete(schema.userPhotos).where(eq(schema.userPhotos.userId, auth.user.id));
+      await tx.update(schema.users).set({ photoVersion: null }).where(eq(schema.users.id, auth.user.id));
+    });
+    return undefined;
+  });
+}
+
 const MAX_CODE_TRIES = 5;
 
 /**

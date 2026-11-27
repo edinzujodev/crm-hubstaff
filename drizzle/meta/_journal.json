@@ -232,6 +232,13 @@
       "when": 1795696541843,
       "tag": "0032_hr_tab_links",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795779200962,
+      "tag": "0033_user_photos",
+      "breakpoints": true
     }
   ]
 }

@@ -50,6 +50,17 @@ export const users = pgTable("users", {
   totpLastStep: integer("totp_last_step"),
   // Vacation days the person gets each year, unless leave_allowances sets that year differently.
   annualLeaveDays: numeric("annual_leave_days", { precision: 4, scale: 1, mode: "number" }).notNull().default(20),
+  // Set when the person has a profile photo (in user_photos): changes with every new photo, so its URL changes too.
+  photoVersion: integer("photo_version"),
+});
+
+// A person's profile photo: a small square JPEG, base64. Kept out of users so loading people never loads photos.
+export const userPhotos = pgTable("user_photos", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
+  data: text("data").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // One widget on a person's dashboard. Dashboards are personal; `config` holds the widget's settings
