@@ -424,6 +424,9 @@ export const timeOff = pgTable(
     decidedById: integer("decided_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
     decisionNote: text("decision_note"),
+    // Who withdrew or revoked it (status "cancelled"), and when.
+    cancelledById: integer("cancelled_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   },
   (t) => [
     index("time_off_user_idx").on(t.userId),
