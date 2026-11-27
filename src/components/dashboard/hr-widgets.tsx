@@ -350,6 +350,7 @@ export async function HrMyLeaveWidget({ auth, raw }: { auth: Auth; raw: unknown 
       daysOff={[...daysOff]}
       vacationLeft={Math.max(0, b.left - b.pending)}
       selfApproves={auth.role === "super_admin"}
+      ownApproved={auth.role !== "worker"}
       blocked={blockedAhead.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason }))}
       team={team}
       today={now}

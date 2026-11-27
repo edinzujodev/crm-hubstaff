@@ -84,8 +84,9 @@ const timeOffInput = z
   .refine((v) => !v.halfDay || v.startDate === v.endDate, { message: "A half day can only be a single day" });
 
 /**
- * Time off for yourself, or (as their leader or a super admin) for someone else. Sick leave counts right away, and
- * so does anything an approver enters for someone; everything else waits for approval.
+ * Time off for yourself, or (as their team lead or a super admin) for someone else. Sick leave counts right away, and
+ * so does anything an approver enters for someone, and a team lead's or super admin's own time off; a worker's
+ * other requests wait for approval.
  */
 export async function requestTimeOff(_prev: unknown, formData: FormData): Promise<Result<{ status: string }>> {
   return run(async () => {
@@ -128,7 +129,8 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
       }
     }
 
-    const approvedNow = !needsApproval(input.kind) || (forSomeoneElse && canDecide(auth, person)) || auth.role === "super_admin";
+    const approvedNow =
+      !needsApproval(input.kind) || (forSomeoneElse && canDecide(auth, person)) || auth.role === "super_admin" || (!forSomeoneElse && auth.role === "leader");
     const [row] = await db.insert(schema.timeOff).values({
       userId: person.id,
       kind: input.kind,
@@ -272,12 +274,15 @@ const allowanceInput = z.object({
 });
 
 /**
- * A super admin sets a person's vacation days: the default per year, and for one year the allowance and the days
- * carried over from last year. An empty year field goes back to the default.
+ * A super admin (anyone's) or team lead (the people in the teams they lead, not their own) sets a person's vacation
+ * days: the default per year, and for one year the allowance and the days carried over from last year. An empty year
+ * field goes back to the default.
  */
 export async function setAllowance(userId: number, year: number, _prev: unknown, formData: FormData): Promise<Result> {
   return run(async () => {
-    await requireRole("super_admin");
+    const auth = await requireRole("super_admin", "leader");
+    const person = await db.query.users.findFirst({ where: eq(schema.users.id, userId), columns: { id: true, teamId: true } });
+    if (!person || !canDecide(auth, person)) throw new Error("You can only change the vacation days of people in the teams you lead.");
     if (!Number.isInteger(year) || year < 2000 || year > 2100) throw new Error("Pick a year.");
     const input = allowanceInput.parse(Object.fromEntries(formData));
     if (input.annual !== null) await db.update(schema.users).set({ annualLeaveDays: input.annual }).where(eq(schema.users.id, userId));

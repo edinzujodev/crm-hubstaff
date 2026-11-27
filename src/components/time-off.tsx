@@ -75,8 +75,10 @@ type FormProps = {
   /** Vacation days still free (left minus waiting requests) this year, to warn before sending. */
   vacationLeft: number;
   kind?: TimeOffKind;
-  /** Whether the signed-in person's own entries are approved straight away (super admin). */
+  /** Super admin: their own entries are approved straight away, and blocked days can still be picked. */
   selfApproves: boolean;
+  /** The signed-in person's own entries are approved straight away (super admins and team leads). */
+  ownApproved?: boolean;
   /** Days nobody can take off. A super admin (selfApproves) can still enter time off on them. */
   blocked?: BlockedSpan[];
   /** Change this time off instead of adding new time off. */
@@ -100,6 +102,7 @@ export function TimeOffForm({
   vacationLeft,
   kind: initialKind = "vacation",
   selfApproves,
+  ownApproved = selfApproves,
   blocked = NO_BLOCKS,
   editing,
   team,
@@ -136,7 +139,7 @@ export function TimeOffForm({
   const days = startDate && end >= startDate ? countDays({ startDate, endDate: end, halfDay: halfDay && single }, offSet) : null;
   // Changing time off: the days it already takes are in vacationLeft, so the warning would be wrong.
   const overLimit = !editing && forMe && kind === "vacation" && days !== null && days > vacationLeft;
-  const instant = !needsApproval(kind) || !forMe || selfApproves;
+  const instant = !needsApproval(kind) || !forMe || selfApproves || ownApproved;
   const blocks = blockable(kind) ? blocked : [];
   const clash = startDate && end >= startDate ? blockedClash({ startDate, endDate: end }, blocks) : undefined;
   // The team's limit (workers only: leaders and super admins are warned by the server and may go past it).

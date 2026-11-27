@@ -80,6 +80,7 @@ async function TimeOffContent({ params }: { params: Promise<{ m?: string; who?: 
     daysOff: [...daysOff],
     vacationLeft: Math.max(0, balance.left - balance.pending),
     selfApproves: auth.role === "super_admin",
+    ownApproved: auth.role !== "worker",
     today,
     blocked: blocked.map(({ startDate, endDate, reason }) => ({ startDate, endDate, reason })),
   };
