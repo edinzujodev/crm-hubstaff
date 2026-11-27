@@ -148,7 +148,7 @@ async function RequestsContent() {
             ],
             actions:
               t.status === "approved" && canDecide(auth, byId.get(t.userId) ?? { id: t.userId, teamId: null }) ? (
-                <span className="flex items-center">
+                <span className="flex items-center gap-2">
                   {/* Time off that is already over can't be taken back. */}
                   {t.endDate >= today && <WithdrawTimeOffButton id={t.id} />}
                   <ChangeTimeOffButton t={{ ...t, name: name.get(t.userId) ?? "" }} />
