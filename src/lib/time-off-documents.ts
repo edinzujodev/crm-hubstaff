@@ -42,7 +42,6 @@ export function documentType(bytes: Uint8Array): string | null {
 /** A file name safe to store and send back in a header: no path, no control characters, not too long. */
 export function cleanFileName(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? "";
-  // eslint-disable-next-line no-control-regex -- removing control characters is the point
   const clean = base.replace(/[\u0000-\u001f\u007f"]/g, "").trim();
   return (clean || "document").slice(0, 120);
 }
