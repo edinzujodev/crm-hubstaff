@@ -516,3 +516,25 @@ export async function deleteEvent(eventId: number): Promise<Result> {
     return undefined;
   });
 }
+
+// ---- Documents on time off ------------------------------------------------------------------------------------
+
+/**
+ * Removes a file attached to time off: the person's own, or as someone who approves their time off. If it was the
+ * last file on sick leave, the person is reminded again that a sick note is needed.
+ */
+export async function deleteTimeOffDocument(documentId: number): Promise<Result> {
+  return run(async () => {
+    const auth = await requireAuth();
+    const doc = await db.query.timeOffDocuments.findFirst({
+      where: eq(schema.timeOffDocuments.id, documentId),
+      columns: { id: true, timeOffId: true },
+    });
+    if (!doc) throw new Error("That file is already gone.");
+    const row = await db.query.timeOff.findFirst({ where: eq(schema.timeOff.id, doc.timeOffId) });
+    const person = row ? await db.query.users.findFirst({ where: eq(schema.users.id, row.userId) }) : undefined;
+    if (!row || !person || !canManagePerson(auth, person)) throw new Error("You can't remove this file.");
+    await db.delete(schema.timeOffDocuments).where(eq(schema.timeOffDocuments.id, documentId));
+    return undefined;
+  });
+}
