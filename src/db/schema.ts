@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -433,6 +434,28 @@ export const timeOff = pgTable(
     index("time_off_dates_idx").on(t.startDate, t.endDate),
     check("time_off_dates_order", sql`${t.endDate} >= ${t.startDate}`),
   ],
+);
+
+/** Raw file bytes (Postgres bytea). */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+
+// Files attached to time off, such as a doctor's note for sick leave. Only the person and those who approve their
+// time off can open them (see app/api/time-off).
+export const timeOffDocuments = pgTable(
+  "time_off_documents",
+  {
+    id: serial("id").primaryKey(),
+    timeOffId: integer("time_off_id")
+      .notNull()
+      .references((): AnyPgColumn => timeOff.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    size: integer("size").notNull(),
+    data: bytea("data").notNull(),
+    uploadedById: integer("uploaded_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("time_off_documents_time_off_idx").on(t.timeOffId)],
 );
 
 // A person's vacation allowance for one year, when it differs from the default: users.annual_leave_days for the
