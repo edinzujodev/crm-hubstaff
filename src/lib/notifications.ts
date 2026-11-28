@@ -8,8 +8,9 @@ import { KIND_LABEL, needsApproval, type TimeOffKind } from "@/lib/leave-days";
  * - a request waits for approval → everyone who can decide on it;
  * - it is approved or rejected → the person who asked;
  * - an approver enters, changes or cancels time off for someone → that person;
- * - someone records sick leave, or cancels their own time off → the people who approve for them.
- * Nobody is told about what they did themselves.
+ * - someone records sick leave, or cancels their own time off → the people who approve for them;
+ * - sick leave is recorded → the person, to upload their sick note (marked read once a file is attached).
+ * Nobody is told about what they did themselves, except the sick note reminder.
  */
 export type NotificationKind =
   | "time_off_requested"
@@ -19,7 +20,8 @@ export type NotificationKind =
   | "time_off_cancelled"
   | "time_off_changed"
   | "time_off_taken"
-  | "sick_leave";
+  | "sick_leave"
+  | "sick_note_needed";
 
 type Person = { id: number; name: string; teamId: number | null };
 type Request = { id: number; kind: TimeOffKind; startDate: string; endDate: string; halfDay: boolean };
@@ -106,6 +108,36 @@ export async function notifyTimeOffAdded(actor: { id: number; name: string }, pe
       timeOffId: r.id,
     });
   }
+}
+
+/**
+ * Sick leave was recorded (or time off changed into sick leave): the person is asked to upload their sick note. Unlike
+ * other notifications this one also goes to the person when they entered the sick leave themselves.
+ */
+export async function notifySickNoteNeeded(actor: { id: number }, person: Person, r: Request) {
+  await db.insert(schema.notifications).values({
+    userId: person.id,
+    kind: "sick_note_needed",
+    title: `Upload your sick note for ${fmtRange(r.startDate, r.endDate)}`,
+    body: "Attach it to the sick leave on My time off.",
+    href: MY_TIME_OFF,
+    actorId: actor.id,
+    timeOffId: r.id,
+  });
+}
+
+/** The sick note reminder is done with: a file was attached, or it is no longer sick leave on the calendar. */
+export async function settleSickNote(timeOffId: number) {
+  await db
+    .update(schema.notifications)
+    .set({ readAt: new Date() })
+    .where(
+      and(
+        eq(schema.notifications.timeOffId, timeOffId),
+        eq(schema.notifications.kind, "sick_note_needed"),
+        isNull(schema.notifications.readAt),
+      ),
+    );
 }
 
 /** After a waiting request is approved or rejected. */

@@ -8,7 +8,14 @@ import { config } from "@/lib/config";
 import { fmtDays, fmtRange, fmtShortDay, isDay, weekday } from "@/lib/days";
 import { REPEATS } from "@/lib/recurrence";
 import { localDay } from "@/lib/format";
-import { notifyTimeOffAdded, notifyTimeOffCancelled, notifyTimeOffChanged, notifyTimeOffDecided } from "@/lib/notifications";
+import {
+  notifySickNoteNeeded,
+  notifyTimeOffAdded,
+  notifyTimeOffCancelled,
+  notifyTimeOffChanged,
+  notifyTimeOffDecided,
+  settleSickNote,
+} from "@/lib/notifications";
 import { blockedBetween, builtInHolidays, daysOffBetween } from "@/lib/holidays";
 import { OverridableError, run, type Result } from "@/lib/result";
 import { balanceFor, blockable, blockedClash, canDecide, canManagePerson, countDays, KIND_LABEL, needsApproval, teamLimitClash } from "@/lib/time-off";
@@ -143,6 +150,7 @@ export async function requestTimeOff(_prev: unknown, formData: FormData): Promis
       ...(approvedNow && needsApproval(input.kind) ? { decidedById: auth.user.id, decidedAt: new Date() } : {}),
     }).returning({ id: schema.timeOff.id });
     await quietly(() => notifyTimeOffAdded(auth.user, person, { ...input, id: row!.id }, approvedNow));
+    if (input.kind === "sick") await quietly(() => notifySickNoteNeeded(auth.user, person, { ...input, id: row!.id }));
     return { status: approvedNow ? "approved" : "pending" };
   });
 }
@@ -198,6 +206,13 @@ export async function updateTimeOff(id: number, _prev: unknown, formData: FormDa
     const after = { kind: input.kind, startDate: input.startDate, endDate: input.endDate, halfDay: input.halfDay, note: input.note, status };
     await db.update(schema.timeOff).set(after).where(eq(schema.timeOff.id, id));
     await quietly(() => notifyTimeOffChanged(auth.user, person, row, { id, ...after }));
+    // Changed into sick leave: a sick note is needed (unless one is attached already). Changed away from it: not any more.
+    if (after.kind === "sick" && row.kind !== "sick") {
+      const attached = await db.query.timeOffDocuments.findFirst({ where: eq(schema.timeOffDocuments.timeOffId, id), columns: { id: true } });
+      if (!attached) await quietly(() => notifySickNoteNeeded(auth.user, person, { id, ...after }));
+    } else if (after.kind !== "sick" && row.kind === "sick") {
+      await quietly(() => settleSickNote(id));
+    }
     return { status };
   });
 }
@@ -252,6 +267,7 @@ export async function cancelTimeOff(id: number): Promise<Result> {
       .set({ status: "cancelled", cancelledById: auth.user.id, cancelledAt: new Date() })
       .where(eq(schema.timeOff.id, id));
     await quietly(() => notifyTimeOffCancelled(auth.user, person, row));
+    await quietly(() => settleSickNote(id));
     return undefined;
   });
 }
