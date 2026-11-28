@@ -14,6 +14,7 @@ import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween } from "@/lib/holidays";
 import { countDays, TIME_OFF_KINDS, type TimeOffKind } from "@/lib/leave-days";
 import { balanceFor, teamOffFor } from "@/lib/time-off";
+import { documentsFor } from "@/lib/time-off-documents";
 
 async function TimeOffContent() {
   await connection();
@@ -53,6 +54,8 @@ async function TimeOffContent() {
         )
       : [],
   );
+  // Sick notes attached to sick leave.
+  const documents = await documentsFor(history.filter((t) => t.kind === "sick").map((t) => t.id));
   const requests: LeaveRequest[] = history.map((t) => ({
     id: t.id,
     kind: t.kind,
@@ -63,6 +66,7 @@ async function TimeOffContent() {
     days: countDays(t, daysOff),
     decisionNote: t.decisionNote,
     decidedBy: deciders.get(decidedBy(t) ?? -1) ?? null,
+    documents: t.kind === "sick" ? (documents.get(t.id) ?? []) : undefined,
     // Requests still waiting, and time off that hasn't started yet (sick leave: that isn't over), can be withdrawn.
     // Nothing that is already over.
     cancellable:

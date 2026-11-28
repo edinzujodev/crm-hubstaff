@@ -14,6 +14,8 @@ import { localDay } from "@/lib/format";
 import { blockedBetween, daysOffBetween } from "@/lib/holidays";
 import { managedPeople, waitingRequests } from "@/lib/hr";
 import { canDecide, countDays } from "@/lib/time-off";
+import { documentsFor } from "@/lib/time-off-documents";
+import { SickNotes } from "@/components/sick-notes";
 
 /**
  * For team leaders and super admins: requests waiting for a decision, and the recent time off of the people they look
@@ -54,6 +56,7 @@ async function RequestsContent() {
     ymd(year + 1, 12, 31),
   );
   const name = new Map(everyone.map((p) => [p.id, p.name]));
+  const documents = await documentsFor(rows.filter((t) => t.kind === "sick").map((t) => t.id));
   // The last say on each time off: who cancelled it, or else who approved or rejected it. They may be outside the
   // people listed (a super admin, a lead above).
   const decidedBy = (t: (typeof rows)[number]) => (t.status === "cancelled" ? t.cancelledById : t.decidedById);
@@ -137,7 +140,17 @@ async function RequestsContent() {
                 {fmtRange(t.startDate, t.endDate)}
                 {t.halfDay && <span className="text-muted"> · half day</span>}
               </span>,
-              <KindBadge key="k" kind={t.kind} />,
+              <span key="k" className="flex flex-col items-start gap-1">
+                <KindBadge kind={t.kind} />
+                {t.kind === "sick" && t.status === "approved" && (
+                  <SickNotes
+                    timeOffId={t.id}
+                    documents={documents.get(t.id) ?? []}
+                    canEdit={canDecide(auth, byId.get(t.userId) ?? { id: t.userId, teamId: null })}
+                    compact
+                  />
+                )}
+              </span>,
               <span key="n" className="tabular-nums">
                 {fmtNum(countDays(t, daysOff))}
               </span>,

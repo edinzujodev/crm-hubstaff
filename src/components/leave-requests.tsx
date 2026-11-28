@@ -1,4 +1,6 @@
+import { SickNotes } from "@/components/sick-notes";
 import { RequestStatus } from "@/components/time-off";
+import type { TimeOffDocument } from "@/lib/time-off-documents";
 import { fmtDays, fmtLongDay } from "@/lib/days";
 import { KIND_LABEL, type TimeOffKind, type TimeOffStatus } from "@/lib/leave-days";
 
@@ -24,6 +26,8 @@ export type LeaveRequest = {
   /** Who approved, rejected or withdrew it (null: nobody else, e.g. sick leave or the person's own entry). */
   decidedBy: string | null;
   cancellable: boolean;
+  /** Sick leave only: the files attached to it (a sick note). */
+  documents?: TimeOffDocument[];
 };
 
 function Cell({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
@@ -104,6 +108,11 @@ export function LeaveRequests({ items }: { items: LeaveRequest[] }) {
               <RequestStatus id={t.id} kind={t.kind} status={t.status} cancellable={t.cancellable} />
             </div>
             {(t.decidedBy || (t.status === "rejected" && t.decisionNote)) && <DecisionBox t={t} />}
+            {t.documents && t.status === "approved" && (
+              <div className="col-span-full -mt-1">
+                <SickNotes timeOffId={t.id} documents={t.documents} canEdit />
+              </div>
+            )}
           </li>
         );
       })}
